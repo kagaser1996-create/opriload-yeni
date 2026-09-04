@@ -37,18 +37,6 @@
 </head>
 <body class="p-2 md:p-4 min-h-[100dvh] lg:h-[100dvh] flex flex-col">
 
-<!-- DIAGNOSTIC MODAL -->
-<div id="diagnosticModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-60 z-50 flex items-center justify-center px-4 no-print">
-    <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-md w-full border-t-8 border-rose-500">
-        <div class="flex justify-between items-start mb-4">
-            <h3 class="text-xl font-black text-slate-800">Sınırlandırma Raporu</h3>
-            <button onclick="closeModal('diagnosticModal')" class="text-slate-400 hover:text-rose-500 font-bold">✕</button>
-        </div>
-        <div id="diagnosticContent" class="text-sm text-slate-700 space-y-3"></div>
-        <button onclick="closeModal('diagnosticModal')" class="w-full mt-5 bg-slate-900 text-white font-bold py-2 rounded-lg hover:bg-slate-800">Anladım</button>
-    </div>
-</div>
-
 <!-- 1. AUTHENTICATION MODAL -->
 <div id="authModal" class="hidden fixed inset-0 bg-slate-900/90 z-50 flex items-center justify-center p-4 no-print">
     <div class="bg-white p-6 md:p-8 rounded-2xl shadow-2xl max-w-md w-full border-t-8 border-sky-500">
@@ -187,7 +175,7 @@
     </div>
 </nav>
 
-<!-- LOGISTICS REVIEW BAR (EXAMINE FIRST THEN DECIDE) -->
+<!-- LOGISTICS REVIEW BAR -->
 <div id="activeReviewBar" class="hidden max-w-[1400px] mx-auto w-full mb-3 bg-gradient-to-r from-slate-900 to-indigo-950 text-white border-2 border-indigo-500 rounded-xl p-3 md:p-4 shadow-xl flex flex-col md:flex-row items-center justify-between gap-3 no-print">
     <div class="flex items-center gap-3">
         <span class="text-2xl animate-bounce">📋</span>
@@ -215,7 +203,7 @@
     </div>
 </div>
 
-<!-- SALES FEEDBACK BANNER (WHEN AN ORDER RETURNS FROM LOGISTICS) -->
+<!-- SALES FEEDBACK BANNER -->
 <div id="salesFeedbackBar" class="hidden max-w-[1400px] mx-auto w-full mb-3 bg-gradient-to-r from-purple-950 to-slate-900 text-white border-2 border-purple-500 rounded-xl p-3 md:p-4 shadow-xl flex flex-col md:flex-row items-center justify-between gap-3 no-print">
     <div class="flex items-center gap-3">
         <span class="text-2xl" id="salesFeedbackIcon">⚠️</span>
@@ -274,7 +262,7 @@
             <div class="input-group mb-3">
                 <label>Araç Tipi</label>
                 <select id="vehicleType" onchange="updateVehicleDims(); autoSyncSingleTargetCapacity(); debouncedRunEngine();">
-                    <option value="TIR" selected>TIR (13600 x 2420 x 2400 mm)</option>
+                    <option value="TIR" selected>TIR (13600 x 2420 x 2600 mm)</option>
                     <option value="40HC">40 Foot High Cube (12015 x 2345 x 2690 mm)</option>
                     <option value="40DC">40 Foot Standart (12015 x 2345 x 2335 mm)</option>
                     <option value="20DC">20 Foot Standart (5890 x 2345 x 2390 mm)</option>
@@ -283,7 +271,7 @@
             
             <input type="hidden" id="contL" value="13600">
             <input type="hidden" id="contW" value="2420">
-            <input type="hidden" id="contH" value="2400">
+            <input type="hidden" id="contH" value="2600">
 
             <div class="grid grid-cols-2 gap-2 mb-3">
                 <div class="input-group">
@@ -291,8 +279,8 @@
                     <input type="number" id="maxWgt" value="25000" max="27800" class="bg-slate-50 text-rose-700 font-bold" oninput="if(this.value > 27800) this.value = 27800; autoSyncSingleTargetCapacity();" onchange="debouncedRunEngine()">
                 </div>
                 <div class="input-group">
-                    <label>Dökme Katı</label>
-                    <input type="text" value="Boyuna Basamaklı (BCT Koruma)" readonly class="!bg-emerald-50 !text-emerald-800 font-bold border-emerald-200 text-[10px] text-center">
+                    <label>Yükleme Modu</label>
+                    <input type="text" id="loadModeDisplay" value="Boyuna Basamaklı" readonly class="!bg-emerald-50 !text-emerald-800 font-bold border-emerald-200 text-[10px] text-center">
                 </div>
             </div>
 
@@ -329,8 +317,8 @@
                 <button onclick="addNewMixedRow()" class="w-full bg-slate-200 text-slate-700 text-xs font-bold py-2 rounded border border-slate-300 hover:bg-slate-300 shadow-sm">+ Yeni Satır Ekle</button>
             </div>
             
-            <!-- BASE TYPE -->
-            <div class="section-header">Taşıma Tabanı</div>
+            <!-- BASE TYPE & WAREHOUSE / DOOR CONSTRAINTS -->
+            <div class="section-header">Taşıma Tabanı & Yükseklik Limitleri</div>
             <div class="input-group mb-3">
                 <select id="baseType" onchange="handleBaseChange(); autoSyncSingleTargetCapacity(); debouncedRunEngine();">
                     <option value="floor" selected>Dökme / Zemin Yükleme</option>
@@ -338,16 +326,28 @@
                     <option value="slipsheet">Slipsheet (Çekme)</option>
                 </select>
             </div>
-            <div id="palletDropdownGroup" class="input-group mb-3" style="display:none;">
-                <label>Palet Boyutu</label>
-                <select id="specificBaseSize" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();">
-                    <option value="auto">🌟 Otomatik Seçim (En Verimli)</option>
-                    <option value="0">80x120 cm Euro Palet</option>
-                    <option value="1">100x120 cm Palet</option>
-                    <option value="2">97x97 cm Palet</option>
-                    <option value="3">97x119 cm Palet</option>
-                    <option value="4" selected>97x115 cm Palet</option>
-                </select>
+
+            <div id="palletDropdownGroup" class="space-y-3 mb-3 p-3 bg-amber-50/70 border border-amber-200 rounded-lg" style="display:none;">
+                <div class="input-group">
+                    <label>Palet Tipi</label>
+                    <select id="specificBaseSize" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();">
+                        <option value="0" selected>80x120 cm Euro Palet</option>
+                        <option value="1">100x120 cm Sanayi Paleti</option>
+                        <option value="2">97x97 cm Kare Palet</option>
+                        <option value="3">97x119 cm Palet</option>
+                        <option value="4">97x115 cm Palet</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="input-group">
+                        <label>Depo Raf Yüksekliği (mm)</label>
+                        <input type="number" id="rackHeight" value="1800" class="bg-white border-amber-300 font-bold" oninput="debouncedRunEngine();">
+                    </div>
+                    <div class="input-group">
+                        <label>Kapı Eşik Limiti (mm)</label>
+                        <input type="number" id="containerDoorHeight" value="2550" class="bg-white border-amber-300 font-bold" oninput="debouncedRunEngine();">
+                    </div>
+                </div>
             </div>
 
             <!-- SAFETY EXTRAS -->
@@ -393,14 +393,14 @@
             </div>
         </div>
 
-        <!-- OPERATOR INSTRUCTIONS (BCT OPTIMIZED) -->
+        <!-- OPERATOR INSTRUCTIONS / PALLET ANALYSIS -->
         <div id="layerOptimizationInfo"><div id="optimizationDetailsList"></div></div>
 
         <!-- 3D CANVAS AREA -->
         <div class="bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col flex-grow min-h-[350px] md:min-h-[480px] relative">
             <div class="bg-slate-50 border-b border-slate-200 px-4 py-3 rounded-t-xl flex justify-between items-center z-10 relative">
                 <span class="text-sm font-bold text-slate-700">3D İZOMETRİK YÜKLEME SİMÜLASYONU</span>
-                <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200">Basamaklı Boy Yayılımı (Kapıya Sıfır)</span>
+                <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200" id="badgeSimSubtitle">Saha Operasyon Çizimi</span>
             </div>
             
             <div class="flex-grow flex items-center justify-center p-2 md:p-4 bg-slate-800 relative rounded-b-xl overflow-hidden min-h-[320px] md:min-h-[450px]">
@@ -424,8 +424,8 @@
     // =========================================================================
     // 🔑 SUPABASE CREDENTIALS - PASTE YOUR PROJECT KEYS HERE
     // =========================================================================
-    const SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL'; // e.g. 'https://xyzcompany.supabase.co'
-    const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';    // e.g. 'eyJhbGciOiJIUzI1Ni...'
+    const SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL'; // e.g. 'https://dehkapuazhvgygbvklbe.supabase.co'
+    const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
     // =========================================================================
 
     const skuDatabase = [
@@ -450,6 +450,14 @@
         {name: "0,75LX12 Yeni Vk Büklüm", L: 236, W: 310, H: 251, Wt: 8.83, maxLayers: 9},
         {name: "2LX6 Kare (Abalı-Kırlangıç)", L: 214, W: 314, H: 323, Wt: 11.70, maxLayers: 7},
         {name: "1LX12 Kare (Abalı-Kırlangıç)", L: 230, W: 302, H: 297, Wt: 11.66, maxLayers: 6}
+    ];
+
+    const standardPalletSizes = [
+        {name: "80x120 Euro Palet", L: 1200, W: 800, H: 145, tare: 25},
+        {name: "100x120 Sanayi Paleti", L: 1200, W: 1000, H: 145, tare: 30},
+        {name: "97x97 Kare Palet", L: 970, W: 970, H: 140, tare: 22},
+        {name: "97x119 Palet", L: 1190, W: 970, H: 140, tare: 25},
+        {name: "97x115 Palet", L: 1150, W: 970, H: 140, tare: 24}
     ];
 
     const colorMap = [
@@ -499,7 +507,7 @@
         populateSelects();
         const skuSel = document.getElementById('skuSelect');
         if (skuSel && skuSel.options.length > 4) {
-            skuSel.value = "4"; // 5LX4 Kare default
+            skuSel.value = "4"; // 5LX4 Kare
         }
         populateSKU();
         addMixedRowWithCount(2, 400);
@@ -523,9 +531,6 @@
         debounceTimer = setTimeout(runEngine, 80);
     }
 
-    // ==========================================
-    // ORDER NAME & PRINT SYNCHRONIZATION
-    // ==========================================
     function syncOrderTitleToPrint() {
         const orderTitleInput = document.getElementById('orderTitle');
         const printDisplay = document.getElementById('printOrderTitleDisplay');
@@ -542,7 +547,7 @@
     }
 
     // ==========================================
-    // AUTH & ROLE HIERARCHY
+    // AUTHENTICATION & ROLE POLICIES
     // ==========================================
     function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
@@ -648,9 +653,7 @@
         const dashText = document.getElementById('dashboardBtnText');
         
         document.getElementById('userEmailLabel').innerText = currentUserProfile?.full_name || currentUser?.email || 'Kullanıcı';
-
-        dashBtn.classList.remove('hidden'); 
-        dashBtn.classList.add('flex');
+        dashBtn.classList.remove('hidden'); dashBtn.classList.add('flex');
 
         if (role === 'logistics' || role === 'admin') {
             roleBadge.innerText = role === 'admin' ? "YÖNETİCİ" : "LOJİSTİK & AR-GE"; 
@@ -661,8 +664,7 @@
             roleBadge.innerText = "SATIŞ EKİBİ"; 
             roleBadge.className = "px-1.5 py-0.5 rounded font-black text-[9px] bg-amber-600 text-white uppercase";
             dashText.innerText = "📥 Taleplerim";
-            btnSales.classList.remove('hidden'); 
-            btnSales.classList.add('flex');
+            btnSales.classList.remove('hidden'); btnSales.classList.add('flex');
         }
     }
 
@@ -671,20 +673,13 @@
         location.reload(); 
     }
 
-    // ==========================================
-    // BADGE NOTIFICATIONS
-    // ==========================================
     async function updatePendingBadgeCount() {
         if (!supabaseClient || !currentUserProfile) return;
         const badge = document.getElementById('pendingBadgeBubble');
         if (!badge) return;
 
         if (currentUserProfile.role === 'logistics' || currentUserProfile.role === 'admin') {
-            const { count, error } = await supabaseClient
-                .from('simulations')
-                .select('*', { count: 'exact', head: true })
-                .eq('status', 'bekliyor');
-
+            const { count, error } = await supabaseClient.from('simulations').select('*', { count: 'exact', head: true }).eq('status', 'bekliyor');
             if (!error && count > 0) {
                 badge.innerText = count;
                 badge.className = "absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full shadow-md animate-pulse";
@@ -693,12 +688,7 @@
                 badge.classList.add('hidden');
             }
         } else {
-            const { count, error } = await supabaseClient
-                .from('simulations')
-                .select('*', { count: 'exact', head: true })
-                .eq('sales_email', currentUser.email)
-                .eq('status', 'duzeltme');
-
+            const { count, error } = await supabaseClient.from('simulations').select('*', { count: 'exact', head: true }).eq('sales_email', currentUser.email).eq('status', 'duzeltme');
             if (!error && count > 0) {
                 badge.innerText = count;
                 badge.className = "absolute -top-1.5 -right-1.5 bg-purple-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full shadow-md animate-bounce";
@@ -711,13 +701,12 @@
 
     async function saveSimulation(status) {
         if (!globalFleet || globalFleet.length === 0 || globalFleet[0].placedItems.length === 0) {
-            alert("Lütfen önce yüklenecek geçerli bir plan oluşturun.");
+            alert("Lütfen önce geçerli bir yükleme planı oluşturun.");
             return;
         }
 
         const btnSales = document.getElementById('btnSubmitSales');
-        btnSales.innerText = "Gönderiliyor..."; 
-        btnSales.disabled = true;
+        btnSales.innerText = "Gönderiliyor..."; btnSales.disabled = true;
 
         let tBoxes = 0; let tWgt = 0;
         globalFleet.forEach(v => { tBoxes += v.totalBoxes; tWgt += v.totalWgt; });
@@ -731,7 +720,10 @@
             maxWgt: document.getElementById('maxWgt').value,
             targetBoxes: document.getElementById('targetBoxes').value,
             baseType: document.getElementById('baseType').value,
-            singleSkuIdx: document.getElementById('skuSelect').value
+            singleSkuIdx: document.getElementById('skuSelect').value,
+            palletIdx: document.getElementById('specificBaseSize').value,
+            rackH: document.getElementById('rackHeight').value,
+            doorH: document.getElementById('containerDoorHeight').value
         };
 
         const payload = {
@@ -761,13 +753,12 @@
             dbError = error;
         }
 
-        btnSales.innerText = "↗ Onaya Gönder"; 
-        btnSales.disabled = false;
+        btnSales.innerText = "↗ Onaya Gönder"; btnSales.disabled = false;
 
         if (dbError) {
             alert("Kayıt hatası: " + dbError.message);
         } else {
-            alert(currentSimulationId ? "✅ Planınız düzeltildi ve yeniden Lojistik onayına gönderildi!" : "✅ Talebiniz başarıyla Lojistik onay havuzuna iletildi!");
+            alert(currentSimulationId ? "✅ Planınız revize edildi ve Lojistik onayına iletildi!" : "✅ Talebiniz başarıyla Lojistik onay havuzuna iletildi!");
             exitSalesFeedbackMode();
             currentSimulationId = null;
             updatePendingBadgeCount();
@@ -842,9 +833,6 @@
         }
     }
 
-    // ==========================================
-    // EXAMINE & DECIDE WORKFLOW
-    // ==========================================
     async function loadSimulationIntoEditor(id) {
         const { data, error } = await supabaseClient.from('simulations').select('*').eq('id', id).single();
         if (error || !data) return alert("Talep yüklenemedi.");
@@ -867,6 +855,10 @@
             document.getElementById('skuSelect').value = inputs.singleSkuIdx || 0;
             populateSKU();
         }
+
+        if (inputs.palletIdx !== undefined) document.getElementById('specificBaseSize').value = inputs.palletIdx;
+        if (inputs.rackH !== undefined) document.getElementById('rackHeight').value = inputs.rackH;
+        if (inputs.doorH !== undefined) document.getElementById('containerDoorHeight').value = inputs.doorH;
 
         isUserDefinedTarget = true;
         updateVehicleDims(); 
@@ -916,25 +908,13 @@
         }
     }
 
-    function exitReviewMode() {
-        document.getElementById('activeReviewBar').classList.add('hidden');
-        currentExaminedOrder = null;
-    }
-
-    function exitSalesFeedbackMode() {
-        document.getElementById('salesFeedbackBar').classList.add('hidden');
-        const btnSales = document.getElementById('btnSubmitSales');
-        btnSales.innerText = "↗ Onaya Gönder";
-        currentSimulationId = null;
-    }
+    function exitReviewMode() { document.getElementById('activeReviewBar').classList.add('hidden'); currentExaminedOrder = null; }
+    function exitSalesFeedbackMode() { document.getElementById('salesFeedbackBar').classList.add('hidden'); document.getElementById('btnSubmitSales').innerText = "↗ Onaya Gönder"; currentSimulationId = null; }
 
     function decideReviewAction(actionType) {
         if (!currentExaminedOrder) return alert("İncelenen talep bulunamadı.");
-
         if (actionType === 'onaylandi') {
-            if (confirm("Bu yükleme planını incelediniz ve kabul ediyor musunuz?")) {
-                submitFinalDecision('onaylandi', 'Yükleme planı incelendi, onaylandı.');
-            }
+            if (confirm("Bu yükleme planını incelediniz ve kabul ediyor musunuz?")) submitFinalDecision('onaylandi', 'Yükleme planı incelendi, onaylandı.');
         } else {
             document.getElementById('pendingActionType').value = actionType;
             const titleEl = document.getElementById('reviewReasonModalTitle');
@@ -945,11 +925,11 @@
             if (actionType === 'reddedildi') {
                 titleEl.innerText = "Talebi Reddet";
                 labelEl.innerText = "Reddetme Gerekçesi (Satış görecek):";
-                inputEl.placeholder = "Örn: Dorse ağırlık sınırları aşıldı, bu yükleme yola çıkamaz...";
+                inputEl.placeholder = "Örn: Tonaj sınırı aşıldı, kapı açıklığına sığmıyor...";
             } else if (actionType === 'duzeltme') {
                 titleEl.innerText = "Düzeltme İste & Geri Gönder";
                 labelEl.innerText = "Satış Ekibinden İstenen Düzeltme Notu:";
-                inputEl.placeholder = "Örn: Koli adedini azaltın veya tabana daha düşük kat yayılacak şekilde revize edin...";
+                inputEl.placeholder = "Örn: Palet istif katını 5'e düşürün...";
             }
             openModal('reviewReasonModal');
         }
@@ -958,42 +938,159 @@
     async function executeFinalDecision() {
         const actionType = document.getElementById('pendingActionType').value;
         const reason = document.getElementById('reviewReasonInput').value.trim();
-
-        if (!reason) {
-            alert("Lütfen Satış ekibine rehberlik edecek bir gerekçe veya açıklama girin.");
-            return;
-        }
+        if (!reason) return alert("Lütfen Satış ekibine gerekçe yazın.");
         closeModal('reviewReasonModal');
         await submitFinalDecision(actionType, reason);
     }
 
     async function submitFinalDecision(actionType, reason) {
         if (!currentExaminedOrder) return;
-        const id = currentExaminedOrder.id;
+        let formattedNote = actionType === 'onaylandi' ? `✓ Onaylandı (${reason})` : (actionType === 'reddedildi' ? `✕ Reddedildi - Gerekçe: ${reason}` : `↺ Düzeltme İstendi - Açıklama: ${reason}`);
 
-        let statusText = actionType;
-        let formattedNote = "";
-        if (actionType === 'onaylandi') formattedNote = `✓ Onaylandı (${reason})`;
-        else if (actionType === 'reddedildi') formattedNote = `✕ Reddedildi - Gerekçe: ${reason}`;
-        else if (actionType === 'duzeltme') formattedNote = `↺ Düzeltme İstendi - İstenen Değişiklik: ${reason}`;
+        const { error } = await supabaseClient.from('simulations').update({
+            status: actionType,
+            logistics_email: currentUser.email,
+            logistics_name: currentUserProfile.full_name || 'Lojistik Yetkilisi',
+            layout_data_review_note: formattedNote
+        }).eq('id', currentExaminedOrder.id);
 
-        const { error } = await supabaseClient
-            .from('simulations')
-            .update({
-                status: statusText,
-                logistics_email: currentUser.email,
-                logistics_name: currentUserProfile.full_name || 'Lojistik Yetkilisi',
-                layout_data_review_note: formattedNote
-            })
-            .eq('id', id);
-
-        if (error) {
-            alert("Karar kaydedilemedi: " + error.message);
-        } else {
+        if (error) alert("Karar kaydedilemedi: " + error.message);
+        else {
             alert(`✅ Karar Satış ekibine iletildi: ${formattedNote}`);
             exitReviewMode();
             updatePendingBadgeCount();
         }
+    }
+
+    // ==========================================
+    // DETAILED PALLET DESIGN ENGINE
+    // ==========================================
+    function calculateOptimalPalletDesign(params) {
+        const {
+            boxL, boxW, boxH, boxWt, maxLayersBCT,
+            palletL = 1200, palletW = 800, palletBaseH = 145, palletTare = 25,
+            maxPalletWeight = 1200,
+            warehouseRackH = 1800,
+            containerDoorH = 2550,
+            containerCeilingH = 2600
+        } = params;
+
+        const doorSafetyMargin = 50;
+        const ceilingSafetyMargin = 50;
+
+        const maxHByDoor = containerDoorH - doorSafetyMargin;
+        const maxHByRack = warehouseRackH;
+        const maxHByCeiling = containerCeilingH - ceilingSafetyMargin;
+
+        const effectiveMaxH = Math.min(maxHByDoor, maxHByRack, maxHByCeiling);
+        const availableCargoH = Math.max(0, effectiveMaxH - palletBaseH);
+
+        const patterns = [];
+
+        // Pattern A: Orthogonal Length-aligned
+        const colsA = Math.floor(palletW / boxW);
+        const rowsA = Math.floor(palletL / boxL);
+        patterns.push({
+            type: 'Düz (Boyuna)',
+            count: colsA * rowsA,
+            layout: generateGrid(rowsA, colsA, boxL, boxW, palletL, palletW, false)
+        });
+
+        // Pattern B: Orthogonal Width-aligned (Rotated)
+        const colsB = Math.floor(palletW / boxL);
+        const rowsB = Math.floor(palletL / boxW);
+        patterns.push({
+            type: 'Düz (Enine Çevrilmiş)',
+            count: colsB * rowsB,
+            layout: generateGrid(rowsB, colsB, boxW, boxL, palletL, palletW, true)
+        });
+
+        // Pattern C: Composite Split
+        for (let r = 1; r < rowsA; r++) {
+            const remainingL = palletL - (r * boxL);
+            const rowsRot = Math.floor(remainingL / boxW);
+            const colsRot = Math.floor(palletW / boxL);
+            if (rowsRot > 0 && colsRot > 0) {
+                patterns.push({
+                    type: 'Kombine / Kilitli',
+                    count: (r * colsA) + (rowsRot * colsRot),
+                    layout: generateSplitLayout(r, colsA, rowsRot, colsRot, boxL, boxW, palletL, palletW)
+                });
+            }
+        }
+
+        patterns.sort((a, b) => b.count - a.count);
+        const best2D = patterns[0];
+        const boxesPerLayer = best2D.count;
+
+        const maxLayersByHeight = Math.floor(availableCargoH / boxH);
+        const maxLayersByWeight = Math.floor((maxPalletWeight - palletTare) / (boxesPerLayer * boxWt));
+        const maxLayersByBCT = maxLayersBCT || 8;
+
+        const finalLayers = Math.max(1, Math.min(maxLayersByHeight, maxLayersByWeight, maxLayersByBCT));
+        const totalBoxes = boxesPerLayer * finalLayers;
+        const finalCargoH = finalLayers * boxH;
+        const finalTotalH = finalCargoH + palletBaseH;
+        const totalWeight = Number(((totalBoxes * boxWt) + palletTare).toFixed(2));
+
+        const doorClearance = containerDoorH - finalTotalH;
+        const rackClearance = warehouseRackH - finalTotalH;
+
+        let limitingFactor = "Kutu BCT Dayanımı";
+        if (finalLayers === maxLayersByHeight) {
+            if (effectiveMaxH === maxHByDoor) limitingFactor = "Konteyner Kapı Yüksekliği";
+            else if (effectiveMaxH === maxHByRack) limitingFactor = "Depo Raf Yüksekliği";
+            else limitingFactor = "Araç Tavanı";
+        } else if (finalLayers === maxLayersByWeight) {
+            limitingFactor = "Palet Taşıma Ağırlık Limiti";
+        }
+
+        return {
+            bestPattern: best2D.type,
+            boxesPerLayer,
+            finalLayers,
+            totalBoxes,
+            totalHeight: finalTotalH,
+            totalWeight,
+            limitingFactor,
+            clearances: {
+                doorClearance,
+                rackClearance,
+                isDoorSafe: doorClearance >= doorSafetyMargin,
+                isRackSafe: rackClearance >= 0
+            },
+            boxPositions: best2D.layout,
+            palletL,
+            palletW
+        };
+    }
+
+    function generateGrid(rows, cols, cellL, cellW, palletL, palletW, isRotated) {
+        const boxes = [];
+        const offsetX = (palletL - (rows * cellL)) / 2;
+        const offsetY = (palletW - (cols * cellW)) / 2;
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                boxes.push({ x: offsetX + (r * cellL), y: offsetY + (c * cellW), l: cellL, w: cellW, isRotated });
+            }
+        }
+        return boxes;
+    }
+
+    function generateSplitLayout(r1, c1, r2, c2, bL, bW, palletL, palletW) {
+        const boxes = [];
+        for (let r = 0; r < r1; r++) {
+            for (let c = 0; c < c1; c++) {
+                boxes.push({ x: r * bL, y: c * bW, l: bL, w: bW, isRotated: false });
+            }
+        }
+        const startX = r1 * bL;
+        for (let r = 0; r < r2; r++) {
+            for (let c = 0; c < c2; c++) {
+                boxes.push({ x: startX + (r * bW), y: c * bL, l: bW, w: bL, isRotated: true });
+            }
+        }
+        return boxes;
     }
 
     // ==========================================
@@ -1005,7 +1102,7 @@
         const baseType = document.getElementById('baseType').value;
         const contL = parseInt(document.getElementById('contL').value) || 13600;
         const contW = parseInt(document.getElementById('contW').value) || 2420;
-        const contH = parseInt(document.getElementById('contH').value) || 2400;
+        const contH = parseInt(document.getElementById('contH').value) || 2600;
         const maxWgt = parseInt(document.getElementById('maxWgt').value) || 25000;
         
         let effContL = contL - 10;
@@ -1031,15 +1128,21 @@
             let volumeLimit = cols * rows * physMaxLayers;
             singleTruckMaxBoxes = Math.min(volumeLimit, maxBoxesByWgt);
         } else {
-            let palletL = 1200, palletW = 800;
-            let c1 = Math.floor(palletL / sku.L) * Math.floor(palletW / sku.W);
-            let c2 = Math.floor(palletL / sku.W) * Math.floor(palletW / sku.L);
-            let boxesPerLayer = Math.max(1, Math.max(c1, c2));
-            let maxLayers = Math.max(1, Math.min(sku.maxLayers, Math.floor((contH - 180) / sku.H)));
-            let colsAcross = Math.floor(effContW / palletW);
-            let rowsDeep = Math.floor(effContL / palletL);
+            const pIdx = parseInt(document.getElementById('specificBaseSize').value) || 0;
+            const pSpec = standardPalletSizes[pIdx];
+            const pDesign = calculateOptimalPalletDesign({
+                boxL: sku.L, boxW: sku.W, boxH: sku.H, boxWt: sku.Wt, maxLayersBCT: sku.maxLayers,
+                palletL: pSpec.L, palletW: pSpec.W, palletBaseH: pSpec.H, palletTare: pSpec.tare,
+                maxPalletWeight: 1200,
+                warehouseRackH: parseInt(document.getElementById('rackHeight').value) || 1800,
+                containerDoorH: parseInt(document.getElementById('containerDoorHeight').value) || 2550,
+                containerCeilingH: contH
+            });
+
+            let colsAcross = Math.floor(effContW / pSpec.W);
+            let rowsDeep = Math.floor(effContL / pSpec.L);
             let totalPallets = colsAcross * rowsDeep;
-            let volumeLimit = totalPallets * boxesPerLayer * maxLayers;
+            let volumeLimit = totalPallets * pDesign.totalBoxes;
             singleTruckMaxBoxes = Math.min(volumeLimit, maxBoxesByWgt);
         }
 
@@ -1060,6 +1163,7 @@
     function handleBaseChange() {
         const bt = document.getElementById('baseType').value;
         document.getElementById('palletDropdownGroup').style.display = (bt === 'pallet' || bt === 'slipsheet') ? 'block' : 'none';
+        document.getElementById('loadModeDisplay').value = bt === 'floor' ? 'Boyuna Basamaklı' : 'Paletli İstif';
         syncOrderTitleToPrint();
     }
 
@@ -1084,15 +1188,16 @@
 
     function updateVehicleDims() {
         const v = document.getElementById('vehicleType').value;
-        let l = 13600, w = 2420, h = 2400, wgt = 25000;
-        if(v === "40HC") { l=12015; w=2345; h=2690; wgt=27800; }
-        else if(v === "40DC") { l=12015; w=2345; h=2335; wgt=27800; }
-        else if(v === "20DC") { l=5890; w=2345; h=2390; wgt=27800; }
+        let l = 13600, w = 2420, h = 2600, wgt = 25000, doorH = 2550;
+        if(v === "40HC") { l=12015; w=2345; h=2690; wgt=27800; doorH = 2585; }
+        else if(v === "40DC") { l=12015; w=2345; h=2385; wgt=27800; doorH = 2280; }
+        else if(v === "20DC") { l=5890; w=2345; h=2385; wgt=27800; doorH = 2280; }
         
         document.getElementById('contL').value = l;
         document.getElementById('contW').value = w;
         document.getElementById('contH').value = h;
         document.getElementById('maxWgt').value = wgt;
+        document.getElementById('containerDoorHeight').value = doorH;
         
         const curveLabel = document.getElementById('optFrontCurveLabel');
         if (curveLabel) curveLabel.style.display = (v === "TIR") ? 'flex' : 'none';
@@ -1117,13 +1222,13 @@
     function addNewMixedRow() { addMixedRowWithCount(0, 100); debouncedRunEngine(); }
 
     // =====================================================================
-    // STEPPED DISTRIBUTION ENGINE (BED-LENGTH EXTENSION + BCT RELIEF)
+    // MAIN LOADING SIMULATION ENGINE
     // =====================================================================
     function runEngine() {
         const baseType = document.getElementById('baseType').value;
         const contL = parseInt(document.getElementById('contL').value) || 13600;
         const contW = parseInt(document.getElementById('contW').value) || 2420;
-        const contH = parseInt(document.getElementById('contH').value) || 2400;
+        const contH = parseInt(document.getElementById('contH').value) || 2600;
         const maxWgt = parseInt(document.getElementById('maxWgt').value) || 25000;
         
         let effContL = contL - 10;
@@ -1139,19 +1244,14 @@
             const sku = skuDatabase[skuIdx];
             if (!sku) return;
             let targetBoxes = parseInt(document.getElementById('targetBoxes').value);
-            if (isNaN(targetBoxes) || targetBoxes <= 0) {
-                targetBoxes = Math.floor(maxWgt / sku.Wt);
-            }
-
+            if (isNaN(targetBoxes) || targetBoxes <= 0) targetBoxes = Math.floor(maxWgt / sku.Wt);
             queue.push({ sku, target: targetBoxes, color: colorMap[0], priority: 0 });
         } else {
             document.querySelectorAll('.mixed-row').forEach((r, idx) => {
                 const skuIdx = parseInt(r.querySelector('.mixed-sku').value) || 0;
                 const sku = skuDatabase[skuIdx];
                 let target = parseInt(r.querySelector('.mixed-val').value) || 0;
-                if (target > 0) {
-                    queue.push({ sku, target, color: colorMap[idx % colorMap.length], priority: idx });
-                }
+                if (target > 0) queue.push({ sku, target, color: colorMap[idx % colorMap.length], priority: idx });
             });
         }
 
@@ -1199,18 +1299,11 @@
                 if (cols <= 0) continue;
 
                 let maxRowsAvailable = Math.floor((effContL - currentX) / actualBoxL);
-                if (maxRowsAvailable <= 0) {
-                    vehicleFull = true;
-                    continue;
-                }
+                if (maxRowsAvailable <= 0) { vehicleFull = true; continue; }
 
                 let maxBoxesByWeight = Math.floor((maxWgt - totalWgt) / sku.Wt);
                 let boxesForThisTruck = Math.min(item.remaining, maxBoxesByWeight);
-
-                if (boxesForThisTruck <= 0) {
-                    vehicleFull = true;
-                    break;
-                }
+                if (boxesForThisTruck <= 0) { vehicleFull = true; break; }
 
                 let floorCapacityOneLayer = maxRowsAvailable * cols;
                 let rowsToUse = 0;
@@ -1226,7 +1319,6 @@
                 } else {
                     rowsToUse = maxRowsAvailable;
                     planBaseLayers = Math.floor(boxesForThisTruck / (rowsToUse * cols));
-                    
                     if (planBaseLayers >= physMaxLayers) {
                         planBaseLayers = physMaxLayers;
                         higherLayerCount = physMaxLayers;
@@ -1240,10 +1332,7 @@
 
                 let rowCounter = 0;
                 while (item.remaining > 0 && rowCounter < rowsToUse && currentX + actualBoxL <= effContL) {
-                    if (totalWgt + sku.Wt > maxWgt) {
-                        vehicleFull = true;
-                        break;
-                    }
+                    if (totalWgt + sku.Wt > maxWgt) { vehicleFull = true; break; }
 
                     let rowLayers = (rowCounter < planHigherRows) ? higherLayerCount : planBaseLayers;
                     let nominalRowBoxes = cols * rowLayers;
@@ -1251,11 +1340,7 @@
                     
                     let maxBoxesByRemainingWeight = Math.floor((maxWgt - totalWgt) / sku.Wt);
                     actualRowBoxes = Math.min(actualRowBoxes, maxBoxesByRemainingWeight);
-
-                    if (actualRowBoxes <= 0) {
-                        vehicleFull = true;
-                        break;
-                    }
+                    if (actualRowBoxes <= 0) { vehicleFull = true; break; }
 
                     let calculatedLayers = Math.ceil(actualRowBoxes / cols);
                     let rowWgt = actualRowBoxes * sku.Wt;
@@ -1275,44 +1360,39 @@
                     currentX += actualBoxL;
                     rowCounter++;
                 }
-
                 if (currentX + actualBoxL > effContL) vehicleFull = true;
 
             } else {
-                let palletL = 1200, palletW = 800;
-                let c1 = Math.floor(palletL / sku.L) * Math.floor(palletW / sku.W);
-                let c2 = Math.floor(palletL / sku.W) * Math.floor(palletW / sku.L);
-                let isRotated = c2 > c1;
-                let boxesPerLayer = Math.max(1, Math.max(c1, c2));
-                let maxLayers = Math.max(1, Math.min(sku.maxLayers, Math.floor((contH - 180) / sku.H)));
-                let boxesPerPallet = boxesPerLayer * maxLayers;
-                let palletTare = 25;
+                // Pallet Loading Engine
+                const pIdx = parseInt(document.getElementById('specificBaseSize').value) || 0;
+                const pSpec = standardPalletSizes[pIdx];
+                const pDesign = calculateOptimalPalletDesign({
+                    boxL: sku.L, boxW: sku.W, boxH: sku.H, boxWt: sku.Wt, maxLayersBCT: sku.maxLayers,
+                    palletL: pSpec.L, palletW: pSpec.W, palletBaseH: pSpec.H, palletTare: pSpec.tare,
+                    maxPalletWeight: 1200,
+                    warehouseRackH: parseInt(document.getElementById('rackHeight').value) || 1800,
+                    containerDoorH: parseInt(document.getElementById('containerDoorHeight').value) || 2550,
+                    containerCeilingH: contH
+                });
 
-                let colsAcross = Math.floor(effContW / palletW);
-                let rowsDeep = Math.floor((effContL - currentX) / palletL);
-
-                if (colsAcross <= 0 || rowsDeep <= 0) {
-                    vehicleFull = true;
-                    continue;
-                }
+                let colsAcross = Math.floor(effContW / pSpec.W);
+                let rowsDeep = Math.floor((effContL - currentX) / pSpec.L);
+                if (colsAcross <= 0 || rowsDeep <= 0) { vehicleFull = true; continue; }
 
                 for (let r = 0; r < rowsDeep; r++) {
                     for (let c = 0; c < colsAcross; c++) {
                         if (item.remaining <= 0) break;
-                        let b = Math.min(boxesPerPallet, item.remaining);
-                        let w = (b * sku.Wt) + palletTare;
+                        let b = Math.min(pDesign.totalBoxes, item.remaining);
+                        let w = (b * sku.Wt) + pSpec.tare;
                         if (totalWgt + w > maxWgt) { vehicleFull = true; break; }
 
-                        let py = (effContW - (colsAcross * palletW)) / 2 + (c * palletW);
+                        let py = (effContW - (colsAcross * pSpec.W)) / 2 + (c * pSpec.W);
                         placedItems.push({
-                            id: sku.name, x: currentX + (r * palletL), y: py,
-                            l: palletL, w: palletW, h: (maxLayers * sku.H) + 150,
+                            id: sku.name, x: currentX + (r * pSpec.L), y: py,
+                            l: pSpec.L, w: pSpec.W, h: pDesign.totalHeight,
                             boxes: b, wgt: w, color: item.color,
-                            cols: Math.floor(palletW / (isRotated ? sku.L : sku.W)),
-                            rows: Math.floor(palletL / (isRotated ? sku.W : sku.L)),
-                            layers: maxLayers, targetLayers: maxLayers,
-                            singleBoxL: isRotated ? sku.W : sku.L, singleBoxW: isRotated ? sku.L : sku.W, singleBoxH: sku.H,
-                            isRotated, isPallet: true, priority: item.priority
+                            palletDesign: pDesign,
+                            isPallet: true, priority: item.priority
                         });
                         totalWgt += w;
                         totalBoxes += b;
@@ -1320,7 +1400,7 @@
                     }
                     if (vehicleFull || item.remaining <= 0) break;
                 }
-                currentX += rowsDeep * palletL;
+                currentX += rowsDeep * pSpec.L;
             }
         }
 
@@ -1356,7 +1436,7 @@
 
         document.getElementById('resTotalBoxes').innerText = truck.totalBoxes.toLocaleString();
         document.getElementById('resWeight').innerText = `${truck.totalWgt.toLocaleString(undefined, {maximumFractionDigits:1})} kg`;
-        document.getElementById('resLoads').innerText = `${truck.placedItems.length} Sıra/Blok`;
+        document.getElementById('resLoads').innerText = `${truck.placedItems.length} İstif/Blok`;
 
         let momentX = 0;
         truck.placedItems.forEach(p => { momentX += (p.x + p.l/2) * p.wgt; });
@@ -1366,156 +1446,140 @@
         document.getElementById('resStatus').innerText = weightPct >= 99 ? `⚠️ Ağırlık Sınırında (CoG: ${(cogX/1000).toFixed(1)}m)` : `Optimum (CoG: ${(cogX/1000).toFixed(1)}m)`;
         document.getElementById('resStatus').className = weightPct >= 99 ? "text-xs md:text-sm font-bold text-rose-600 mt-1" : "text-xs md:text-sm font-bold text-emerald-600 mt-1";
 
-        let groupedItems = {};
-        truck.placedItems.forEach(item => {
-            if (!groupedItems[item.id]) {
-                groupedItems[item.id] = {
-                    name: item.id,
-                    totalBoxes: 0,
-                    totalRows: 0,
-                    cols: item.cols,
-                    isRotated: item.isRotated,
-                    color: item.color,
-                    singleBoxL: item.singleBoxL,
-                    singleBoxW: item.singleBoxW,
-                    hasPartial: false,
-                    layerCounts: {}
-                };
+        const baseType = document.getElementById('baseType').value;
+        let detailsHtml = '';
+
+        if (baseType === 'floor') {
+            let groupedItems = {};
+            truck.placedItems.forEach(item => {
+                if (!groupedItems[item.id]) {
+                    groupedItems[item.id] = {
+                        name: item.id, totalBoxes: 0, totalRows: 0, cols: item.cols, isRotated: item.isRotated,
+                        color: item.color, singleBoxL: item.singleBoxL, singleBoxW: item.singleBoxW, layerCounts: {}
+                    };
+                }
+                groupedItems[item.id].totalBoxes += item.boxes;
+                groupedItems[item.id].totalRows += (item.rows || 1);
+                groupedItems[item.id].layerCounts[item.layers] = (groupedItems[item.id].layerCounts[item.layers] || 0) + 1;
+            });
+
+            let groupList = Object.values(groupedItems);
+            groupList.forEach((g, idx) => {
+                let layerStepDesc = Object.entries(g.layerCounts).sort((a,b) => b[0] - a[0]).map(([lyr, rws]) => `${rws} Sıra ${lyr} Kat`).join(', ');
+                detailsHtml += `
+                    <li class="bg-white p-3 rounded-lg border border-slate-200 shadow-sm mt-2">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="w-4 h-4 rounded border" style="background-color:${g.color.base}"></span>
+                            <strong class="text-indigo-900 text-xs md:text-sm">${g.name}</strong>
+                            <span class="ml-auto text-emerald-700 font-black text-xs md:text-sm">${g.totalBoxes.toLocaleString()} Koli</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs mb-2">
+                            <div class="bg-slate-50 p-2 rounded"><strong>Toplam Blok:</strong> ${g.totalRows} Sıra</div>
+                            <div class="bg-slate-50 p-2 rounded"><strong>Kat Düzeni:</strong> ${layerStepDesc}</div>
+                            <div class="col-span-1 md:col-span-2 bg-emerald-50 p-2.5 rounded border border-emerald-200">
+                                <strong>BCT Taban Dağılımı:</strong> Genişlik: ${g.cols} Koli | Yükseklik: ${layerStepDesc}
+                            </div>
+                        </div>
+                    </li>
+                `;
+            });
+        } else {
+            // Pallet Detailed Inspection Card
+            if (truck.placedItems.length > 0 && truck.placedItems[0].palletDesign) {
+                const p = truck.placedItems[0].palletDesign;
+                const dBadge = p.clearances.isDoorSafe
+                    ? `<span class="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded font-bold">✓ Kapıdan Rahat Geçer (${Math.floor(p.clearances.doorClearance)}mm Eşik Payı)</span>`
+                    : `<span class="text-rose-700 bg-rose-100 px-2 py-0.5 rounded font-bold">⚠️ Kapı Eşiğine Çarpar (-${Math.abs(Math.floor(p.clearances.doorClearance))}mm)</span>`;
+                const rBadge = p.clearances.isRackSafe
+                    ? `<span class="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded font-bold">✓ Rafa Sığar (${Math.floor(p.clearances.rackClearance)}mm Boşluk)</span>`
+                    : `<span class="text-rose-700 bg-rose-100 px-2 py-0.5 rounded font-bold">⚠️ Rafa Sığmaz (Yükseklik Aşımı)</span>`;
+
+                detailsHtml = `
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-xs space-y-3">
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <strong class="text-slate-800 text-sm">Palet Tasarımı ve Yükseklik Analizi</strong>
+                            <span class="text-indigo-700 bg-indigo-50 font-bold px-2 py-1 rounded">Dizilim Deseni: ${p.bestPattern}</span>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            <div class="p-2 bg-slate-50 rounded border"><span class="text-slate-500 block text-[10px] uppercase font-bold">Kat Başına Koli</span><strong>${p.boxesPerLayer} Koli</strong></div>
+                            <div class="p-2 bg-slate-50 rounded border"><span class="text-slate-500 block text-[10px] uppercase font-bold">İstif Kat Sayısı</span><strong>${p.finalLayers} Kat</strong></div>
+                            <div class="p-2 bg-slate-50 rounded border"><span class="text-slate-500 block text-[10px] uppercase font-bold">Palet Başı Toplam</span><strong class="text-emerald-600">${p.totalBoxes} Koli</strong></div>
+                            <div class="p-2 bg-slate-50 rounded border"><span class="text-slate-500 block text-[10px] uppercase font-bold">Palet Toplam Yükseklik</span><strong class="text-slate-800">${p.totalHeight} mm</strong></div>
+                        </div>
+                        <div class="p-3 bg-slate-50 rounded-lg border space-y-1.5">
+                            <div class="flex justify-between items-center"><span><strong>Konteyner Kapı Girişi:</strong> (Eşik: ${p.clearances.doorClearance.toFixed(0)} mm)</span>${dBadge}</div>
+                            <div class="flex justify-between items-center"><span><strong>Depo Raf Yüksekliği:</strong> (Kalan: ${p.clearances.rackClearance.toFixed(0)} mm)</span>${rBadge}</div>
+                            <div class="text-[11px] text-slate-500 pt-1 border-t"><strong>Kritik Kısıtlayıcı Faktör:</strong> <span class="text-indigo-700 font-semibold">${p.limitingFactor}</span></div>
+                        </div>
+                        <div class="flex items-center gap-4 border-t pt-3">
+                            <div class="w-24 h-24 bg-slate-50 border rounded p-1 flex-shrink-0">
+                                <canvas id="pallet2DCanvas" width="96" height="96" class="w-full h-full object-contain"></canvas>
+                            </div>
+                            <div class="text-[11px] text-slate-500">
+                                <strong>Palet Üstten Görünüm (2D Taban Yerleşimi)</strong><br>
+                                Her bir kat yukarıdaki desene göre dizilir. Katlar arası <strong>${p.finalLayers} kat</strong> istiflenerek streçlenmelidir.
+                            </div>
+                        </div>
+                    </div>
+                `;
             }
-            groupedItems[item.id].totalBoxes += item.boxes;
-            groupedItems[item.id].totalRows += (item.rows || 1);
-            if (item.isPartial) groupedItems[item.id].hasPartial = true;
-            groupedItems[item.id].layerCounts[item.layers] = (groupedItems[item.id].layerCounts[item.layers] || 0) + 1;
-        });
-
-        let groupList = Object.values(groupedItems);
-        let skuDetailsHtml = '';
-
-        groupList.forEach((g, idx) => {
-            let safeCanvasId = `pallet_preview_${idx}`;
-            let orientationText = g.isRotated 
-                ? "Kutular YAN Çevrilecek (Kısa kenar tır uzunluğuna paralel)" 
-                : "Kutular DÜZ Konulacak (Uzun kenar tır uzunluğuna paralel)";
-
-            let layerStepDesc = Object.entries(g.layerCounts)
-                .sort((a,b) => b[0] - a[0])
-                .map(([lyr, rws]) => `${rws} Sıra ${lyr} Kat`)
-                .join(', ');
-
-            skuDetailsHtml += `
-                <li class="bg-white p-3 rounded-lg border border-slate-200 shadow-sm mt-2">
-                    <div class="flex items-center gap-2 mb-2">
-                        <span class="w-4 h-4 rounded border border-slate-300 inline-block" style="background-color:${g.color.base}"></span>
-                        <strong class="text-indigo-900 text-xs md:text-sm">${g.name}</strong>
-                        <span class="ml-auto text-emerald-700 font-black text-xs md:text-sm">${g.totalBoxes.toLocaleString()} Koli</span>
-                    </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs mb-2">
-                        <div class="bg-slate-50 p-2 rounded">
-                            <span class="block text-slate-500 text-[10px] uppercase font-bold">Toplam Blok / Sıra</span>
-                            <strong class="text-slate-800 text-xs md:text-sm">${g.totalRows} Sıra (Kapıya Kadar Yayılmış)</strong>
-                        </div>
-                        <div class="bg-slate-50 p-2 rounded">
-                            <span class="block text-slate-500 text-[10px] uppercase font-bold">Dizilim Düzeni</span>
-                            <strong class="text-slate-800 text-xs md:text-sm">${layerStepDesc}</strong>
-                        </div>
-                        
-                        <div class="col-span-1 md:col-span-2 bg-emerald-50 p-2.5 rounded border border-emerald-200">
-                            <span class="block text-emerald-800 text-[10px] uppercase font-bold mb-1">BCT Korumalı Zemin Dağılımı</span>
-                            <strong class="text-slate-800 text-xs block mb-1">
-                                Genişlik: ${g.cols} Koli &nbsp;|&nbsp; Boy: ${g.totalRows} Sıra &nbsp;|&nbsp; Yükseklik: ${layerStepDesc}
-                            </strong>
-                            <span class="text-emerald-700 font-bold text-[10px] uppercase border border-emerald-300 bg-white px-1.5 py-0.5 rounded shadow-sm inline-block mt-0.5">
-                                Kutu Yönü: ${orientationText}
-                            </span>
-                        </div>
-                    </div>
-
-                    <div class="flex items-center gap-4 border-t border-slate-100 pt-2.5">
-                        <div class="w-20 h-20 flex-shrink-0 bg-slate-50 border border-slate-200 rounded p-1">
-                            <canvas id="${safeCanvasId}" width="80" height="80" class="w-full h-full object-contain"></canvas>
-                        </div>
-                        <div class="text-[10px] text-slate-500">
-                            <strong class="text-slate-700 uppercase">Taban Dizilimi (Üstten Görünüm)</strong><br>
-                            Kutuların ezilmesini (BCT) önlemek ve boşluk bırakmamak için yük kapıya kadar <strong>basamaklı kat (${layerStepDesc})</strong> olarak yayılmıştır.
-                        </div>
-                    </div>
-                </li>
-            `;
-        });
+        }
 
         const useAirbag = document.getElementById('optAirbag').checked;
         const useLashing = document.getElementById('optLashing').checked;
 
         document.getElementById('optimizationDetailsList').innerHTML = `
             <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-200 shadow-sm text-xs text-indigo-950 space-y-3">
-                <h4 class="font-black text-sm text-indigo-900 uppercase">👷 ADIM ADIM SAHA OPERATÖR TALİMATI (ARAÇ ${currentVehicleIdx + 1})</h4>
-                
-                <div>
-                    <h5 class="font-bold text-xs text-indigo-900 bg-indigo-100 p-2 rounded">ADIM 1: İSTİFLERİ & SIRALARI HAZIRLAYIN</h5>
-                    <ul class="space-y-1.5">${skuDetailsHtml || '<li class="text-slate-500 py-2">Yüklenecek ürün bulunamadı.</li>'}</ul>
-                </div>
-
-                <div>
-                    <h5 class="font-bold text-xs text-indigo-900 bg-indigo-100 p-2 rounded mb-1.5">ADIM 2: ARAÇ İÇİNE YERLEŞTİRİN & MERKEZLEYİN</h5>
+                <h4 class="font-black text-sm text-indigo-900 uppercase">👷 SAHA OPERASYON VE YÜKLEME TALİMATI (ARAÇ ${currentVehicleIdx + 1})</h4>
+                ${detailsHtml}
+                <div class="pt-2 border-t border-indigo-200">
                     <ul class="list-disc pl-5 space-y-1 text-slate-700">
-                        <li>Kutuları tavana kadar yığmak yerine, <strong>dorse tabanına yayarak kapıya kadar</strong> uzatın.</li>
-                        <li><strong>Tüm yükü dorse genişliğine göre tam ortalayın.</strong></li>
-                    </ul>
-                </div>
-
-                <div>
-                    <h5 class="font-bold text-xs text-indigo-900 bg-indigo-100 p-2 rounded mb-1.5">ADIM 3: GÜVENLİK VE SABİTLEME (STATİK/DİNAMİK ETKİLER)</h5>
-                    <ul class="list-disc pl-5 space-y-1 text-slate-700">
-                        <li>${(useAirbag && truck.gapW > 80) ? `🔄 <strong>Yanal Boşluk:</strong> Yanlarda toplam ${Math.floor(truck.gapW)} mm boşluk kalmaktadır. Virajlarda kaymayı önlemek için <strong>Hava Yastığı (Airbag)</strong> kullanın.` : '✅ Yanal alan güvenli seviyede doludur.'}</li>
-                        <li>${(useLashing && truck.gapL > 250) ? `🚚 <strong>Boyuna Boşluk:</strong> Yük kapıya ${Math.floor(truck.gapL)} mm mesafede bitmektedir. Devrilmeyi önlemek için <strong>Spanset (Lashing)</strong> çekilmelidir.` : '✅ Yük kapıya kadar tam oturmuştur. Spanset ihtiyacı minimumdur.'}</li>
+                        <li>${(useAirbag && truck.gapW > 80) ? `🔄 <strong>Yanal Boşluk:</strong> Yanlarda ${Math.floor(truck.gapW)} mm boşluk kalmaktadır. Hava Yastığı (Airbag) kullanın.` : '✅ Yanal alan güvenli seviyede doludur.'}</li>
+                        <li>${(useLashing && truck.gapL > 250) ? `🚚 <strong>Boyuna Boşluk:</strong> Yük kapıya ${Math.floor(truck.gapL)} mm mesafede bitmektedir. Spanset (Lashing) çekilmelidir.` : '✅ Yük kapıya kadar tam oturmuştur.'}</li>
                     </ul>
                 </div>
             </div>
         `;
 
-        setTimeout(() => {
-            groupList.forEach((g, idx) => {
-                let cvs = document.getElementById(`pallet_preview_${idx}`);
+        if (baseType !== 'floor' && truck.placedItems.length > 0 && truck.placedItems[0].palletDesign) {
+            setTimeout(() => {
+                const cvs = document.getElementById('pallet2DCanvas');
                 if (!cvs) return;
-                let c = cvs.getContext('2d');
+                const p = truck.placedItems[0].palletDesign;
+                const c = cvs.getContext('2d');
                 c.clearRect(0, 0, cvs.width, cvs.height);
 
-                let pad = 6;
-                let totW = g.cols * g.singleBoxW;
-                let totL = 1 * g.singleBoxL;
-                let sc = Math.min((cvs.width - pad * 2) / totL, (cvs.height - pad * 2) / totW);
+                const pad = 6;
+                const sc = Math.min((cvs.width - pad*2) / p.palletL, (cvs.height - pad*2) / p.palletW);
+                const ox = (cvs.width - p.palletL * sc) / 2;
+                const oy = (cvs.height - p.palletW * sc) / 2;
 
-                let ox = (cvs.width - totL * sc) / 2;
-                let oy = (cvs.height - totW * sc) / 2;
+                c.fillStyle = '#d7ba89';
+                c.fillRect(ox, oy, p.palletL * sc, p.palletW * sc);
+                c.strokeStyle = '#8c6d3b';
+                c.strokeRect(ox, oy, p.palletL * sc, p.palletW * sc);
 
-                c.fillStyle = g.color.top;
-                for (let col = 0; col < g.cols; col++) {
-                    let bx = ox;
-                    let by = oy + (col * g.singleBoxW * sc);
-                    c.fillRect(bx, by, g.singleBoxL * sc - 1, g.singleBoxW * sc - 1);
-                    c.strokeStyle = 'rgba(0,0,0,0.4)';
-                    c.strokeRect(bx, by, g.singleBoxL * sc - 1, g.singleBoxW * sc - 1);
-                }
-            });
-        }, 50);
+                p.boxPositions.forEach(b => {
+                    c.fillStyle = b.isRotated ? '#38bdf8' : '#0284c7';
+                    c.fillRect(ox + b.x*sc, oy + b.y*sc, b.l*sc - 1, b.w*sc - 1);
+                    c.strokeStyle = 'rgba(0,0,0,0.5)';
+                    c.strokeRect(ox + b.x*sc, oy + b.y*sc, b.l*sc - 1, b.w*sc - 1);
+                });
+            }, 50);
+        }
 
         lastRenderData = { placedItems: truck.placedItems, contL: ctx.contL, contW: ctx.contW, contH: ctx.contH, optFrontCurve: ctx.optFrontCurve, cogX };
         performRender(lastRenderData);
     }
 
     // ==========================================
-    // 3D ISOMETRIC ENGINE (DESKTOP & MOBILE TOUCH)
+    // 3D ISOMETRIC ENGINE (DESKTOP & TOUCH)
     // ==========================================
     function initCanvasInteractions() {
         const canvas = document.getElementById('contCanvas');
         if (!canvas) return;
 
-        canvas.addEventListener('mousedown', (e) => { 
-            isDragging = true; 
-            startX = e.clientX - panX; 
-            startY = e.clientY - panY; 
-        });
+        canvas.addEventListener('mousedown', (e) => { isDragging = true; startX = e.clientX - panX; startY = e.clientY - panY; });
         window.addEventListener('mousemove', (e) => { 
             if (!isDragging) return; 
             panX = e.clientX - startX; 
@@ -1535,10 +1599,7 @@
                 startX = e.touches[0].clientX - panX;
                 startY = e.touches[0].clientY - panY;
             } else if (e.touches.length === 2) {
-                initialPinchDist = Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                );
+                initialPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
             }
         }, { passive: false });
 
@@ -1550,10 +1611,7 @@
                 if (lastRenderData) performRender(lastRenderData);
             } else if (e.touches.length === 2 && initialPinchDist) {
                 e.preventDefault();
-                let dist = Math.hypot(
-                    e.touches[0].clientX - e.touches[1].clientX,
-                    e.touches[0].clientY - e.touches[1].clientY
-                );
+                let dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                 let newZoom = zoomLevel * (dist / initialPinchDist);
                 zoomLevel = Math.max(0.4, Math.min(6, newZoom));
                 initialPinchDist = dist;
@@ -1561,18 +1619,10 @@
             }
         }, { passive: false });
 
-        canvas.addEventListener('touchend', () => {
-            isDragging = false;
-            initialPinchDist = null;
-        });
+        canvas.addEventListener('touchend', () => { isDragging = false; initialPinchDist = null; });
     }
 
-    function resetView() { 
-        panX = 0; 
-        panY = 0; 
-        zoomLevel = 1; 
-        if (lastRenderData) performRender(lastRenderData); 
-    }
+    function resetView() { panX = 0; panY = 0; zoomLevel = 1; if (lastRenderData) performRender(lastRenderData); }
 
     function performRender(data) {
         const { placedItems, contL, contW, contH, optFrontCurve, cogX } = data;
@@ -1589,10 +1639,7 @@
         let cy = canvas.height / 2 + 50 + panY;
 
         function project(x, y, z) {
-            return {
-                x: cx + (x - y) * cosA * scale,
-                y: cy + (x + y) * sinA * scale - (z * scale)
-            };
+            return { x: cx + (x - y) * cosA * scale, y: cy + (x + y) * sinA * scale - (z * scale) };
         }
 
         function drawPoly(pts, fill, stroke = 'rgba(0,0,0,0.2)', width = 1) {
@@ -1609,16 +1656,14 @@
             ctx.strokeStyle = stroke; ctx.lineWidth = width; ctx.stroke();
         }
 
-        // 1. Trailer Floor & Walls
+        // Trailer Shell
         drawPoly([project(0,0,0), project(contL,0,0), project(contL,contW,0), project(0,contW,0)], '#334155');
         drawPoly([project(0,0,0), project(contL,0,0), project(contL,0,contH), project(0,0,contH)], '#1e293b');
         drawPoly([project(0,0,0), project(0,contW,0), project(0,contW,contH), project(0,0,contH)], '#0f172a');
 
-        if (optFrontCurve) {
-            drawPoly([project(0,0,0), project(100,0,0), project(100,contW,0), project(0,contW,0)], 'rgba(234, 179, 8, 0.4)', '#ca8a04');
-        }
+        if (optFrontCurve) drawPoly([project(0,0,0), project(100,0,0), project(100,contW,0), project(0,contW,0)], 'rgba(234, 179, 8, 0.4)', '#ca8a04');
 
-        // 2. Render Rows with Individual Box Grids
+        // Render Loaded Blocks
         placedItems.forEach(b => {
             let pRight = [project(b.x + b.l, b.y, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, b.h), project(b.x + b.l, b.y, b.h)];
             let pFront = [project(b.x, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, b.h), project(b.x, b.y + b.w, b.h)];
@@ -1628,20 +1673,21 @@
             drawPoly(pFront, b.color.left, 'rgba(0,0,0,0.6)', 1.5);
             drawPoly(pTop, b.color.top, 'rgba(0,0,0,0.6)', 1.5);
 
-            for (let l = 1; l < b.layers; l++) {
-                let z = l * b.singleBoxH;
-                drawLine(project(b.x + b.l, b.y, z), project(b.x + b.l, b.y + b.w, z), 'rgba(0,0,0,0.35)');
-                drawLine(project(b.x, b.y + b.w, z), project(b.x + b.l, b.y + b.w, z), 'rgba(0,0,0,0.35)');
-            }
-
-            for (let c = 1; c < b.cols; c++) {
-                let y = b.y + c * (b.w / b.cols);
-                drawLine(project(b.x + b.l, y, 0), project(b.x + b.l, y, b.h), 'rgba(0,0,0,0.35)');
-                drawLine(project(b.x, y, b.h), project(b.x + b.l, y, b.h), 'rgba(0,0,0,0.4)');
+            if (b.layers && b.cols) {
+                for (let l = 1; l < b.layers; l++) {
+                    let z = l * b.singleBoxH;
+                    drawLine(project(b.x + b.l, b.y, z), project(b.x + b.l, b.y + b.w, z), 'rgba(0,0,0,0.35)');
+                    drawLine(project(b.x, b.y + b.w, z), project(b.x + b.l, b.y + b.w, z), 'rgba(0,0,0,0.35)');
+                }
+                for (let c = 1; c < b.cols; c++) {
+                    let y = b.y + c * (b.w / b.cols);
+                    drawLine(project(b.x + b.l, y, 0), project(b.x + b.l, y, b.h), 'rgba(0,0,0,0.35)');
+                    drawLine(project(b.x, y, b.h), project(b.x + b.l, y, b.h), 'rgba(0,0,0,0.4)');
+                }
             }
         });
 
-        // 3. Center of Gravity
+        // Center of Gravity
         if (placedItems.length > 0) {
             let cogPt = project(cogX, contW / 2, contH / 2);
             ctx.beginPath(); ctx.arc(cogPt.x, cogPt.y, 6, 0, 2*Math.PI);
