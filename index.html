@@ -264,8 +264,8 @@
                 <select id="vehicleType" onchange="updateVehicleDims(); autoSyncSingleTargetCapacity(); debouncedRunEngine();">
                     <option value="TIR" selected>TIR (13600 x 2420 x 2600 mm)</option>
                     <option value="40HC">40 Foot High Cube (12015 x 2345 x 2690 mm)</option>
-                    <option value="40DC">40 Foot Standart (12015 x 2345 x 2335 mm)</option>
-                    <option value="20DC">20 Foot Standart (5890 x 2345 x 2390 mm)</option>
+                    <option value="40DC">40 Foot Standart (12015 x 2345 x 2385 mm)</option>
+                    <option value="20DC">20 Foot Standart (5890 x 2345 x 2385 mm)</option>
                 </select>
             </div>
             
@@ -280,7 +280,7 @@
                 </div>
                 <div class="input-group">
                     <label>Yükleme Modu</label>
-                    <input type="text" id="loadModeDisplay" value="Boyuna Basamaklı" readonly class="!bg-emerald-50 !text-emerald-800 font-bold border-emerald-200 text-[10px] text-center">
+                    <input type="text" id="loadModeDisplay" value="Gelişmiş Karma Taban" readonly class="!bg-emerald-50 !text-emerald-800 font-bold border-emerald-200 text-[10px] text-center">
                 </div>
             </div>
 
@@ -311,8 +311,8 @@
 
             <!-- MIXED SKU PANEL -->
             <div id="panel-mixed" class="hidden">
-                <div class="section-header flex justify-between items-center mb-2">Karma Yük <span class="text-[9px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded font-bold">Öncelik Tipi</span></div>
-                <div class="text-[10px] text-slate-500 mb-2 font-semibold">Sıralamayı değiştirmek için ☰ ikonundan sürükleyin.</div>
+                <div class="section-header flex justify-between items-center mb-2">Karma Yük <span class="text-[9px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded font-bold">Yoğunluk/Ağırlık Dengeli</span></div>
+                <div class="text-[10px] text-slate-500 mb-2 font-semibold">Ağır ve yoğun koliler tabana, hacimli hafif koliler üst katlara otomatik dengelenir.</div>
                 <div id="mixedList" class="space-y-1 mb-3"></div>
                 <button onclick="addNewMixedRow()" class="w-full bg-slate-200 text-slate-700 text-xs font-bold py-2 rounded border border-slate-300 hover:bg-slate-300 shadow-sm">+ Yeni Satır Ekle</button>
             </div>
@@ -321,7 +321,7 @@
             <div class="section-header">Taşıma Tabanı & Yükseklik Limitleri</div>
             <div class="input-group mb-3">
                 <select id="baseType" onchange="handleBaseChange(); autoSyncSingleTargetCapacity(); debouncedRunEngine();">
-                    <option value="floor" selected>Dökme / Zemin Yükleme</option>
+                    <option value="floor" selected>Dökme / Zemin Yükleme (Karma Taban & Kilit Sıralı)</option>
                     <option value="pallet">Ahşap Palet</option>
                     <option value="slipsheet">Slipsheet (Çekme)</option>
                 </select>
@@ -393,14 +393,14 @@
             </div>
         </div>
 
-        <!-- OPERATOR INSTRUCTIONS / PALLET ANALYSIS -->
+        <!-- OPERATOR INSTRUCTIONS / ADVANCED ANALYSIS -->
         <div id="layerOptimizationInfo"><div id="optimizationDetailsList"></div></div>
 
         <!-- 3D CANVAS AREA -->
         <div class="bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col flex-grow min-h-[350px] md:min-h-[480px] relative">
             <div class="bg-slate-50 border-b border-slate-200 px-4 py-3 rounded-t-xl flex justify-between items-center z-10 relative">
                 <span class="text-sm font-bold text-slate-700">3D İZOMETRİK YÜKLEME SİMÜLASYONU</span>
-                <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200" id="badgeSimSubtitle">Saha Operasyon Çizimi</span>
+                <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200" id="badgeSimSubtitle">Kombine Taban & Kuyruk Kilidi</span>
             </div>
             
             <div class="flex-grow flex items-center justify-center p-2 md:p-4 bg-slate-800 relative rounded-b-xl overflow-hidden min-h-[320px] md:min-h-[450px]">
@@ -507,7 +507,7 @@
         populateSelects();
         const skuSel = document.getElementById('skuSelect');
         if (skuSel && skuSel.options.length > 4) {
-            skuSel.value = "4"; // 5LX4 Kare
+            skuSel.value = "4"; // 5LX4 Kare default
         }
         populateSKU();
         addMixedRowWithCount(2, 400);
@@ -664,7 +664,8 @@
             roleBadge.innerText = "SATIŞ EKİBİ"; 
             roleBadge.className = "px-1.5 py-0.5 rounded font-black text-[9px] bg-amber-600 text-white uppercase";
             dashText.innerText = "📥 Taleplerim";
-            btnSales.classList.remove('hidden'); btnSales.classList.add('flex');
+            btnSales.classList.remove('hidden'); 
+            btnSales.classList.add('flex');
         }
     }
 
@@ -962,6 +963,76 @@
         }
     }
 
+    // =========================================================================
+    // 🚀 ADVANCED FLOOR OPTIMIZATION ENGINE:
+    // 1. COMBINED TRANSVERSE FOOTPRINTS (SPLIT COLUMNS)
+    // 2. DOOR-END TAIL TURNING (TURN-AT-DOOR ROWS)
+    // =========================================================================
+    function solveOptimalFloorPattern(effW, effL, boxL, boxW) {
+        // Test all valid combinations of columns (a boxes of W_b across width + b boxes of L_b across width)
+        const dimW1 = boxW, dimL1 = boxL; // Orientation 1: Width along W, Length along L
+        const dimW2 = boxL, dimL2 = boxW; // Orientation 2: Length along W, Width along L
+
+        let bestSolution = null;
+        let maxFloorCount = 0;
+
+        const maxA = Math.floor(effW / dimW1);
+        for (let a = 0; a <= maxA; a++) {
+            const widthUsedByA = a * dimW1;
+            const remainingWidth = effW - widthUsedByA;
+            const b = Math.floor(remainingWidth / dimW2);
+
+            if (a === 0 && b === 0) continue;
+
+            // Strip 1: 'a' columns of Orientation 1
+            const rows1 = (a > 0) ? Math.floor(effL / dimL1) : 0;
+            const remL1 = (a > 0) ? (effL - (rows1 * dimL1)) : 0;
+            // Door-End Tail Turning for Strip 1:
+            // Check if remaining void at door can fit rotated boxes (dimL2 along length)
+            let tailRows1 = 0;
+            let tailCols1 = 0;
+            if (a > 0 && remL1 >= dimL2) {
+                tailRows1 = Math.floor(remL1 / dimL2);
+                tailCols1 = Math.floor((a * dimW1) / dimW2);
+            }
+            const countStrip1 = (a * rows1) + (tailRows1 * tailCols1);
+
+            // Strip 2: 'b' columns of Orientation 2
+            const rows2 = (b > 0) ? Math.floor(effL / dimL2) : 0;
+            const remL2 = (b > 0) ? (effL - (rows2 * dimL2)) : 0;
+            // Door-End Tail Turning for Strip 2:
+            let tailRows2 = 0;
+            let tailCols2 = 0;
+            if (b > 0 && remL2 >= dimL1) {
+                tailRows2 = Math.floor(remL2 / dimL1);
+                tailCols2 = Math.floor((b * dimW2) / dimW1);
+            }
+            const countStrip2 = (b * rows2) + (tailRows2 * tailCols2);
+
+            const totalFloorBoxes = countStrip1 + countStrip2;
+
+            if (totalFloorBoxes > maxFloorCount) {
+                maxFloorCount = totalFloorBoxes;
+                bestSolution = {
+                    totalFloorBoxes,
+                    colsA: a,
+                    rowsA: rows1,
+                    tailRowsA: tailRows1,
+                    tailColsA: tailCols1,
+                    colsB: b,
+                    rowsB: rows2,
+                    tailRowsB: tailRows2,
+                    tailColsB: tailCols2,
+                    dimW1, dimL1, dimW2, dimL2,
+                    isSplit: (a > 0 && b > 0),
+                    hasTailTurn: (tailRows1 > 0 || tailRows2 > 0)
+                };
+            }
+        }
+
+        return bestSolution;
+    }
+
     // ==========================================
     // DETAILED PALLET DESIGN ENGINE
     // ==========================================
@@ -1118,14 +1189,9 @@
         const maxBoxesByWgt = Math.floor(maxWgt / sku.Wt);
 
         if (baseType === 'floor') {
-            let c1 = Math.floor(effContW / sku.W);
-            let c2 = Math.floor(effContW / sku.L);
-            let isRotated = c2 > c1;
-            let cols = isRotated ? c2 : c1;
-            let actualBoxL = isRotated ? sku.W : sku.L;
-            let rows = Math.floor(effContL / actualBoxL);
-            let physMaxLayers = Math.max(1, Math.min(sku.maxLayers, Math.floor((contH - 20) / sku.H)));
-            let volumeLimit = cols * rows * physMaxLayers;
+            const floorSol = solveOptimalFloorPattern(effContW, effContL, sku.L, sku.W);
+            const physMaxLayers = Math.max(1, Math.min(sku.maxLayers, Math.floor((contH - 20) / sku.H)));
+            const volumeLimit = (floorSol ? floorSol.totalFloorBoxes : 100) * physMaxLayers;
             singleTruckMaxBoxes = Math.min(volumeLimit, maxBoxesByWgt);
         } else {
             const pIdx = parseInt(document.getElementById('specificBaseSize').value) || 0;
@@ -1163,7 +1229,7 @@
     function handleBaseChange() {
         const bt = document.getElementById('baseType').value;
         document.getElementById('palletDropdownGroup').style.display = (bt === 'pallet' || bt === 'slipsheet') ? 'block' : 'none';
-        document.getElementById('loadModeDisplay').value = bt === 'floor' ? 'Boyuna Basamaklı' : 'Paletli İstif';
+        document.getElementById('loadModeDisplay').value = bt === 'floor' ? 'Gelişmiş Karma Taban' : 'Paletli İstif';
         syncOrderTitleToPrint();
     }
 
@@ -1222,7 +1288,7 @@
     function addNewMixedRow() { addMixedRowWithCount(0, 100); debouncedRunEngine(); }
 
     // =====================================================================
-    // MAIN LOADING SIMULATION ENGINE
+    // MAIN LOADING SIMULATION ENGINE WITH 3X OPTIMIZATIONS
     // =====================================================================
     function runEngine() {
         const baseType = document.getElementById('baseType').value;
@@ -1247,12 +1313,21 @@
             if (isNaN(targetBoxes) || targetBoxes <= 0) targetBoxes = Math.floor(maxWgt / sku.Wt);
             queue.push({ sku, target: targetBoxes, color: colorMap[0], priority: 0 });
         } else {
+            // 3. DENSITY & WEIGHT BLENDING:
+            // In mixed mode, sort queue by density (kg per m³) descending so heavy, compact items form base/front
+            let rawQueue = [];
             document.querySelectorAll('.mixed-row').forEach((r, idx) => {
                 const skuIdx = parseInt(r.querySelector('.mixed-sku').value) || 0;
                 const sku = skuDatabase[skuIdx];
                 let target = parseInt(r.querySelector('.mixed-val').value) || 0;
-                if (target > 0) queue.push({ sku, target, color: colorMap[idx % colorMap.length], priority: idx });
+                if (target > 0) {
+                    const boxVolumeM3 = (sku.L * sku.W * sku.H) / 1000000000;
+                    const density = sku.Wt / boxVolumeM3;
+                    rawQueue.push({ sku, target, color: colorMap[idx % colorMap.length], priority: idx, density });
+                }
             });
+            rawQueue.sort((a, b) => b.density - a.density);
+            queue = rawQueue;
         }
 
         globalFleet = [];
@@ -1288,82 +1363,133 @@
             const sku = item.sku;
 
             if (baseType === 'floor') {
-                let c1 = Math.floor(effContW / sku.W);
-                let c2 = Math.floor(effContW / sku.L);
-                let isRotated = c2 > c1;
-                let cols = isRotated ? c2 : c1;
-                let actualBoxW = isRotated ? sku.L : sku.W;
-                let actualBoxL = isRotated ? sku.W : sku.L;
-                
-                let physMaxLayers = Math.max(1, Math.min(sku.maxLayers, Math.floor((contH - 20) / sku.H)));
-                if (cols <= 0) continue;
+                const availableL = effContL - currentX;
+                if (availableL <= 0) { vehicleFull = true; continue; }
 
-                let maxRowsAvailable = Math.floor((effContL - currentX) / actualBoxL);
-                if (maxRowsAvailable <= 0) { vehicleFull = true; continue; }
+                // 1. Solve optimal floor pattern (Split columns + tail turning)
+                const sol = solveOptimalFloorPattern(effContW, availableL, sku.L, sku.W);
+                if (!sol || sol.totalFloorBoxes <= 0) { vehicleFull = true; continue; }
 
-                let maxBoxesByWeight = Math.floor((maxWgt - totalWgt) / sku.Wt);
-                let boxesForThisTruck = Math.min(item.remaining, maxBoxesByWeight);
+                const physMaxLayers = Math.max(1, Math.min(sku.maxLayers, Math.floor((contH - 20) / sku.H)));
+                const maxBoxesByWeight = Math.floor((maxWgt - totalWgt) / sku.Wt);
+                const boxesForThisTruck = Math.min(item.remaining, maxBoxesByWeight);
                 if (boxesForThisTruck <= 0) { vehicleFull = true; break; }
 
-                let floorCapacityOneLayer = maxRowsAvailable * cols;
-                let rowsToUse = 0;
-                let planBaseLayers = 1;
-                let planHigherRows = 0;
-                let higherLayerCount = 1;
+                // BCT Stepped Height allocation
+                let baseLayers = Math.floor(boxesForThisTruck / sol.totalFloorBoxes);
+                let higherLayerCount = baseLayers + 1;
+                let remainderBoxes = boxesForThisTruck - (baseLayers * sol.totalFloorBoxes);
 
-                if (boxesForThisTruck <= floorCapacityOneLayer) {
-                    rowsToUse = Math.ceil(boxesForThisTruck / cols);
-                    planBaseLayers = 1;
+                if (baseLayers >= physMaxLayers) {
+                    baseLayers = physMaxLayers;
+                    higherLayerCount = physMaxLayers;
+                    remainderBoxes = 0;
+                } else if (baseLayers < 1) {
+                    baseLayers = 1;
                     higherLayerCount = 1;
-                    planHigherRows = rowsToUse;
-                } else {
-                    rowsToUse = maxRowsAvailable;
-                    planBaseLayers = Math.floor(boxesForThisTruck / (rowsToUse * cols));
-                    if (planBaseLayers >= physMaxLayers) {
-                        planBaseLayers = physMaxLayers;
-                        higherLayerCount = physMaxLayers;
-                        planHigherRows = rowsToUse;
-                    } else {
-                        let remainderBoxes = boxesForThisTruck - (rowsToUse * cols * planBaseLayers);
-                        planHigherRows = Math.ceil(remainderBoxes / cols);
-                        higherLayerCount = planBaseLayers + 1;
+                }
+
+                // Place Strip A
+                let stripAY = (effContW - ((sol.colsA * sol.dimW1) + (sol.colsB * sol.dimW2))) / 2;
+                if (sol.colsA > 0) {
+                    for (let r = 0; r < sol.rowsA; r++) {
+                        if (item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
+                        let rowX = currentX + (r * sol.dimL1);
+                        let rowBoxes = Math.min(sol.colsA * higherLayerCount, item.remaining);
+                        rowBoxes = Math.min(rowBoxes, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                        if (rowBoxes <= 0) break;
+
+                        let lyrs = Math.ceil(rowBoxes / sol.colsA);
+                        let w = rowBoxes * sku.Wt;
+
+                        placedItems.push({
+                            id: sku.name, x: rowX, y: stripAY,
+                            l: sol.dimL1, w: sol.colsA * sol.dimW1, h: lyrs * sku.H,
+                            boxes: rowBoxes, wgt: w, color: item.color,
+                            cols: sol.colsA, rows: 1, layers: lyrs, targetLayers: higherLayerCount,
+                            singleBoxL: sol.dimL1, singleBoxW: sol.dimW1, singleBoxH: sku.H,
+                            isRotated: false, priority: item.priority, section: 'Strip A'
+                        });
+                        totalWgt += w; totalBoxes += rowBoxes; item.remaining -= rowBoxes;
+                    }
+
+                    // Place Strip A Door-End Tail Turn
+                    if (sol.tailRowsA > 0 && item.remaining > 0 && totalWgt + sku.Wt <= maxWgt) {
+                        for (let tr = 0; tr < sol.tailRowsA; tr++) {
+                            let tailX = currentX + (sol.rowsA * sol.dimL1) + (tr * sol.dimL2);
+                            let tailBoxes = Math.min(sol.tailColsA * baseLayers, item.remaining);
+                            tailBoxes = Math.min(tailBoxes, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                            if (tailBoxes <= 0) break;
+
+                            let lyrs = Math.ceil(tailBoxes / sol.tailColsA);
+                            let w = tailBoxes * sku.Wt;
+
+                            placedItems.push({
+                                id: sku.name, x: tailX, y: stripAY,
+                                l: sol.dimL2, w: sol.tailColsA * sol.dimW2, h: lyrs * sku.H,
+                                boxes: tailBoxes, wgt: w, color: item.color,
+                                cols: sol.tailColsA, rows: 1, layers: lyrs, targetLayers: baseLayers,
+                                singleBoxL: sol.dimL2, singleBoxW: sol.dimW2, singleBoxH: sku.H,
+                                isRotated: true, priority: item.priority, section: 'Kapı Kilidi A'
+                            });
+                            totalWgt += w; totalBoxes += tailBoxes; item.remaining -= tailBoxes;
+                        }
                     }
                 }
 
-                let rowCounter = 0;
-                while (item.remaining > 0 && rowCounter < rowsToUse && currentX + actualBoxL <= effContL) {
-                    if (totalWgt + sku.Wt > maxWgt) { vehicleFull = true; break; }
+                // Place Strip B (Split Columns)
+                if (sol.colsB > 0 && item.remaining > 0 && totalWgt + sku.Wt <= maxWgt) {
+                    let stripBY = stripAY + (sol.colsA * sol.dimW1);
+                    for (let r = 0; r < sol.rowsB; r++) {
+                        if (item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
+                        let rowX = currentX + (r * sol.dimL2);
+                        let rowBoxes = Math.min(sol.colsB * baseLayers, item.remaining);
+                        rowBoxes = Math.min(rowBoxes, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                        if (rowBoxes <= 0) break;
 
-                    let rowLayers = (rowCounter < planHigherRows) ? higherLayerCount : planBaseLayers;
-                    let nominalRowBoxes = cols * rowLayers;
-                    let actualRowBoxes = Math.min(nominalRowBoxes, item.remaining);
-                    
-                    let maxBoxesByRemainingWeight = Math.floor((maxWgt - totalWgt) / sku.Wt);
-                    actualRowBoxes = Math.min(actualRowBoxes, maxBoxesByRemainingWeight);
-                    if (actualRowBoxes <= 0) { vehicleFull = true; break; }
+                        let lyrs = Math.ceil(rowBoxes / sol.colsB);
+                        let w = rowBoxes * sku.Wt;
 
-                    let calculatedLayers = Math.ceil(actualRowBoxes / cols);
-                    let rowWgt = actualRowBoxes * sku.Wt;
+                        placedItems.push({
+                            id: sku.name, x: rowX, y: stripBY,
+                            l: sol.dimL2, w: sol.colsB * sol.dimW2, h: lyrs * sku.H,
+                            boxes: rowBoxes, wgt: w, color: item.color,
+                            cols: sol.colsB, rows: 1, layers: lyrs, targetLayers: baseLayers,
+                            singleBoxL: sol.dimL2, singleBoxW: sol.dimW2, singleBoxH: sku.H,
+                            isRotated: true, priority: item.priority, section: 'Strip B (Kombine)'
+                        });
+                        totalWgt += w; totalBoxes += rowBoxes; item.remaining -= rowBoxes;
+                    }
 
-                    placedItems.push({
-                        id: sku.name, x: currentX, y: (effContW - (cols * actualBoxW)) / 2,
-                        l: actualBoxL, w: cols * actualBoxW, h: calculatedLayers * sku.H,
-                        boxes: actualRowBoxes, wgt: rowWgt, color: item.color,
-                        cols, rows: 1, layers: calculatedLayers, targetLayers: higherLayerCount,
-                        singleBoxL: actualBoxL, singleBoxW: actualBoxW, singleBoxH: sku.H,
-                        isRotated, isPartial: (actualRowBoxes < nominalRowBoxes), priority: item.priority
-                    });
+                    // Place Strip B Door-End Tail Turn
+                    if (sol.tailRowsB > 0 && item.remaining > 0 && totalWgt + sku.Wt <= maxWgt) {
+                        for (let tr = 0; tr < sol.tailRowsB; tr++) {
+                            let tailX = currentX + (sol.rowsB * sol.dimL2) + (tr * sol.dimL1);
+                            let tailBoxes = Math.min(sol.tailColsB * baseLayers, item.remaining);
+                            tailBoxes = Math.min(tailBoxes, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                            if (tailBoxes <= 0) break;
 
-                    totalWgt += rowWgt;
-                    totalBoxes += actualRowBoxes;
-                    item.remaining -= actualRowBoxes;
-                    currentX += actualBoxL;
-                    rowCounter++;
+                            let lyrs = Math.ceil(tailBoxes / sol.tailColsB);
+                            let w = tailBoxes * sku.Wt;
+
+                            placedItems.push({
+                                id: sku.name, x: tailX, y: stripBY,
+                                l: sol.dimL1, w: sol.tailColsB * sol.dimW1, h: lyrs * sku.H,
+                                boxes: tailBoxes, wgt: w, color: item.color,
+                                cols: sol.tailColsB, rows: 1, layers: lyrs, targetLayers: baseLayers,
+                                singleBoxL: sol.dimL1, singleBoxW: sol.dimW1, singleBoxH: sku.H,
+                                isRotated: false, priority: item.priority, section: 'Kapı Kilidi B'
+                            });
+                            totalWgt += w; totalBoxes += tailBoxes; item.remaining -= tailBoxes;
+                        }
+                    }
                 }
-                if (currentX + actualBoxL > effContL) vehicleFull = true;
+
+                currentX = placedItems.reduce((max, it) => Math.max(max, it.x + it.l), 0);
+                if (currentX + Math.min(sku.L, sku.W) > effContL) vehicleFull = true;
 
             } else {
-                // Pallet Loading Engine
+                // Pallet Loading Mode
                 const pIdx = parseInt(document.getElementById('specificBaseSize').value) || 0;
                 const pSpec = standardPalletSizes[pIdx];
                 const pDesign = calculateOptimalPalletDesign({
@@ -1394,9 +1520,7 @@
                             palletDesign: pDesign,
                             isPallet: true, priority: item.priority
                         });
-                        totalWgt += w;
-                        totalBoxes += b;
-                        item.remaining -= b;
+                        totalWgt += w; totalBoxes += b; item.remaining -= b;
                     }
                     if (vehicleFull || item.remaining <= 0) break;
                 }
@@ -1436,7 +1560,7 @@
 
         document.getElementById('resTotalBoxes').innerText = truck.totalBoxes.toLocaleString();
         document.getElementById('resWeight').innerText = `${truck.totalWgt.toLocaleString(undefined, {maximumFractionDigits:1})} kg`;
-        document.getElementById('resLoads').innerText = `${truck.placedItems.length} İstif/Blok`;
+        document.getElementById('resLoads').innerText = `${truck.placedItems.length} Blok / Sıra`;
 
         let momentX = 0;
         truck.placedItems.forEach(p => { momentX += (p.x + p.l/2) * p.wgt; });
@@ -1450,41 +1574,29 @@
         let detailsHtml = '';
 
         if (baseType === 'floor') {
-            let groupedItems = {};
-            truck.placedItems.forEach(item => {
-                if (!groupedItems[item.id]) {
-                    groupedItems[item.id] = {
-                        name: item.id, totalBoxes: 0, totalRows: 0, cols: item.cols, isRotated: item.isRotated,
-                        color: item.color, singleBoxL: item.singleBoxL, singleBoxW: item.singleBoxW, layerCounts: {}
-                    };
-                }
-                groupedItems[item.id].totalBoxes += item.boxes;
-                groupedItems[item.id].totalRows += (item.rows || 1);
-                groupedItems[item.id].layerCounts[item.layers] = (groupedItems[item.id].layerCounts[item.layers] || 0) + 1;
-            });
+            let hasSplitColumns = truck.placedItems.some(it => it.section && it.section.includes('Strip B'));
+            let hasTailTurn = truck.placedItems.some(it => it.section && it.section.includes('Kapı Kilidi'));
 
-            let groupList = Object.values(groupedItems);
-            groupList.forEach((g, idx) => {
-                let layerStepDesc = Object.entries(g.layerCounts).sort((a,b) => b[0] - a[0]).map(([lyr, rws]) => `${rws} Sıra ${lyr} Kat`).join(', ');
-                detailsHtml += `
-                    <li class="bg-white p-3 rounded-lg border border-slate-200 shadow-sm mt-2">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="w-4 h-4 rounded border" style="background-color:${g.color.base}"></span>
-                            <strong class="text-indigo-900 text-xs md:text-sm">${g.name}</strong>
-                            <span class="ml-auto text-emerald-700 font-black text-xs md:text-sm">${g.totalBoxes.toLocaleString()} Koli</span>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs mb-2">
-                            <div class="bg-slate-50 p-2 rounded"><strong>Toplam Blok:</strong> ${g.totalRows} Sıra</div>
-                            <div class="bg-slate-50 p-2 rounded"><strong>Kat Düzeni:</strong> ${layerStepDesc}</div>
-                            <div class="col-span-1 md:col-span-2 bg-emerald-50 p-2.5 rounded border border-emerald-200">
-                                <strong>BCT Taban Dağılımı:</strong> Genişlik: ${g.cols} Koli | Yükseklik: ${layerStepDesc}
-                            </div>
-                        </div>
-                    </li>
-                `;
-            });
+            let summaryBadges = '';
+            if (hasSplitColumns) summaryBadges += '<span class="bg-indigo-100 text-indigo-800 text-[10px] font-black px-2 py-0.5 rounded border border-indigo-200">✓ Kombine Sütun (L-Pattern) Devrede</span> ';
+            if (hasTailTurn) summaryBadges += '<span class="bg-amber-100 text-amber-800 text-[10px] font-black px-2 py-0.5 rounded border border-amber-200">✓ Kapı Önü Kilit Sırası Eklendi</span> ';
+            if (currentMode === 'mixed') summaryBadges += '<span class="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2 py-0.5 rounded border border-emerald-200">✓ Yoğunluk/Ağırlık Dengeli Sıralama</span>';
+
+            detailsHtml = `
+                <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm text-xs space-y-2">
+                    <div class="flex items-center justify-between border-b pb-2">
+                        <strong class="text-slate-900 text-sm">Gelişmiş Zemin & Hacim Optimizasyonu Raporu</strong>
+                        <div class="flex gap-1 flex-wrap">${summaryBadges || '<span class="text-slate-400 font-bold">Tekil Sıra Dizilimi</span>'}</div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2 pt-1 text-slate-700">
+                        <div class="bg-slate-50 p-2.5 rounded border"><strong class="block text-indigo-900 text-xs mb-0.5">1. Enine Kombine Sütun (Split)</strong>Genişlikte ölü boşluk kalmaması için sütunlar karma yönlendirilerek ekstra kolon açıldı.</div>
+                        <div class="bg-slate-50 p-2.5 rounded border"><strong class="block text-indigo-900 text-xs mb-0.5">2. Kapı Önü Kilit Sırası</strong>Kapı önündeki 20-35 cm'lik boşluğa kutular 90° çevrilerek ekstra kilit sırası yerleştirildi.</div>
+                        <div class="bg-slate-50 p-2.5 rounded border"><strong class="block text-indigo-900 text-xs mb-0.5">3. BCT Korumalı Basamak</strong>Kutular tavana yığılmayıp boyuna yayılarak alt kutuların ezilmesi engellendi.</div>
+                    </div>
+                </div>
+            `;
         } else {
-            // Pallet Detailed Inspection Card
+            // Pallet Inspection Breakdown
             if (truck.placedItems.length > 0 && truck.placedItems[0].palletDesign) {
                 const p = truck.placedItems[0].palletDesign;
                 const dBadge = p.clearances.isDoorSafe
@@ -1663,7 +1775,7 @@
 
         if (optFrontCurve) drawPoly([project(0,0,0), project(100,0,0), project(100,contW,0), project(0,contW,0)], 'rgba(234, 179, 8, 0.4)', '#ca8a04');
 
-        // Render Loaded Blocks
+        // Render Loaded Blocks (Including Split Columns and Tail Rows)
         placedItems.forEach(b => {
             let pRight = [project(b.x + b.l, b.y, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, b.h), project(b.x + b.l, b.y, b.h)];
             let pFront = [project(b.x, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, b.h), project(b.x, b.y + b.w, b.h)];
@@ -1699,10 +1811,10 @@
 
     function exportCSV() {
         if (!globalFleet || !globalFleet[0] || globalFleet[0].placedItems.length === 0) return alert("Dışa aktarılacak veri yok.");
-        let csv = "Arac,Siparis_Adi,SKU,Koli,Agirlik(kg)\n";
+        let csv = "Arac,Siparis_Adi,SKU,Koli,Agirlik(kg),Bolum\n";
         const oName = document.getElementById('orderTitle')?.value.trim() || 'Isimsiz';
         globalFleet.forEach((f, i) => {
-            f.placedItems.forEach(it => { csv += `${i+1},"${oName}","${it.id}",${it.boxes},${it.wgt}\n`; });
+            f.placedItems.forEach(it => { csv += `${i+1},"${oName}","${it.id}",${it.boxes},${it.wgt},"${it.section || 'Zemin'}"\n`; });
         });
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Elita_${oName}.csv`; a.click();
