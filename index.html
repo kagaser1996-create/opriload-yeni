@@ -280,7 +280,7 @@
                 </div>
                 <div class="input-group">
                     <label>Yükleme Modu</label>
-                    <input type="text" id="loadModeDisplay" value="Boyuna Tam Yayılım" readonly class="!bg-emerald-50 !text-emerald-800 font-bold border-emerald-200 text-[10px] text-center">
+                    <input type="text" id="loadModeDisplay" value="Maksimum Hacim & Boyuna Dağılım" readonly class="!bg-emerald-50 !text-emerald-800 font-bold border-emerald-200 text-[10px] text-center">
                 </div>
             </div>
 
@@ -289,16 +289,16 @@
                 <div class="section-header">Tekil Ürün Modu</div>
                 <div class="input-group mb-3">
                     <label>Ürün Seçimi</label>
-                    <select id="skuSelect" onchange="populateSKU(); autoSyncSingleTargetCapacity(); debouncedRunEngine();"></select>
+                    <select id="skuSelect" onchange="populateSKU(); isUserDefinedTarget = false; autoSyncSingleTargetCapacity(); debouncedRunEngine();"></select>
                 </div>
                 
                 <div class="input-group mb-3 p-3 bg-fuchsia-50 border border-fuchsia-200 rounded-lg">
                     <label class="!text-fuchsia-800 flex items-center justify-between">
-                        <span>Hedef Koli (İhtiyaç Kadar)</span>
-                        <span id="capacityHintBadge" class="text-[9px] bg-fuchsia-200 text-fuchsia-900 px-1.5 py-0.5 rounded font-bold">1 Araç Kapasitesi</span>
+                        <span>Hedef Koli (Otomatik Maksimum)</span>
+                        <span id="capacityHintBadge" class="text-[9px] bg-fuchsia-200 text-fuchsia-900 px-1.5 py-0.5 rounded font-bold">Maksimum Kapasite</span>
                     </label>
-                    <input type="number" id="targetBoxes" value="" placeholder="1 Araç Dolumu (Otomatik)" class="bg-white border-fuchsia-300 font-bold text-fuchsia-900" oninput="isUserDefinedTarget = true; debouncedRunEngine();">
-                    <span class="text-[10px] text-fuchsia-700 mt-1 block">Boş bırakırsanız 1 aracın tam kapasitesi otomatik yüklenir.</span>
+                    <input type="number" id="targetBoxes" value="" placeholder="Otomatik Maksimum" class="bg-white border-fuchsia-300 font-bold text-fuchsia-900" oninput="isUserDefinedTarget = (this.value !== ''); debouncedRunEngine();">
+                    <span class="text-[10px] text-fuchsia-700 mt-1 block">Boş bıraktığınızda araç, ağırlık ve BCT sınırları içindeki en yüksek koli adedi otomatik yüklenir.</span>
                 </div>
 
                 <div class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
@@ -311,17 +311,17 @@
 
             <!-- MIXED SKU PANEL -->
             <div id="panel-mixed" class="hidden">
-                <div class="section-header flex justify-between items-center mb-2">Karma Yük <span class="text-[9px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded font-bold">Yoğunluk/Ağırlık Dengeli</span></div>
-                <div class="text-[10px] text-slate-500 mb-2 font-semibold">Ağır ve yoğun koliler tabana, hacimli hafif koliler üst katlara dengelenerek boyuna yayılır.</div>
+                <div class="section-header flex justify-between items-center mb-2">Karma Yük <span class="text-[9px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded font-bold">Yoğunluk Dengeli</span></div>
+                <div class="text-[10px] text-slate-500 mb-2 font-semibold">Ağır/yoğun ürünler tabana yerleştirilerek boyuna yayılır; hafif ürünler üst katlara aktarılır.</div>
                 <div id="mixedList" class="space-y-1 mb-3"></div>
                 <button onclick="addNewMixedRow()" class="w-full bg-slate-200 text-slate-700 text-xs font-bold py-2 rounded border border-slate-300 hover:bg-slate-300 shadow-sm">+ Yeni Satır Ekle</button>
             </div>
             
-            <!-- BASE TYPE & WAREHOUSE / DOOR CONSTRAINTS -->
+            <!-- BASE TYPE & CONSTRAINTS -->
             <div class="section-header">Taşıma Tabanı & Yükseklik Limitleri</div>
             <div class="input-group mb-3">
                 <select id="baseType" onchange="handleBaseChange(); autoSyncSingleTargetCapacity(); debouncedRunEngine();">
-                    <option value="floor" selected>Dökme / Zemin Yükleme (Kapıya Kadar Tam Yayılım)</option>
+                    <option value="floor" selected>Dökme / Zemin Yükleme (Tam Boy Yayılımı)</option>
                     <option value="pallet">Ahşap Palet</option>
                     <option value="slipsheet">Slipsheet (Çekme)</option>
                 </select>
@@ -341,11 +341,11 @@
                 <div class="grid grid-cols-2 gap-2">
                     <div class="input-group">
                         <label>Depo Raf Yüksekliği (mm)</label>
-                        <input type="number" id="rackHeight" value="1800" class="bg-white border-amber-300 font-bold" oninput="debouncedRunEngine();">
+                        <input type="number" id="rackHeight" value="1800" class="bg-white border-amber-300 font-bold" oninput="autoSyncSingleTargetCapacity(); debouncedRunEngine();">
                     </div>
                     <div class="input-group">
                         <label>Kapı Eşik Limiti (mm)</label>
-                        <input type="number" id="containerDoorHeight" value="2550" class="bg-white border-amber-300 font-bold" oninput="debouncedRunEngine();">
+                        <input type="number" id="containerDoorHeight" value="2550" class="bg-white border-amber-300 font-bold" oninput="autoSyncSingleTargetCapacity(); debouncedRunEngine();">
                     </div>
                 </div>
             </div>
@@ -400,7 +400,7 @@
         <div class="bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col flex-grow min-h-[350px] md:min-h-[480px] relative">
             <div class="bg-slate-50 border-b border-slate-200 px-4 py-3 rounded-t-xl flex justify-between items-center z-10 relative">
                 <span class="text-sm font-bold text-slate-700">3D İZOMETRİK YÜKLEME SİMÜLASYONU</span>
-                <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200" id="badgeSimSubtitle">Kapıya Sıfır Tam Yayılım</span>
+                <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200" id="badgeSimSubtitle">Dinamik Çözücü Aktif</span>
             </div>
             
             <div class="flex-grow flex items-center justify-center p-2 md:p-4 bg-slate-800 relative rounded-b-xl overflow-hidden min-h-[320px] md:min-h-[450px]">
@@ -861,7 +861,7 @@
         if (inputs.rackH !== undefined) document.getElementById('rackHeight').value = inputs.rackH;
         if (inputs.doorH !== undefined) document.getElementById('containerDoorHeight').value = inputs.doorH;
 
-        isUserDefinedTarget = true;
+        isUserDefinedTarget = (inputs.targetBoxes !== '' && inputs.targetBoxes !== undefined);
         updateVehicleDims(); 
         handleBaseChange(); 
         debouncedRunEngine(); 
@@ -964,27 +964,65 @@
     }
 
     // =========================================================================
-    // 🚀 FLOOR OPTIMIZATION: ACCURATE CAPACITY & ORIENTATION ANALYSIS
+    // 🚀 DYNAMIC MULTI-CUTOFF OPTIMIZER (AUTOMATIC MAXIMUM SOLVER)
     // =========================================================================
-    function getBestFloorOrientation(effW, effL, boxL, boxW) {
-        // Option 1: Box length (L) along trailer length
-        const cols1 = Math.floor(effW / boxW);
-        const rows1 = Math.floor(effL / boxL);
-        const boxes1 = cols1 * rows1;
-        const len1 = rows1 * boxL;
+    function findOptimalFloorPlan(effW, effL, contH, sku, maxWgt) {
+        const boxL = sku.L;
+        const boxW = sku.W;
+        const boxH = sku.H;
+        const boxWt = sku.Wt;
 
-        // Option 2: Box width (W) along trailer length (Rotated)
-        const cols2 = Math.floor(effW / boxL);
-        const rows2 = Math.floor(effL / boxW);
-        const boxes2 = cols2 * rows2;
-        const len2 = rows2 * boxW;
+        // Cutoff 1: Vertical Layers Limit (BCT & Ceiling Clearance)
+        const physMaxLayers = Math.max(1, Math.min(sku.maxLayers, Math.floor((contH - 20) / boxH)));
 
-        // Pick option with greatest boxes, or if equal, the one that fills closer to the door
-        if (boxes2 > boxes1 || (boxes2 === boxes1 && len2 >= len1)) {
-            return { cols: cols2, rows: rows2, boxStepL: boxW, boxStepW: boxL, isRotated: true, totalFloorBoxes: boxes2 };
-        } else {
-            return { cols: cols1, rows: rows1, boxStepL: boxL, boxStepW: boxW, isRotated: false, totalFloorBoxes: boxes1 };
+        // Cutoff 2: Legal Gross Weight Limit
+        const maxBoxesByWeight = Math.floor(maxWgt / boxWt);
+
+        let bestPlan = null;
+        let maxBoxesFound = 0;
+
+        // Exhaustive combinatorial search across the container width:
+        // Strip A: 'a' columns of boxW (running boxL along length)
+        // Strip B: 'b' columns of boxL (running boxW along length)
+        const maxA = Math.floor(effW / boxW);
+        for (let a = 0; a <= maxA; a++) {
+            const widthUsedByA = a * boxW;
+            const remainingW = effW - widthUsedByA;
+            const b = Math.floor(remainingW / boxL);
+
+            if (a === 0 && b === 0) continue;
+
+            const rowsA = (a > 0) ? Math.floor(effL / boxL) : 0;
+            const rowsB = (b > 0) ? Math.floor(effL / boxW) : 0;
+
+            const layerBoxes = (a * rowsA) + (b * rowsB);
+            if (layerBoxes <= 0) continue;
+
+            // Maximum volume boxes possible across all available layers
+            const volumeBoxes = layerBoxes * physMaxLayers;
+            const feasibleBoxes = Math.min(volumeBoxes, maxBoxesByWeight);
+
+            if (feasibleBoxes > maxBoxesFound || 
+               (feasibleBoxes === maxBoxesFound && layerBoxes > (bestPlan ? bestPlan.layerBoxes : 0))) {
+                maxBoxesFound = feasibleBoxes;
+                bestPlan = {
+                    colsA: a,
+                    rowsA: rowsA,
+                    dimL1: boxL,
+                    dimW1: boxW,
+                    colsB: b,
+                    rowsB: rowsB,
+                    dimL2: boxW,
+                    dimW2: boxL,
+                    layerBoxes: layerBoxes,
+                    maxBoxes: feasibleBoxes,
+                    physMaxLayers: physMaxLayers,
+                    isSplit: (a > 0 && b > 0)
+                };
+            }
         }
+
+        return bestPlan;
     }
 
     // ==========================================
@@ -1116,11 +1154,9 @@
     }
 
     // ==========================================
-    // CAPACITY & TARGET CALCULATION
+    // AUTO-SYNC CAPACITY BASED ON ALL VARIABLES
     // ==========================================
     function autoSyncSingleTargetCapacity() {
-        if (isUserDefinedTarget && document.getElementById('targetBoxes').value !== '') return;
-
         const baseType = document.getElementById('baseType').value;
         const contL = parseInt(document.getElementById('contL').value) || 13600;
         const contW = parseInt(document.getElementById('contW').value) || 2420;
@@ -1137,13 +1173,10 @@
         if (!sku) return;
 
         let singleTruckMaxBoxes = 0;
-        const maxBoxesByWgt = Math.floor(maxWgt / sku.Wt);
 
         if (baseType === 'floor') {
-            const floorSol = getBestFloorOrientation(effContW, effContL, sku.L, sku.W);
-            const physMaxLayers = Math.max(1, Math.min(sku.maxLayers, Math.floor((contH - 20) / sku.H)));
-            const volumeLimit = (floorSol ? floorSol.totalFloorBoxes : 100) * physMaxLayers;
-            singleTruckMaxBoxes = Math.min(volumeLimit, maxBoxesByWgt);
+            const plan = findOptimalFloorPlan(effContW, effContL, contH, sku, maxWgt);
+            singleTruckMaxBoxes = plan ? plan.maxBoxes : Math.floor(maxWgt / sku.Wt);
         } else {
             const pIdx = parseInt(document.getElementById('specificBaseSize').value) || 0;
             const pSpec = standardPalletSizes[pIdx];
@@ -1160,12 +1193,17 @@
             let rowsDeep = Math.floor(effContL / pSpec.L);
             let totalPallets = colsAcross * rowsDeep;
             let volumeLimit = totalPallets * pDesign.totalBoxes;
-            singleTruckMaxBoxes = Math.min(volumeLimit, maxBoxesByWgt);
+            singleTruckMaxBoxes = Math.min(volumeLimit, Math.floor(maxWgt / sku.Wt));
         }
 
-        document.getElementById('targetBoxes').value = singleTruckMaxBoxes;
+        const targetInput = document.getElementById('targetBoxes');
         const badge = document.getElementById('capacityHintBadge');
-        if (badge) badge.innerText = `1 Araç = ${singleTruckMaxBoxes} Koli`;
+
+        if (!isUserDefinedTarget || targetInput.value === '') {
+            targetInput.value = singleTruckMaxBoxes;
+        }
+
+        if (badge) badge.innerText = `Maks: ${singleTruckMaxBoxes} Koli`;
     }
 
     function switchTab(mode) {
@@ -1180,7 +1218,7 @@
     function handleBaseChange() {
         const bt = document.getElementById('baseType').value;
         document.getElementById('palletDropdownGroup').style.display = (bt === 'pallet' || bt === 'slipsheet') ? 'block' : 'none';
-        document.getElementById('loadModeDisplay').value = bt === 'floor' ? 'Boyuna Tam Yayılım' : 'Paletli İstif';
+        document.getElementById('loadModeDisplay').value = bt === 'floor' ? 'Maksimum Hacim & Boyuna Dağılım' : 'Paletli İstif';
         syncOrderTitleToPrint();
     }
 
@@ -1239,7 +1277,7 @@
     function addNewMixedRow() { addMixedRowWithCount(0, 100); debouncedRunEngine(); }
 
     // =====================================================================
-    // 🚚 MAIN MULTI-TIER VEHICLE ENGINE (FULL BED SPREAD APPLIED TO ALL SKUS)
+    // 🚚 FULL BED SPREAD SIMULATION ENGINE
     // =====================================================================
     function runEngine() {
         const baseType = document.getElementById('baseType').value;
@@ -1260,8 +1298,12 @@
             const skuIdx = parseInt(document.getElementById('skuSelect').value) || 0;
             const sku = skuDatabase[skuIdx];
             if (!sku) return;
+
             let targetBoxes = parseInt(document.getElementById('targetBoxes').value);
-            if (isNaN(targetBoxes) || targetBoxes <= 0) targetBoxes = Math.floor(maxWgt / sku.Wt);
+            if (isNaN(targetBoxes) || targetBoxes <= 0) {
+                const plan = findOptimalFloorPlan(effContW, effContL, contH, sku, maxWgt);
+                targetBoxes = plan ? plan.maxBoxes : Math.floor(maxWgt / sku.Wt);
+            }
             queue.push({ sku, target: targetBoxes, color: colorMap[0], priority: 0 });
         } else {
             let rawQueue = [];
@@ -1315,90 +1357,105 @@
                 const availableL = effContL - currentX;
                 if (availableL <= 0) { vehicleFull = true; continue; }
 
-                // 1. Solve the optimal orientation that covers the floor with maximum rows up to the door
-                const sol = getBestFloorOrientation(effContW, availableL, sku.L, sku.W);
-                if (!sol || sol.totalFloorBoxes <= 0 || sol.rows <= 0) { vehicleFull = true; continue; }
+                // 1. Solve optimal floor plan with all width partitions and cutoffs
+                const plan = findOptimalFloorPlan(effContW, availableL, contH, sku, maxWgt - totalWgt);
+                if (!plan || plan.layerBoxes <= 0) { vehicleFull = true; continue; }
 
-                const physMaxLayers = Math.max(1, Math.min(sku.maxLayers, Math.floor((contH - 20) / sku.H)));
                 const maxBoxesByWeight = Math.floor((maxWgt - totalWgt) / sku.Wt);
                 const boxesForThisTruck = Math.min(item.remaining, maxBoxesByWeight);
                 if (boxesForThisTruck <= 0) { vehicleFull = true; break; }
 
-                // 2. Full-bed baseline layer calculation across ALL available rows
-                const totalRows = sol.rows;
-                const cols = sol.cols;
-                const floorCapacity = totalRows * cols;
+                // 2. Uniform Floor-First Distribution
+                // Calculate baseline layers that run across ALL available rows to the door
+                let baseLayers = Math.floor(boxesForThisTruck / plan.layerBoxes);
+                baseLayers = Math.max(1, Math.min(baseLayers, plan.physMaxLayers));
 
-                let baseLayers = 1;
-                let higherRowsCount = 0;
-                let higherLayerCount = 1;
-                let partialBoxes = 0;
+                let higherLayerCount = baseLayers;
+                let remainderBoxes = 0;
 
-                if (boxesForThisTruck >= floorCapacity) {
-                    // There are enough boxes to spread at least 1 full layer across all rows to the door
-                    baseLayers = Math.floor(boxesForThisTruck / floorCapacity);
-                    baseLayers = Math.max(1, Math.min(baseLayers, physMaxLayers));
-                    
-                    if (baseLayers >= physMaxLayers) {
-                        baseLayers = physMaxLayers;
-                        higherLayerCount = physMaxLayers;
-                        higherRowsCount = totalRows;
-                    } else {
-                        higherLayerCount = baseLayers + 1;
-                        const remainderBoxes = boxesForThisTruck - (baseLayers * floorCapacity);
-                        higherRowsCount = Math.floor(remainderBoxes / cols);
-                        partialBoxes = remainderBoxes % cols;
-                    }
-                } else {
-                    // Small batch: fill full rows of 1 layer from the front
-                    baseLayers = 0;
-                    higherLayerCount = 1;
-                    higherRowsCount = Math.floor(boxesForThisTruck / cols);
-                    partialBoxes = boxesForThisTruck % cols;
+                if (baseLayers < plan.physMaxLayers && (boxesForThisTruck > baseLayers * plan.layerBoxes)) {
+                    higherLayerCount = baseLayers + 1;
+                    remainderBoxes = boxesForThisTruck - (baseLayers * plan.layerBoxes);
                 }
 
-                const startY = (effContW - (cols * sol.boxStepW)) / 2;
+                const totalWidthUsed = (plan.colsA * plan.dimW1) + (plan.colsB * plan.dimW2);
+                const startY = (effContW - totalWidthUsed) / 2;
 
-                for (let r = 0; r < totalRows; r++) {
-                    if (item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
+                // Load Strip A
+                let stripAY = startY;
+                if (plan.colsA > 0) {
+                    let higherRowsA = Math.min(plan.rowsA, Math.floor(remainderBoxes / plan.colsA));
+                    let partialInRowA = (remainderBoxes % plan.colsA);
 
-                    let rowBoxes = 0;
-                    let rowLayers = 0;
+                    for (let r = 0; r < plan.rowsA; r++) {
+                        if (item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
 
-                    if (r < higherRowsCount) {
-                        rowLayers = higherLayerCount;
-                        rowBoxes = cols * higherLayerCount;
-                    } else if (r === higherRowsCount && partialBoxes > 0) {
-                        rowLayers = higherLayerCount;
-                        rowBoxes = (cols * baseLayers) + partialBoxes;
-                    } else {
-                        rowLayers = baseLayers;
-                        rowBoxes = cols * baseLayers;
+                        let rowLayers = baseLayers;
+                        let rowBoxes = plan.colsA * baseLayers;
+
+                        if (r < higherRowsA) {
+                            rowLayers = higherLayerCount;
+                            rowBoxes = plan.colsA * higherLayerCount;
+                        } else if (r === higherRowsA && partialInRowA > 0) {
+                            rowLayers = higherLayerCount;
+                            rowBoxes = (plan.colsA * baseLayers) + partialInRowA;
+                        }
+
+                        rowBoxes = Math.min(rowBoxes, item.remaining);
+                        rowBoxes = Math.min(rowBoxes, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                        if (rowBoxes <= 0) break;
+
+                        const rowX = currentX + (r * plan.dimL1);
+                        const rowWgt = rowBoxes * sku.Wt;
+
+                        placedItems.push({
+                            id: sku.name, x: rowX, y: stripAY,
+                            l: plan.dimL1, w: plan.colsA * plan.dimW1, h: rowLayers * sku.H,
+                            boxes: rowBoxes, wgt: rowWgt, color: item.color,
+                            cols: plan.colsA, rows: 1, layers: rowLayers, targetLayers: rowLayers,
+                            singleBoxL: plan.dimL1, singleBoxW: plan.dimW1, singleBoxH: sku.H,
+                            isRotated: false, priority: item.priority, section: 'Strip A'
+                        });
+
+                        totalWgt += rowWgt;
+                        totalBoxes += rowBoxes;
+                        item.remaining -= rowBoxes;
                     }
+                }
 
-                    rowBoxes = Math.min(rowBoxes, item.remaining);
-                    rowBoxes = Math.min(rowBoxes, Math.floor((maxWgt - totalWgt) / sku.Wt));
-                    if (rowBoxes <= 0) break;
+                // Load Strip B (Split columns)
+                if (plan.colsB > 0) {
+                    let stripBY = startY + (plan.colsA * plan.dimW1);
+                    for (let r = 0; r < plan.rowsB; r++) {
+                        if (item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
 
-                    const rowX = currentX + (r * sol.boxStepL);
-                    const rowWgt = rowBoxes * sku.Wt;
+                        let rowLayers = baseLayers;
+                        let rowBoxes = plan.colsB * baseLayers;
 
-                    placedItems.push({
-                        id: sku.name, x: rowX, y: startY,
-                        l: sol.boxStepL, w: cols * sol.boxStepW, h: rowLayers * sku.H,
-                        boxes: rowBoxes, wgt: rowWgt, color: item.color,
-                        cols: cols, rows: 1, layers: rowLayers, targetLayers: rowLayers,
-                        singleBoxL: sol.boxStepL, singleBoxW: sol.boxStepW, singleBoxH: sku.H,
-                        isRotated: sol.isRotated, priority: item.priority
-                    });
+                        rowBoxes = Math.min(rowBoxes, item.remaining);
+                        rowBoxes = Math.min(rowBoxes, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                        if (rowBoxes <= 0) break;
 
-                    totalWgt += rowWgt;
-                    totalBoxes += rowBoxes;
-                    item.remaining -= rowBoxes;
+                        const rowX = currentX + (r * plan.dimL2);
+                        const rowWgt = rowBoxes * sku.Wt;
+
+                        placedItems.push({
+                            id: sku.name, x: rowX, y: stripBY,
+                            l: plan.dimL2, w: plan.colsB * plan.dimW2, h: rowLayers * sku.H,
+                            boxes: rowBoxes, wgt: rowWgt, color: item.color,
+                            cols: plan.colsB, rows: 1, layers: rowLayers, targetLayers: rowLayers,
+                            singleBoxL: plan.dimL2, singleBoxW: plan.dimW2, singleBoxH: sku.H,
+                            isRotated: true, priority: item.priority, section: 'Strip B'
+                        });
+
+                        totalWgt += rowWgt;
+                        totalBoxes += rowBoxes;
+                        item.remaining -= rowBoxes;
+                    }
                 }
 
                 currentX = placedItems.reduce((max, it) => Math.max(max, it.x + it.l), 0);
-                if (currentX + sol.boxStepL > effContL) vehicleFull = true;
+                if (currentX + Math.min(sku.L, sku.W) > effContL) vehicleFull = true;
 
             } else {
                 // Pallet Loading Mode
@@ -1510,12 +1567,12 @@
                     <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm text-xs space-y-2">
                         <div class="flex items-center justify-between border-b pb-2">
                             <strong class="text-slate-900 text-sm">${g.name} &bull; Taban Dağılım Raporu</strong>
-                            <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-black text-xs">${g.totalBoxes} Koli (${g.totalRows} Sıra)</span>
+                            <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-black text-xs">${g.totalBoxes} Koli (${g.totalRows} Blok/Sıra)</span>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-2 pt-1 text-slate-700">
-                            <div class="bg-slate-50 p-2.5 rounded border"><strong class="block text-indigo-900 text-xs mb-0.5">Boyuna Yayılım</strong>Yük önde yığılmayıp dorse tabanına yayılarak kapıya kadar ${g.totalRows} sıra olarak uzatılmıştır.</div>
-                            <div class="bg-slate-50 p-2.5 rounded border"><strong class="block text-indigo-900 text-xs mb-0.5">Kat Kademesi</strong>${layerStepDesc} olarak kademelendirilmiş, alt koliler üzerindeki BCT yükü dengelenmiştir.</div>
-                            <div class="bg-slate-50 p-2.5 rounded border"><strong class="block text-indigo-900 text-xs mb-0.5">Kutu Yönü</strong>${g.isRotated ? "Kutular YAN yerleştirilmiştir (Kısa kenar tır uzunluğuna paralel)." : "Kutular DÜZ yerleştirilmiştir (Uzun kenar tır uzunluğuna paralel)."}</div>
+                            <div class="bg-slate-50 p-2.5 rounded border"><strong class="block text-indigo-900 text-xs mb-0.5">Boyuna Tam Yayılım</strong>Kutular dorse tabanına yayılarak kapıya kadar ${g.totalRows} sıra olarak uzatılmış, arkada boşluk bırakılmamıştır.</div>
+                            <div class="bg-slate-50 p-2.5 rounded border"><strong class="block text-indigo-900 text-xs mb-0.5">Kat Dağılımı</strong>${layerStepDesc} olarak kademelendirilmiş, alt koliler üzerindeki BCT yükü eşitlenmiştir.</div>
+                            <div class="bg-slate-50 p-2.5 rounded border"><strong class="block text-indigo-900 text-xs mb-0.5">Hacim Kullanımı</strong>Enine ve boyuna ölçüler dinamik çözücüyle optimize edilip maksimum doluluk elde edilmiştir.</div>
                         </div>
                     </div>
                 `;
@@ -1735,10 +1792,10 @@
 
     function exportCSV() {
         if (!globalFleet || !globalFleet[0] || globalFleet[0].placedItems.length === 0) return alert("Dışa aktarılacak veri yok.");
-        let csv = "Arac,Siparis_Adi,SKU,Koli,Agirlik(kg)\n";
+        let csv = "Arac,Siparis_Adi,SKU,Koli,Agirlik(kg),Bolum\n";
         const oName = document.getElementById('orderTitle')?.value.trim() || 'Isimsiz';
         globalFleet.forEach((f, i) => {
-            f.placedItems.forEach(it => { csv += `${i+1},"${oName}","${it.id}",${it.boxes},${it.wgt}\n`; });
+            f.placedItems.forEach(it => { csv += `${i+1},"${oName}","${it.id}",${it.boxes},${it.wgt},"${it.section || 'Zemin'}"\n`; });
         });
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Elita_${oName}.csv`; a.click();
