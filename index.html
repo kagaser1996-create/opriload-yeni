@@ -397,11 +397,11 @@
                 
                 <div class="input-group mb-3 p-3 bg-fuchsia-50 border border-fuchsia-200 rounded-lg">
                     <label class="!text-fuchsia-800 flex items-center justify-between">
-                        <span>Hedef Koli (Otomatik Maksimum)</span>
+                        <span>Hedef Adet / Talep (İhtiyaç Kadar)</span>
                         <span id="capacityHintBadge" class="text-[9px] bg-fuchsia-200 text-fuchsia-900 px-1.5 py-0.5 rounded font-bold">Maksimum Kapasite</span>
                     </label>
-                    <input type="number" id="targetBoxes" value="" placeholder="Otomatik Maksimum" class="bg-white border-fuchsia-300 font-bold text-fuchsia-900" oninput="isUserDefinedTarget = (this.value !== ''); debouncedRunEngine();">
-                    <span class="text-[10px] text-fuchsia-700 mt-1 block">Boş bıraktığınızda araç, tonaj ve BCT sınırları içindeki en yüksek koli adedi otomatik yüklenir.</span>
+                    <input type="number" id="targetBoxes" value="" placeholder="Otomatik Araç Kapasitesi" class="bg-white border-fuchsia-300 font-bold text-fuchsia-900" oninput="isUserDefinedTarget = (this.value !== ''); debouncedRunEngine();">
+                    <span class="text-[10px] text-fuchsia-700 mt-1 block">Boş bıraktığınızda 1 aracın yasal ve fiziksel taşıma miktarı otomatik hesaplanır.</span>
                 </div>
 
                 <div class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
@@ -447,7 +447,7 @@
                         <label class="text-amber-900 font-bold">Hedef İstif Katı</label>
                         <select id="palletTargetLayers" class="bg-white border-amber-400 font-bold text-amber-950" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();">
                             <option value="auto" selected>Otomatik (Maksimum)</option>
-                            <option value="2">2 Kat (Çift İstif / Duble)</option>
+                            <option value="2">2 Kat (Duble / Çift İstif)</option>
                             <option value="3">3 Kat</option>
                             <option value="4">4 Kat (Standart Saha)</option>
                             <option value="5">5 Kat</option>
@@ -489,33 +489,37 @@
     <div class="flex-grow flex flex-col gap-4 lg:overflow-y-auto print-full-width custom-scrollbar lg:pr-1" id="printArea">
         <div id="fleetPaginationContainer" class="no-print"></div>
 
-        <!-- STATS BAR -->
+        <!-- STATS BAR: TAŞIMA MİKTARI ODAKLI KPI'LAR -->
         <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4 print-grid print-stats">
             <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center">
-                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Maksimum Adet</p>
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1" id="lblMetricTotalBoxes">Toplam Taşıma Miktarı</p>
                 <p class="text-xl md:text-2xl font-black text-emerald-600 leading-none" id="resTotalBoxes">-</p>
+                <span class="text-[10px] text-slate-400 font-semibold mt-1" id="resTotalBoxesSub">Araç İçi Net Adet</span>
             </div>
             <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center">
-                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Toplam Brüt Ağırlık</p>
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Taşıma Brüt Ağırlığı</p>
                 <p class="text-xl md:text-2xl font-black text-rose-600 leading-none" id="resWeight">-</p>
+                <span class="text-[10px] text-slate-400 font-semibold mt-1" id="resWeightSub">Ürün + Ambalaj / Dara</span>
             </div>
             <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center">
-                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Yük İstifi</p>
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1" id="lblMetricLoads">Taşıma Birimi (İstif)</p>
                 <p class="text-xl md:text-2xl font-black text-slate-800 leading-none" id="resLoads">-</p>
+                <span class="text-[10px] text-slate-400 font-semibold mt-1" id="resLoadsSub">Palet / Sıra Dağılımı</span>
             </div>
             <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center">
-                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Durum / Ağırlık Merkezi</p>
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Sefer & Doluluk Oranı</p>
                 <p class="text-xs md:text-sm font-bold text-sky-700 leading-tight mt-1" id="resStatus">-</p>
+                <span class="text-[10px] text-slate-400 font-semibold mt-1" id="resStatusSub">Ağırlık Merkezi (CoG)</span>
             </div>
         </div>
 
-        <!-- OPERATOR INSTRUCTIONS -->
+        <!-- OPERATOR INSTRUCTIONS & DETAILED TRANSPORT SUMMARY -->
         <div id="layerOptimizationInfo"><div id="optimizationDetailsList"></div></div>
 
         <!-- 3D CANVAS AREA -->
         <div class="bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col flex-grow min-h-[350px] md:min-h-[480px] relative">
             <div class="bg-slate-50 border-b border-slate-200 px-4 py-3 rounded-t-xl flex justify-between items-center z-10 relative">
-                <span class="text-sm font-bold text-slate-700">3D İZOMETRİK YÜKLEME SİMÜLASYONU</span>
+                <span class="text-sm font-bold text-slate-700">3D İZOMETRİK TAŞIMA & YÜKLEME SİMÜLASYONU</span>
                 <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200" id="badgeSimSubtitle">Dinamik Çözücü Aktif</span>
             </div>
             
@@ -667,13 +671,12 @@
         populateSKU();
         isUserDefinedTarget = false;
 
-        // Yuvarlak teneke seçildiyse ve palet modu aktifse, 100x120 Sanayi paleti 3-2-3 petek dizilimini desteklediğinden önerilir
         const skuIdx = parseInt(document.getElementById('skuSelect').value) || 0;
         const sku = skuDatabase[skuIdx];
         if (sku && sku.shape === 'round') {
             const palSelect = document.getElementById('specificBaseSize');
             if (palSelect && palSelect.value === "0") {
-                palSelect.value = "1"; // 100x120 Sanayi Paleti
+                palSelect.value = "1"; // 100x120 Sanayi Paleti otomatik seçilir (3-2-3-3 dizilimi için)
             }
         }
 
@@ -1278,8 +1281,8 @@
                 isRound: true
             });
 
-            // 2. Boyuna Şaşırtmalı / 3-2-3 Petek Dizilimi (Nesting along Length)
-            const rowPitchX = D * Math.sqrt(3) / 2; // ~0.866025 * D
+            // 2. Boyuna Şaşırtmalı / 3-2-3-3 Petek Dizilimi (Nesting along Length)
+            const rowPitchX = D * Math.sqrt(3) / 2; // ~0.866 * D
             if (palletL >= D && rowPitchX > 0) {
                 const numColsOdd = Math.floor(palletW / D);
                 const numColsEven = Math.floor((palletW - (D / 2)) / D);
@@ -1292,11 +1295,10 @@
                     const offX = Math.max(0, (palletL - totalL) / 2);
 
                     for (let r = 0; r < maxRowsL; r++) {
-                        // 3-2-3-3 kombinasyonu veya ardışık petek: Son sıra da tam sığıyorsa 3 alır
                         let isEven = (r % 2 === 1);
                         let colsInRow = isEven ? numColsEven : numColsOdd;
                         
-                        // Palet boyu ve eni izin veriyorsa son sırayı 3'lüye tamamlama kontrolü
+                        // Palet boyu ve eni izin veriyorsa son sırayı 3'lüye tamamlama kontrolü (3-2-3-3 = 11'li formasyon)
                         if (r === maxRowsL - 1 && r >= 3 && numColsOdd >= 3 && (palletW >= numColsOdd * D)) {
                             colsInRow = numColsOdd;
                             isEven = false;
@@ -1317,7 +1319,7 @@
                     }
 
                     patterns.push({
-                        type: maxRowsL === 4 && countStag === 11 ? '3-2-3-3 Petek (11 Adet/Kat)' : 'Şaşırtmalı Petek Dizilimi',
+                        type: (maxRowsL === 4 && countStag === 11) ? '3-2-3-3 Petek (11 Adet/Kat)' : 'Şaşırtmalı Petek Dizilimi',
                         count: countStag,
                         layout: stagBoxes,
                         isRound: true
@@ -1424,7 +1426,6 @@
         const maxLayersByWeight = Math.floor((maxPalletWeight - palletTare) / (boxesPerLayer * boxWt));
         const maxLayersByBCT = maxLayersBCT || 8;
 
-        // Kat Sayısı Kısıtı (Kullanıcı 2 veya 4 kat seçtiğinde doğrudan uygulanır)
         let calculatedLayers = Math.max(1, Math.min(maxLayersByHeight, maxLayersByWeight, maxLayersByBCT));
         let finalLayers = calculatedLayers;
 
@@ -1574,7 +1575,7 @@
             targetInput.value = singleTruckMaxBoxes;
         }
 
-        if (badge) badge.innerText = `Maks: ${singleTruckMaxBoxes} Adet`;
+        if (badge) badge.innerText = `Taşıma: ${singleTruckMaxBoxes} Adet`;
     }
 
     function switchTab(mode) {
@@ -1932,7 +1933,7 @@
     }
 
     // ==========================================
-    // UI & REPORTING UPDATES
+    // UI & REPORTING UPDATES (TAŞIMA MİKTARI ODAKLI)
     // ==========================================
     function updateFleetUI() {
         let pagContainer = document.getElementById('fleetPaginationContainer');
@@ -1940,7 +1941,7 @@
             let pagHtml = `<div class="flex gap-2 mb-2 p-2 bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">`;
             globalFleet.forEach((v, idx) => {
                 let activeClass = idx === currentVehicleIdx ? 'bg-sky-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200';
-                pagHtml += `<button onclick="currentVehicleIdx = ${idx}; updateFleetUI();" class="px-4 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap ${activeClass}">🚚 Araç ${idx + 1} (${v.totalBoxes} Adet)</button>`;
+                pagHtml += `<button onclick="currentVehicleIdx = ${idx}; updateFleetUI();" class="px-4 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap ${activeClass}">🚚 Araç ${idx + 1} (${v.totalBoxes} Adet Taşıma)</button>`;
             });
             pagHtml += `</div>`;
             pagContainer.innerHTML = pagHtml;
@@ -1950,23 +1951,43 @@
 
         let truck = globalFleet[currentVehicleIdx] || { placedItems: [], totalBoxes: 0, totalWgt: 0, gapL: 0, gapW: 0 };
         const ctx = globalEngineContext;
+        const baseType = document.getElementById('baseType').value;
+        const isPalletMode = (baseType === 'pallet' || baseType === 'slipsheet');
 
-        document.getElementById('resTotalBoxes').innerText = truck.totalBoxes.toLocaleString();
+        // 1. Toplam Taşıma Miktarı
+        document.getElementById('resTotalBoxes').innerText = `${truck.totalBoxes.toLocaleString()} Adet`;
+        document.getElementById('resTotalBoxesSub').innerText = isPalletMode 
+            ? `${truck.placedItems.length} Palet Üzerinde Net Yük` 
+            : `Dorse Tabanında Dökme Yük`;
+
+        // 2. Taşıma Ağırlığı
         document.getElementById('resWeight').innerText = `${truck.totalWgt.toLocaleString(undefined, {maximumFractionDigits:1})} kg`;
-        document.getElementById('resLoads').innerText = `${truck.placedItems.length} Blok / Sıra`;
+        let weightPct = Math.min(100, Math.round((truck.totalWgt / (ctx.maxWgt || 25000)) * 100));
+        document.getElementById('resWeightSub').innerText = `Yasal Sınır: ${(ctx.maxWgt || 25000).toLocaleString()} kg (%${weightPct} Dolu)`;
 
+        // 3. Taşıma Birimi (İstif / Palet Sayısı)
+        if (isPalletMode) {
+            document.getElementById('lblMetricLoads').innerText = "Taşınan Palet Sayısı";
+            document.getElementById('resLoads').innerText = `${truck.placedItems.length} Palet`;
+            let unitPerPal = truck.placedItems.length > 0 && truck.placedItems[0].palletDesign ? truck.placedItems[0].palletDesign.totalBoxes : 0;
+            document.getElementById('resLoadsSub').innerText = `Palet Başı: ${unitPerPal} Adet`;
+        } else {
+            document.getElementById('lblMetricLoads').innerText = "Taşıma Sıra / Blok";
+            document.getElementById('resLoads').innerText = `${truck.placedItems.length} Blok / Sıra`;
+            document.getElementById('resLoadsSub').innerText = "Dorse Boyunca Sıralı";
+        }
+
+        // 4. Sefer / CoG
         let momentX = 0;
         truck.placedItems.forEach(p => { momentX += (p.x + p.l/2) * p.wgt; });
         let cogX = truck.totalWgt > 0 ? (momentX / truck.totalWgt) : 0;
-        let weightPct = Math.min(100, Math.round((truck.totalWgt / (ctx.maxWgt || 25000)) * 100));
 
-        document.getElementById('resStatus').innerText = weightPct >= 99 ? `⚠️ Ağırlık Sınırında (CoG: ${(cogX/1000).toFixed(1)}m)` : `Optimum (CoG: ${(cogX/1000).toFixed(1)}m)`;
-        document.getElementById('resStatus').className = weightPct >= 99 ? "text-xs md:text-sm font-bold text-rose-600 mt-1" : "text-xs md:text-sm font-bold text-emerald-600 mt-1";
+        document.getElementById('resStatus').innerText = weightPct >= 99 ? `⚠️ Ağırlık Sınırında` : `Optimum (%${weightPct} Tonaj)`;
+        document.getElementById('resStatusSub').innerText = `Ağırlık Merkezi (CoG): ${(cogX/1000).toFixed(1)}m`;
 
-        const baseType = document.getElementById('baseType').value;
         let detailsHtml = '';
 
-        if (baseType === 'floor') {
+        if (!isPalletMode) {
             let groupedItems = {};
             truck.placedItems.forEach(item => {
                 if (!groupedItems[item.id]) {
@@ -1988,15 +2009,15 @@
                     .join(', ');
 
                 detailsHtml += `
-                    <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm text-xs space-y-2">
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-xs space-y-3">
                         <div class="flex items-center justify-between border-b pb-2">
-                            <strong class="text-slate-900 text-sm">${g.isRound ? '⚪ ' : '⏹ '}${g.name} &bull; Taban Dağılım Raporu</strong>
-                            <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-black text-xs">${g.totalBoxes} Adet (${g.totalRows} Blok/Sıra)</span>
+                            <strong class="text-slate-900 text-sm">${g.isRound ? '⚪ ' : '⏹ '}${g.name} &bull; Araç İçi Taşıma Miktarı Raporu</strong>
+                            <span class="text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded font-black text-xs">Bu Araçta Toplam: ${g.totalBoxes} Adet</span>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-2 pt-1 text-slate-700">
-                            <div class="bg-slate-50 p-2.5 rounded border"><strong class="block text-indigo-900 text-xs mb-0.5">Boyuna Tam Yayılım</strong>Yük dorse tabanına yayılarak kapıya kadar ${g.totalRows} sıra boyunca yerleştirilmiş ve arka boşluk minimize edilmiştir.</div>
-                            <div class="bg-slate-50 p-2.5 rounded border"><strong class="block text-indigo-900 text-xs mb-0.5">Kat Dağılımı</strong>${layerStepDesc} olarak kademelendirilmiş, alt ürünler üzerindeki BCT / ezilme yükü dengelenmiştir.</div>
-                            <div class="bg-slate-50 p-2.5 rounded border"><strong class="block text-indigo-900 text-xs mb-0.5">Geometri & Doluluk</strong>${g.isRound ? 'Silindirik teneke formatında çap bazlı dizilmiştir.' : 'Kutu / kare teneke formatında enine-boyuna optimum yön seçilmiştir.'}</div>
+                            <div class="bg-slate-50 p-2.5 rounded border"><strong class="block text-indigo-900 text-xs mb-0.5">Taşıma Formatı:</strong>${g.totalRows} Sıra dökme boyuna yayılım ile kapı eşiğine sıfır yanaşma sağlanmıştır.</div>
+                            <div class="bg-slate-50 p-2.5 rounded border"><strong class="block text-indigo-900 text-xs mb-0.5">Kat Dağılımı:</strong>${layerStepDesc} olarak kademelendirilmiş, alt ürünler üzerindeki BCT ezilme yükü dengelenmiştir.</div>
+                            <div class="bg-slate-50 p-2.5 rounded border"><strong class="block text-indigo-900 text-xs mb-0.5">Yük Dağılımı:</strong>Aks ağırlık dengesi korunmuş, dorse arkasında toplanma ve devrilme engellenmiştir.</div>
                         </div>
                     </div>
                 `;
@@ -2005,6 +2026,11 @@
             // Pallet Details Card
             if (truck.placedItems.length > 0 && truck.placedItems[0].palletDesign) {
                 const p = truck.placedItems[0].palletDesign;
+                const totalPalletInVehicle = truck.placedItems.length;
+                const totalUnitsInVehicle = truck.totalBoxes;
+                const totalPalletTare = totalPalletInVehicle * (standardPalletSizes[document.getElementById('specificBaseSize').value]?.tare || 25);
+                const netProductWeight = (truck.totalWgt - totalPalletTare);
+
                 const dBadge = p.clearances.isDoorSafe
                     ? `<span class="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded font-bold">✓ Kapıdan Rahat Geçer (${Math.floor(p.clearances.doorClearance)}mm Eşik Payı)</span>`
                     : `<span class="text-rose-700 bg-rose-100 px-2 py-0.5 rounded font-bold">⚠️ Kapı Eşiğine Çarpar (-${Math.abs(Math.floor(p.clearances.doorClearance))}mm)</span>`;
@@ -2013,47 +2039,74 @@
                     : `<span class="text-rose-700 bg-rose-100 px-2 py-0.5 rounded font-bold">⚠️ Rafa Sığmaz (Yükseklik Aşımı)</span>`;
 
                 const safetyProtocolText = p.isRound 
-                    ? `<div class="bg-amber-50 border border-amber-200 p-2.5 rounded text-amber-900 mt-2">
-                        <strong class="block text-xs uppercase mb-0.5">⚠️ Teneke Paletleme Güvenlik & Petek Protokolü:</strong>
+                    ? `<div class="bg-amber-50 border border-amber-200 p-3 rounded-lg text-amber-900 mt-2">
+                        <strong class="block text-xs uppercase mb-1">⚠️ Teneke Paletleme & Taşıma Güvenlik Protokolü:</strong>
                         <ul class="list-disc pl-4 space-y-0.5 text-[11px]">
-                            <li><strong>3-2-3 (11'li Petek) & Çember Koruması:</strong> 100x120 paletlerde 11 adetli petek dizilimi uygulanır. Metal sürtünmesini önlemek için katlar arasına mukavva separatör konulmalıdır.</li>
-                            <li><strong>Kat Tercihi:</strong> Araç içi çift istif için 2 kat (Duble), tek kat sevkiyatlar için 4 kat önerilir.</li>
-                            <li><strong>Sıfır Taşma Güvencesi:</strong> Palet kenarından dışarı taşma kesinlikle sıfırdır. Köşebent ve gerdirilmiş streç uygulanmalıdır.</li>
+                            <li><strong>3-2-3 (11'li Petek Formasyonu):</strong> 100x120 Sanayi Paleti üzerinde her katta 11 adet teneke yerleşir. Katlar arasına mukavva separatör konulmalıdır.</li>
+                            <li><strong>Araç İçi Taşıma Miktarı:</strong> Bu araca toplam <strong>${totalPalletInVehicle} Palet</strong> yerleştirilmiş olup toplam <strong>${totalUnitsInVehicle.toLocaleString()} Adet Teneke</strong> taşınmaktadır.</li>
+                            <li><strong>Çember Koruması:</strong> Üst tenekeler alt tenekelerin çemberine tam oturur. 4 köşeye L-köşebent takılarak en az 5 tur gerdirilmiş streç uygulanmalıdır.</li>
                         </ul>
                        </div>`
-                    : `<div class="bg-indigo-50 border border-indigo-200 p-2.5 rounded text-indigo-900 mt-2">
-                        <strong class="block text-xs uppercase mb-0.5">📦 Koli Paletleme Güvenlik Protokolü:</strong>
+                    : `<div class="bg-indigo-50 border border-indigo-200 p-3 rounded-lg text-indigo-900 mt-2">
+                        <strong class="block text-xs uppercase mb-1">📦 Koli Paletleme & Taşıma Özeti:</strong>
                         <ul class="list-disc pl-4 space-y-0.5 text-[11px]">
+                            <li><strong>Araç İçi Taşıma:</strong> Toplam <strong>${totalPalletInVehicle} Palet</strong> (${totalUnitsInVehicle.toLocaleString()} Koli) sevk edilmektedir.</li>
                             <li><strong>BCT Koruma:</strong> Kutu köşeleri palet sınırlarına tam hizalanmış, ezilme direnci %100 korunmuştur.</li>
-                            <li><strong>Dikey Köşebent:</strong> Üst katların devrilmesini engellemek için palet 4 köşesine L-köşebent takılarak sarılmalıdır.</li>
                         </ul>
                        </div>`;
 
                 detailsHtml = `
                     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-xs space-y-3">
-                        <div class="flex justify-between items-center border-b pb-2">
-                            <strong class="text-slate-800 text-sm">${p.isRound ? '⚪ Yuvarlak Teneke' : '⏹ Koli'} Palet Tasarımı ve Güvenlik Analizi</strong>
-                            <span class="text-indigo-700 bg-indigo-50 font-bold px-2 py-1 rounded">Dizilim Deseni: ${p.bestPattern}</span>
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-2 gap-2">
+                            <div>
+                                <strong class="text-slate-800 text-sm block">🚚 ARAÇ TAŞIMA KAPASİTESİ & PALET DAĞILIM RAPORU</strong>
+                                <span class="text-[11px] text-slate-500">Seçilen Araç ve Palet Tipine Göre Net Taşıma Rakamları</span>
+                            </div>
+                            <span class="text-indigo-700 bg-indigo-50 font-bold px-2.5 py-1 rounded text-right">${p.bestPattern}</span>
                         </div>
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                            <div class="p-2 bg-slate-50 rounded border"><span class="text-slate-500 block text-[10px] uppercase font-bold">Kat Başına Adet</span><strong>${p.boxesPerLayer} Adet</strong></div>
-                            <div class="p-2 bg-slate-50 rounded border"><span class="text-slate-500 block text-[10px] uppercase font-bold">İstif Kat Sayısı</span><strong>${p.finalLayers} Kat</strong></div>
-                            <div class="p-2 bg-slate-50 rounded border"><span class="text-slate-500 block text-[10px] uppercase font-bold">Palet Başı Toplam</span><strong class="text-emerald-600">${p.totalBoxes} Adet</strong></div>
-                            <div class="p-2 bg-slate-50 rounded border"><span class="text-slate-500 block text-[10px] uppercase font-bold">Palet Toplam Yükseklik</span><strong class="text-slate-800">${p.totalHeight} mm</strong></div>
+
+                        <!-- 4 ANA TAŞIMA GÖSTERGESİ -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                            <div class="p-2.5 bg-white rounded-lg border shadow-xs">
+                                <span class="text-slate-500 block text-[10px] uppercase font-bold">Araçtaki Palet</span>
+                                <strong class="text-base text-indigo-900 font-black">${totalPalletInVehicle} Palet</strong>
+                                <span class="text-[10px] text-slate-400 block mt-0.5">Araç İçi Toplam</span>
+                            </div>
+                            <div class="p-2.5 bg-white rounded-lg border shadow-xs">
+                                <span class="text-slate-500 block text-[10px] uppercase font-bold">Palet Başı Adet</span>
+                                <strong class="text-base text-slate-800 font-black">${p.totalBoxes} Adet</strong>
+                                <span class="text-[10px] text-slate-400 block mt-0.5">${p.finalLayers} Kat × ${p.boxesPerLayer} Adet</span>
+                            </div>
+                            <div class="p-2.5 bg-white rounded-lg border shadow-xs">
+                                <span class="text-emerald-700 block text-[10px] uppercase font-bold">Toplam Taşıma Miktarı</span>
+                                <strong class="text-base text-emerald-600 font-black">${totalUnitsInVehicle.toLocaleString()} Adet</strong>
+                                <span class="text-[10px] text-emerald-700 block mt-0.5">${totalPalletInVehicle} Palet × ${p.totalBoxes} Adet</span>
+                            </div>
+                            <div class="p-2.5 bg-white rounded-lg border shadow-xs">
+                                <span class="text-rose-700 block text-[10px] uppercase font-bold">Brüt Taşıma Ağırlığı</span>
+                                <strong class="text-base text-rose-600 font-black">${truck.totalWgt.toLocaleString(undefined, {maximumFractionDigits:1})} kg</strong>
+                                <span class="text-[10px] text-slate-400 block mt-0.5">${netProductWeight.toLocaleString(undefined, {maximumFractionDigits:0})} kg Net + ${totalPalletTare} kg Dara</span>
+                            </div>
                         </div>
+
                         <div class="p-3 bg-slate-50 rounded-lg border space-y-1.5">
                             <div class="flex justify-between items-center"><span><strong>Konteyner Kapı Girişi:</strong> (Eşik Payı: ${p.clearances.doorClearance.toFixed(0)} mm)</span>${dBadge}</div>
                             <div class="flex justify-between items-center"><span><strong>Depo Raf Yüksekliği:</strong> (Kalan: ${p.clearances.rackClearance.toFixed(0)} mm)</span>${rBadge}</div>
-                            <div class="text-[11px] text-slate-500 pt-1 border-t"><strong>Kritik Kısıtlayıcı Faktör:</strong> <span class="text-indigo-700 font-semibold">${p.limitingFactor}</span></div>
+                            <div class="text-[11px] text-slate-500 pt-1 border-t flex justify-between items-center">
+                                <span><strong>Kritik Kısıtlayıcı Faktör:</strong> <span class="text-indigo-700 font-semibold">${p.limitingFactor}</span></span>
+                                <span><strong>Palet Yüksekliği:</strong> <strong class="text-slate-800">${p.totalHeight} mm</strong></span>
+                            </div>
                         </div>
+
                         ${safetyProtocolText}
+
                         <div class="flex items-center gap-4 border-t pt-3">
                             <div class="w-24 h-24 bg-slate-50 border rounded p-1 flex-shrink-0">
                                 <canvas id="pallet2DCanvas" width="96" height="96" class="w-full h-full object-contain"></canvas>
                             </div>
-                            <div class="text-[11px] text-slate-500">
-                                <strong>Palet 2D Taban Dizilimi (${p.isRound ? 'Dairesel Petek Teneke' : 'Kutu Grid'})</strong><br>
-                                Her bir kat yukarıdaki desene göre dizilir. Katlar arası <strong>${p.finalLayers} kat</strong> istiflenerek paletlenir.
+                            <div class="text-[11px] text-slate-600">
+                                <strong class="text-slate-900 block mb-0.5">Palet 2D Kat Dizilimi (${p.isRound ? 'Dairesel Petek Teneke' : 'Kutu Grid'})</strong>
+                                Her bir kat ${p.boxesPerLayer} adet ${p.isRound ? 'teneke' : 'koli'} alacak şekilde yukarıdaki desene göre dizilir. Katlar arası <strong>${p.finalLayers} kat</strong> istiflenerek araçta toplam <strong>${totalPalletInVehicle} palet (${totalUnitsInVehicle.toLocaleString()} adet)</strong> sevk edilir.
                             </div>
                         </div>
                     </div>
@@ -2066,7 +2119,7 @@
 
         document.getElementById('optimizationDetailsList').innerHTML = `
             <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-200 shadow-sm text-xs text-indigo-950 space-y-3">
-                <h4 class="font-black text-sm text-indigo-900 uppercase">👷 SAHA OPERASYON VE YÜKLEME TALİMATI (ARAÇ ${currentVehicleIdx + 1})</h4>
+                <h4 class="font-black text-sm text-indigo-900 uppercase">👷 SAHA OPERASYON VE SEVKİYAT TALİMATI (ARAÇ ${currentVehicleIdx + 1} / ${globalFleet.length})</h4>
                 ${detailsHtml}
                 <div class="pt-2 border-t border-indigo-200">
                     <ul class="list-disc pl-5 space-y-1 text-slate-700">
@@ -2077,7 +2130,7 @@
             </div>
         `;
 
-        if (baseType !== 'floor' && truck.placedItems.length > 0 && truck.placedItems[0].palletDesign) {
+        if (isPalletMode && truck.placedItems.length > 0 && truck.placedItems[0].palletDesign) {
             setTimeout(() => {
                 const cvs = document.getElementById('pallet2DCanvas');
                 if (!cvs) return;
@@ -2219,15 +2272,17 @@
 
         if (optFrontCurve) drawPoly([project(0,0,0), project(100,0,0), project(100,contW,0), project(0,contW,0)], 'rgba(234, 179, 8, 0.4)', '#ca8a04');
 
-        // Render Blocks
+        // Render Loaded Blocks (Floor or Pallet)
         placedItems.forEach(b => {
             if (b.isPallet) {
+                // 1. Draw Wooden Pallet Base
                 const baseH = b.palletBaseH || 145;
                 let pbRight = [project(b.x + b.l, b.y, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, baseH), project(b.x + b.l, b.y, baseH)];
                 let pbFront = [project(b.x, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, baseH), project(b.x, b.y + b.w, baseH)];
                 drawPoly(pbRight, '#8c6538', 'rgba(0,0,0,0.4)', 1);
                 drawPoly(pbFront, '#a37542', 'rgba(0,0,0,0.4)', 1);
 
+                // 2. Draw Pallet Cargo Block
                 let pRight = [project(b.x + b.l, b.y, baseH), project(b.x + b.l, b.y + b.w, baseH), project(b.x + b.l, b.y + b.w, b.h), project(b.x + b.l, b.y, b.h)];
                 let pFront = [project(b.x, b.y + b.w, baseH), project(b.x + b.l, b.y + b.w, baseH), project(b.x + b.l, b.y + b.w, b.h), project(b.x, b.y + b.w, b.h)];
                 let pTop = [project(b.x, b.y, b.h), project(b.x + b.l, b.y, b.h), project(b.x + b.l, b.y + b.w, b.h), project(b.x, b.y + b.w, b.h)];
@@ -2236,6 +2291,7 @@
                 drawPoly(pFront, b.color.left, 'rgba(0,0,0,0.5)', 1);
                 drawPoly(pTop, b.color.top, 'rgba(0,0,0,0.5)', 1);
 
+                // Draw Horizontal Layer Separators on Pallet
                 if (b.palletDesign && b.palletDesign.finalLayers > 1) {
                     const lyrH = (b.h - baseH) / b.palletDesign.finalLayers;
                     for (let l = 1; l < b.palletDesign.finalLayers; l++) {
@@ -2245,6 +2301,7 @@
                     }
                 }
 
+                // Top Surface Can/Box Indicators
                 if (b.palletDesign && b.palletDesign.boxPositions) {
                     b.palletDesign.boxPositions.forEach(bp => {
                         if (bp.isRound) {
@@ -2263,6 +2320,7 @@
                     });
                 }
             } else {
+                // Floor Loading
                 let pRight = [project(b.x + b.l, b.y, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, b.h), project(b.x + b.l, b.y, b.h)];
                 let pFront = [project(b.x, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, b.h), project(b.x, b.y + b.w, b.h)];
                 let pTop = [project(b.x, b.y, b.h), project(b.x + b.l, b.y, b.h), project(b.x + b.l, b.y + b.w, b.h), project(b.x, b.y + b.w, b.h)];
