@@ -65,7 +65,6 @@
                 </div>
             </div>
 
-            <!-- Dikdörtgen / Kare Ölçüleri -->
             <div id="boxDimensionInputs" class="grid grid-cols-2 gap-2">
                 <div>
                     <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Uzunluk (L - mm)</label>
@@ -77,11 +76,10 @@
                 </div>
             </div>
 
-            <!-- Yuvarlak Teneke Çap Ölçüsü -->
             <div id="roundDimensionInput" class="hidden">
                 <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Dış Çap (D - mm)</label>
                 <input type="number" id="cstSkuDia" value="280" class="w-full p-2 border rounded-lg bg-slate-50 font-bold">
-                <span class="text-[10px] text-slate-400 mt-0.5 block">Konteyner tabanında çap boy ve en olarak baz alınır.</span>
+                <span class="text-[10px] text-slate-400 mt-0.5 block">Silindirik tenekelerde çap otomatik olarak taban en ve boyuna eşitlenir.</span>
             </div>
 
             <div class="grid grid-cols-3 gap-2">
@@ -481,7 +479,7 @@
         <!-- STATS BAR -->
         <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4 print-grid print-stats">
             <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center">
-                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Maksimum Koli</p>
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Maksimum Adet</p>
                 <p class="text-xl md:text-2xl font-black text-emerald-600 leading-none" id="resTotalBoxes">-</p>
             </div>
             <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center">
@@ -691,7 +689,6 @@
         skuDatabase.push(newSku);
 
         populateSelects();
-        // Set to newly added SKU
         const sel = document.getElementById('skuSelect');
         sel.value = skuDatabase.length - 1;
         populateSKU();
@@ -995,7 +992,7 @@
                         <td class="p-3 font-bold text-slate-900">${orderNameDisplay}</td>
                         <td class="p-3">${statusBadge}</td>
                         <td class="p-3 font-semibold text-slate-700"><span class="block">${salesRep}</span><span class="text-[10px] text-slate-400 font-normal">${row.sales_email || ''}</span></td>
-                        <td class="p-3 text-[11px]"><strong class="text-slate-800 block">${row.vehicle_type} (${row.base_type})</strong><span class="text-slate-500">${row.total_boxes} Koli | ${row.total_weight} kg</span></td>
+                        <td class="p-3 text-[11px]"><strong class="text-slate-800 block">${row.vehicle_type} (${row.base_type})</strong><span class="text-slate-500">${row.total_boxes} Adet | ${row.total_weight} kg</span></td>
                         <td class="p-3 text-slate-600 font-medium text-[11px] max-w-[200px] truncate" title="${reviewNote}">${reviewNote}</td>
                         <td class="p-3 text-center whitespace-nowrap">${actionBtn}</td>
                     </tr>`;
@@ -1149,7 +1146,6 @@
         let bestPlan = null;
         let maxBoxesFound = 0;
 
-        // Yuvarlak tenekelerde L == W olduğu için tek simetrik eksen yeterlidir
         if (sku.shape === 'round') {
             const cols = Math.floor(effW / boxW);
             const rows = Math.floor(effL / boxL);
@@ -1197,9 +1193,9 @@
         return bestPlan;
     }
 
-    // ==========================================
-    // DETAILED PALLET DESIGN ENGINE
-    // ==========================================
+    // =========================================================================
+    // 📦 ADVANCED PALLET DESIGN & SAFETY ENGINE (BOX + ROUND CAN OPTIMIZATION)
+    // =========================================================================
     function calculateOptimalPalletDesign(params) {
         const {
             boxL, boxW, boxH, boxWt, maxLayersBCT,
@@ -1207,7 +1203,8 @@
             maxPalletWeight = 1200,
             warehouseRackH = 1800,
             containerDoorH = 2550,
-            containerCeilingH = 2600
+            containerCeilingH = 2600,
+            shape = 'box'
         } = params;
 
         const doorSafetyMargin = 50;
@@ -1222,38 +1219,119 @@
 
         const patterns = [];
 
-        const colsA = Math.floor(palletW / boxW);
-        const rowsA = Math.floor(palletL / boxL);
-        patterns.push({
-            type: 'Düz (Boyuna)',
-            count: colsA * rowsA,
-            layout: generateGrid(rowsA, colsA, boxL, boxW, palletL, palletW, false)
-        });
+        if (shape === 'round') {
+            const D = Math.max(boxL, boxW);
 
-        const colsB = Math.floor(palletW / boxL);
-        const rowsB = Math.floor(palletL / boxW);
-        patterns.push({
-            type: 'Düz (Enine Çevrilmiş)',
-            count: colsB * rowsB,
-            layout: generateGrid(rowsB, colsB, boxW, boxL, palletL, palletW, true)
-        });
+            // Pattern 1: Düz Kare Şebeke (Orthogonal Rim-to-Rim)
+            const colsGrid = Math.floor(palletW / D);
+            const rowsGrid = Math.floor(palletL / D);
+            const countGrid = colsGrid * rowsGrid;
 
-        for (let r = 1; r < rowsA; r++) {
-            const remainingL = palletL - (r * boxL);
-            const rowsRot = Math.floor(remainingL / boxW);
-            const colsRot = Math.floor(palletW / boxL);
-            if (rowsRot > 0 && colsRot > 0) {
-                patterns.push({
-                    type: 'Kombine / Kilitli',
-                    count: (r * colsA) + (rowsRot * colsRot),
-                    layout: generateSplitLayout(r, colsA, rowsRot, colsRot, boxL, boxW, palletL, palletW)
-                });
+            const gridBoxes = [];
+            const offXGrid = (palletL - (rowsGrid * D)) / 2;
+            const offYGrid = (palletW - (colsGrid * D)) / 2;
+            for (let r = 0; r < rowsGrid; r++) {
+                for (let c = 0; c < colsGrid; c++) {
+                    gridBoxes.push({
+                        x: offXGrid + (r * D),
+                        y: offYGrid + (c * D),
+                        l: D, w: D,
+                        isRound: true
+                    });
+                }
+            }
+            patterns.push({
+                type: 'Düz Çember Dizilimi (Rim-to-Rim)',
+                count: countGrid,
+                layout: gridBoxes,
+                isRound: true
+            });
+
+            // Pattern 2: Şaşırtmalı / Petek (Honeycomb / Hexagonal Staggered)
+            const rowPitchX = D * Math.sqrt(3) / 2; // ~0.866 * D
+            if (palletL >= D && rowPitchX > 0) {
+                const stagRows = 1 + Math.floor((palletL - D) / rowPitchX);
+                let stagBoxes = [];
+                let totalStag = 0;
+                const totalStagL = D + (stagRows - 1) * rowPitchX;
+                const startXStag = (palletL - totalStagL) / 2;
+
+                for (let r = 0; r < stagRows; r++) {
+                    const isEven = (r % 2 === 0);
+                    const colsInRow = isEven ? Math.floor(palletW / D) : Math.floor((palletW - D / 2) / D);
+                    const rowW = isEven ? (colsInRow * D) : (colsInRow * D + D / 2);
+                    const startYStag = (palletW - rowW) / 2 + (isEven ? 0 : D / 2);
+
+                    for (let c = 0; c < colsInRow; c++) {
+                        stagBoxes.push({
+                            x: startXStag + (r * rowPitchX),
+                            y: startYStag + (c * D),
+                            l: D, w: D,
+                            isRound: true
+                        });
+                        totalStag++;
+                    }
+                }
+
+                if (totalStag > countGrid) {
+                    patterns.push({
+                        type: 'Şaşırtmalı / Petek Dizilimi (Maksimum Doluluk)',
+                        count: totalStag,
+                        layout: stagBoxes,
+                        isRound: true
+                    });
+                }
+            }
+        } else {
+            // Rectangular Boxes
+            const colsA = Math.floor(palletW / boxW);
+            const rowsA = Math.floor(palletL / boxL);
+            patterns.push({
+                type: 'Düz (Boyuna)',
+                count: colsA * rowsA,
+                layout: generateGrid(rowsA, colsA, boxL, boxW, palletL, palletW, false)
+            });
+
+            const colsB = Math.floor(palletW / boxL);
+            const rowsB = Math.floor(palletL / boxW);
+            patterns.push({
+                type: 'Düz (Enine Çevrilmiş)',
+                count: colsB * rowsB,
+                layout: generateGrid(rowsB, colsB, boxW, boxL, palletL, palletW, true)
+            });
+
+            // Length-Split
+            for (let r = 1; r < rowsA; r++) {
+                const remainingL = palletL - (r * boxL);
+                const rowsRot = Math.floor(remainingL / boxW);
+                const colsRot = Math.floor(palletW / boxL);
+                if (rowsRot > 0 && colsRot > 0) {
+                    patterns.push({
+                        type: 'Kombine / Kilitli (Boyuna Bölmeli)',
+                        count: (r * colsA) + (rowsRot * colsRot),
+                        layout: generateSplitLayout(r, colsA, rowsRot, colsRot, boxL, boxW, palletL, palletW)
+                    });
+                }
+            }
+
+            // Width-Split
+            for (let c = 1; c < colsA; c++) {
+                const remW = palletW - (c * boxW);
+                const cRot = Math.floor(remW / boxL);
+                const rRot = Math.floor(palletL / boxW);
+                if (cRot > 0 && rRot > 0) {
+                    patterns.push({
+                        type: 'Kombine / Kilitli (Enine Bölmeli)',
+                        count: (rowsA * c) + (rRot * cRot),
+                        layout: generateWidthSplitLayout(rowsA, c, rRot, cRot, boxL, boxW, palletL, palletW)
+                    });
+                }
             }
         }
 
         patterns.sort((a, b) => b.count - a.count);
-        const best2D = patterns[0];
-        const boxesPerLayer = best2D.count;
+        const best2D = patterns[0] || { type: 'Düz', count: 1, layout: [] };
+        const boxesPerLayer = Math.max(1, best2D.count);
 
         const maxLayersByHeight = Math.floor(availableCargoH / boxH);
         const maxLayersByWeight = Math.floor((maxPalletWeight - palletTare) / (boxesPerLayer * boxWt));
@@ -1268,13 +1346,13 @@
         const doorClearance = containerDoorH - finalTotalH;
         const rackClearance = warehouseRackH - finalTotalH;
 
-        let limitingFactor = "Kutu BCT Dayanımı";
+        let limitingFactor = "Kutu/Teneke BCT Dayanımı";
         if (finalLayers === maxLayersByHeight) {
-            if (effectiveMaxH === maxHByDoor) limitingFactor = "Konteyner Kapı Yüksekliği";
-            else if (effectiveMaxH === maxHByRack) limitingFactor = "Depo Raf Yüksekliği";
-            else limitingFactor = "Araç Tavanı";
+            if (effectiveMaxH === maxHByDoor) limitingFactor = "Konteyner Kapı Yüksekliği (Forklift Giriş Limiti)";
+            else if (effectiveMaxH === maxHByRack) limitingFactor = "Depo Raf Kiriş Yüksekliği";
+            else limitingFactor = "Araç İç Tavanı";
         } else if (finalLayers === maxLayersByWeight) {
-            limitingFactor = "Palet Taşıma Ağırlık Limiti";
+            limitingFactor = "Palet Taşıma Ağırlık Limiti (Maks 1.200 kg)";
         }
 
         return {
@@ -1285,6 +1363,7 @@
             totalHeight: finalTotalH,
             totalWeight,
             limitingFactor,
+            isRound: (shape === 'round'),
             clearances: {
                 doorClearance,
                 rackClearance,
@@ -1293,7 +1372,8 @@
             },
             boxPositions: best2D.layout,
             palletL,
-            palletW
+            palletW,
+            palletBaseH
         };
     }
 
@@ -1303,7 +1383,7 @@
         const offsetY = (palletW - (cols * cellW)) / 2;
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
-                boxes.push({ x: offsetX + (r * cellL), y: offsetY + (c * cellW), l: cellL, w: cellW, isRotated });
+                boxes.push({ x: offsetX + (r * cellL), y: offsetY + (c * cellW), l: cellL, w: cellW, isRotated, isRound: false });
             }
         }
         return boxes;
@@ -1313,13 +1393,29 @@
         const boxes = [];
         for (let r = 0; r < r1; r++) {
             for (let c = 0; c < c1; c++) {
-                boxes.push({ x: r * bL, y: c * bW, l: bL, w: bW, isRotated: false });
+                boxes.push({ x: r * bL, y: c * bW, l: bL, w: bW, isRotated: false, isRound: false });
             }
         }
         const startX = r1 * bL;
         for (let r = 0; r < r2; r++) {
             for (let c = 0; c < c2; c++) {
-                boxes.push({ x: startX + (r * bW), y: c * bL, l: bW, w: bL, isRotated: true });
+                boxes.push({ x: startX + (r * bW), y: c * bL, l: bW, w: bL, isRotated: true, isRound: false });
+            }
+        }
+        return boxes;
+    }
+
+    function generateWidthSplitLayout(r1, c1, r2, c2, bL, bW, palletL, palletW) {
+        const boxes = [];
+        for (let r = 0; r < r1; r++) {
+            for (let c = 0; c < c1; c++) {
+                boxes.push({ x: r * bL, y: c * bW, l: bL, w: bW, isRotated: false, isRound: false });
+            }
+        }
+        const startY = c1 * bW;
+        for (let r = 0; r < r2; r++) {
+            for (let c = 0; c < c2; c++) {
+                boxes.push({ x: r * bW, y: startY + (c * bL), l: bW, w: bL, isRotated: true, isRound: false });
             }
         }
         return boxes;
@@ -1358,13 +1454,16 @@
                 maxPalletWeight: 1200,
                 warehouseRackH: parseInt(document.getElementById('rackHeight').value) || 1800,
                 containerDoorH: parseInt(document.getElementById('containerDoorHeight').value) || 2550,
-                containerCeilingH: contH
+                containerCeilingH: contH,
+                shape: sku.shape || 'box'
             });
 
-            let colsAcross = Math.floor(effContW / pSpec.W);
-            let rowsDeep = Math.floor(effContL / pSpec.L);
-            let totalPallets = colsAcross * rowsDeep;
-            let volumeLimit = totalPallets * pDesign.totalBoxes;
+            // Dual-Orientation Vehicle Pallet Optimization
+            const palsWacross = Math.floor(effContW / pSpec.W) * Math.floor(effContL / pSpec.L);
+            const palsLacross = Math.floor(effContW / pSpec.L) * Math.floor(effContL / pSpec.W);
+            const totalPallets = Math.max(palsWacross, palsLacross);
+
+            const volumeLimit = totalPallets * pDesign.totalBoxes;
             singleTruckMaxBoxes = Math.min(volumeLimit, Math.floor(maxWgt / sku.Wt));
         }
 
@@ -1375,7 +1474,7 @@
             targetInput.value = singleTruckMaxBoxes;
         }
 
-        if (badge) badge.innerText = `Maks: ${singleTruckMaxBoxes} Koli`;
+        if (badge) badge.innerText = `Maks: ${singleTruckMaxBoxes} Adet`;
     }
 
     function switchTab(mode) {
@@ -1403,7 +1502,6 @@
             select.options.add(new Option(`${icon} ${sku.name} (${sku.L}x${sku.W}x${sku.H})`, idx));
         });
 
-        // Update any mixed SKU rows currently open
         document.querySelectorAll('.mixed-sku').forEach(sel => {
             const currentVal = sel.value;
             sel.innerHTML = skuDatabase.map((s, i) => `<option value="${i}">${s.shape === 'round' ? '⚪' : '⏹'} ${s.name}</option>`).join('');
@@ -1491,8 +1589,26 @@
 
             let targetBoxes = parseInt(document.getElementById('targetBoxes').value);
             if (isNaN(targetBoxes) || targetBoxes <= 0) {
-                const plan = findOptimalFloorPlan(effContW, effContL, contH, sku, maxWgt);
-                targetBoxes = plan ? plan.maxBoxes : Math.floor(maxWgt / sku.Wt);
+                if (baseType === 'floor') {
+                    const plan = findOptimalFloorPlan(effContW, effContL, contH, sku, maxWgt);
+                    targetBoxes = plan ? plan.maxBoxes : Math.floor(maxWgt / sku.Wt);
+                } else {
+                    const pIdx = parseInt(document.getElementById('specificBaseSize').value) || 0;
+                    const pSpec = standardPalletSizes[pIdx] || standardPalletSizes[0];
+                    const pDesign = calculateOptimalPalletDesign({
+                        boxL: sku.L, boxW: sku.W, boxH: sku.H, boxWt: sku.Wt, maxLayersBCT: sku.maxLayers,
+                        palletL: pSpec.L, palletW: pSpec.W, palletBaseH: pSpec.H, palletTare: pSpec.tare,
+                        maxPalletWeight: 1200,
+                        warehouseRackH: parseInt(document.getElementById('rackHeight').value) || 1800,
+                        containerDoorH: parseInt(document.getElementById('containerDoorHeight').value) || 2550,
+                        containerCeilingH: contH,
+                        shape: sku.shape || 'box'
+                    });
+                    const palsWacross = Math.floor(effContW / pSpec.W) * Math.floor(effContL / pSpec.L);
+                    const palsLacross = Math.floor(effContW / pSpec.L) * Math.floor(effContL / pSpec.W);
+                    const totalPallets = Math.max(palsWacross, palsLacross);
+                    targetBoxes = Math.min(totalPallets * pDesign.totalBoxes, Math.floor(maxWgt / sku.Wt));
+                }
             }
             queue.push({ sku, target: targetBoxes, color: colorMap[0], priority: 0 });
         } else {
@@ -1645,7 +1761,7 @@
                 if (currentX + Math.min(sku.L, sku.W) > effContL) vehicleFull = true;
 
             } else {
-                // Pallet Loading Mode
+                // Pallet Loading Mode with Optimal Vehicle Layout Check
                 const pIdx = parseInt(document.getElementById('specificBaseSize').value) || 0;
                 const pSpec = standardPalletSizes[pIdx] || standardPalletSizes[0];
                 const pDesign = calculateOptimalPalletDesign({
@@ -1654,11 +1770,27 @@
                     maxPalletWeight: 1200,
                     warehouseRackH: parseInt(document.getElementById('rackHeight').value) || 1800,
                     containerDoorH: parseInt(document.getElementById('containerDoorHeight').value) || 2550,
-                    containerCeilingH: contH
+                    containerCeilingH: contH,
+                    shape: sku.shape || 'box'
                 });
 
-                let colsAcross = Math.floor(effContW / pSpec.W);
-                let rowsDeep = Math.floor((effContL - currentX) / pSpec.L);
+                const availableL = effContL - currentX;
+                
+                // Compare Option 1 (W across) vs Option 2 (L across)
+                const c1 = Math.floor(effContW / pSpec.W);
+                const r1 = Math.floor(availableL / pSpec.L);
+                const count1 = c1 * r1;
+
+                const c2 = Math.floor(effContW / pSpec.L);
+                const r2 = Math.floor(availableL / pSpec.W);
+                const count2 = c2 * r2;
+
+                const useOption2 = (count2 > count1);
+                const colsAcross = useOption2 ? c2 : c1;
+                const rowsDeep = useOption2 ? r2 : r1;
+                const palStepW = useOption2 ? pSpec.L : pSpec.W;
+                const palStepL = useOption2 ? pSpec.W : pSpec.L;
+
                 if (colsAcross <= 0 || rowsDeep <= 0) { vehicleFull = true; continue; }
 
                 for (let r = 0; r < rowsDeep; r++) {
@@ -1668,19 +1800,21 @@
                         let w = (b * sku.Wt) + pSpec.tare;
                         if (totalWgt + w > maxWgt) { vehicleFull = true; break; }
 
-                        let py = (effContW - (colsAcross * pSpec.W)) / 2 + (c * pSpec.W);
+                        let py = (effContW - (colsAcross * palStepW)) / 2 + (c * palStepW);
                         placedItems.push({
-                            id: sku.name, x: currentX + (r * pSpec.L), y: py,
-                            l: pSpec.L, w: pSpec.W, h: pDesign.totalHeight,
+                            id: sku.name, x: currentX + (r * palStepL), y: py,
+                            l: palStepL, w: palStepW, h: pDesign.totalHeight,
                             boxes: b, wgt: w, color: item.color,
                             palletDesign: pDesign,
+                            palletBaseH: pSpec.H,
+                            singleBoxH: sku.H,
                             isPallet: true, isRound: (sku.shape === 'round'), priority: item.priority
                         });
                         totalWgt += w; totalBoxes += b; item.remaining -= b;
                     }
                     if (vehicleFull || item.remaining <= 0) break;
                 }
-                currentX += rowsDeep * pSpec.L;
+                currentX += rowsDeep * palStepL;
             }
         }
 
@@ -1703,7 +1837,7 @@
             let pagHtml = `<div class="flex gap-2 mb-2 p-2 bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">`;
             globalFleet.forEach((v, idx) => {
                 let activeClass = idx === currentVehicleIdx ? 'bg-sky-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200';
-                pagHtml += `<button onclick="currentVehicleIdx = ${idx}; updateFleetUI();" class="px-4 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap ${activeClass}">🚚 Araç ${idx + 1} (${v.totalBoxes} Koli/Teneke)</button>`;
+                pagHtml += `<button onclick="currentVehicleIdx = ${idx}; updateFleetUI();" class="px-4 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap ${activeClass}">🚚 Araç ${idx + 1} (${v.totalBoxes} Adet)</button>`;
             });
             pagHtml += `</div>`;
             pagContainer.innerHTML = pagHtml;
@@ -1765,6 +1899,7 @@
                 `;
             });
         } else {
+            // Pallet Details Card
             if (truck.placedItems.length > 0 && truck.placedItems[0].palletDesign) {
                 const p = truck.placedItems[0].palletDesign;
                 const dBadge = p.clearances.isDoorSafe
@@ -1774,10 +1909,27 @@
                     ? `<span class="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded font-bold">✓ Rafa Sığar (${Math.floor(p.clearances.rackClearance)}mm Boşluk)</span>`
                     : `<span class="text-rose-700 bg-rose-100 px-2 py-0.5 rounded font-bold">⚠️ Rafa Sığmaz (Yükseklik Aşımı)</span>`;
 
+                const safetyProtocolText = p.isRound 
+                    ? `<div class="bg-amber-50 border border-amber-200 p-2.5 rounded text-amber-900 mt-2">
+                        <strong class="block text-xs uppercase mb-0.5">⚠️ Teneke Paletleme Güvenlik Protokolü:</strong>
+                        <ul class="list-disc pl-4 space-y-0.5 text-[11px]">
+                            <li><strong>Çember-Çembere (Rim-to-Rim) Dizilim:</strong> Üst tenekeler alt tenekelerin çemberine tam oturmalıdır. Katlar arası şaşırtma / kilit yapılmaz (kapak çökmesini önler).</li>
+                            <li><strong>Seperatör Mukavva:</strong> Katlar arasına mukavva levha yerleştirilerek metal sürtünmesi ve kayma engellenmelidir.</li>
+                            <li><strong>Sıfır Taşma Güvencesi:</strong> Palet kenarından dışarı taşma kesinlikle sıfırdır. Köşebent ve en az 5 tur gerdirilmiş streç uygulanmalıdır.</li>
+                        </ul>
+                       </div>`
+                    : `<div class="bg-indigo-50 border border-indigo-200 p-2.5 rounded text-indigo-900 mt-2">
+                        <strong class="block text-xs uppercase mb-0.5">📦 Koli Paletleme Güvenlik Protokolü:</strong>
+                        <ul class="list-disc pl-4 space-y-0.5 text-[11px]">
+                            <li><strong>BCT Koruma:</strong> Kutu köşeleri palet sınırlarına tam hizalanmış, ezilme direnci %100 korunmuştur.</li>
+                            <li><strong>Dikey Köşebent:</strong> Üst katların devrilmesini engellemek için palet 4 köşesine L-köşebent takılarak sarılmalıdır.</li>
+                        </ul>
+                       </div>`;
+
                 detailsHtml = `
                     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-xs space-y-3">
                         <div class="flex justify-between items-center border-b pb-2">
-                            <strong class="text-slate-800 text-sm">Palet Tasarımı ve Yükseklik Analizi</strong>
+                            <strong class="text-slate-800 text-sm">${p.isRound ? '⚪ Yuvarlak Teneke' : '⏹ Koli'} Palet Tasarımı ve Güvenlik Analizi</strong>
                             <span class="text-indigo-700 bg-indigo-50 font-bold px-2 py-1 rounded">Dizilim Deseni: ${p.bestPattern}</span>
                         </div>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -1787,17 +1939,18 @@
                             <div class="p-2 bg-slate-50 rounded border"><span class="text-slate-500 block text-[10px] uppercase font-bold">Palet Toplam Yükseklik</span><strong class="text-slate-800">${p.totalHeight} mm</strong></div>
                         </div>
                         <div class="p-3 bg-slate-50 rounded-lg border space-y-1.5">
-                            <div class="flex justify-between items-center"><span><strong>Konteyner Kapı Girişi:</strong> (Eşik: ${p.clearances.doorClearance.toFixed(0)} mm)</span>${dBadge}</div>
+                            <div class="flex justify-between items-center"><span><strong>Konteyner Kapı Girişi:</strong> (Eşik Payı: ${p.clearances.doorClearance.toFixed(0)} mm)</span>${dBadge}</div>
                             <div class="flex justify-between items-center"><span><strong>Depo Raf Yüksekliği:</strong> (Kalan: ${p.clearances.rackClearance.toFixed(0)} mm)</span>${rBadge}</div>
                             <div class="text-[11px] text-slate-500 pt-1 border-t"><strong>Kritik Kısıtlayıcı Faktör:</strong> <span class="text-indigo-700 font-semibold">${p.limitingFactor}</span></div>
                         </div>
+                        ${safetyProtocolText}
                         <div class="flex items-center gap-4 border-t pt-3">
                             <div class="w-24 h-24 bg-slate-50 border rounded p-1 flex-shrink-0">
                                 <canvas id="pallet2DCanvas" width="96" height="96" class="w-full h-full object-contain"></canvas>
                             </div>
                             <div class="text-[11px] text-slate-500">
-                                <strong>Palet Üstten Görünüm (2D Taban Yerleşimi)</strong><br>
-                                Her bir kat yukarıdaki desene göre dizilir. Katlar arası <strong>${p.finalLayers} kat</strong> istiflenerek streçlenmelidir.
+                                <strong>Palet 2D Taban Dizilimi (${p.isRound ? 'Dairesel Teneke' : 'Kutu Grid'})</strong><br>
+                                Her bir kat yukarıdaki desene göre dizilir. Katlar arası <strong>${p.finalLayers} kat</strong> istiflenerek paletlenir.
                             </div>
                         </div>
                     </div>
@@ -1840,10 +1993,30 @@
                 c.strokeRect(ox, oy, p.palletL * sc, p.palletW * sc);
 
                 p.boxPositions.forEach(b => {
-                    c.fillStyle = b.isRotated ? '#38bdf8' : '#0284c7';
-                    c.fillRect(ox + b.x*sc, oy + b.y*sc, b.l*sc - 1, b.w*sc - 1);
-                    c.strokeStyle = 'rgba(0,0,0,0.5)';
-                    c.strokeRect(ox + b.x*sc, oy + b.y*sc, b.l*sc - 1, b.w*sc - 1);
+                    if (b.isRound) {
+                        const r = (b.l * sc) / 2;
+                        const cx = ox + b.x * sc + r;
+                        const cy = oy + b.y * sc + r;
+
+                        c.beginPath();
+                        c.arc(cx, cy, r - 0.5, 0, 2 * Math.PI);
+                        c.fillStyle = '#38bdf8';
+                        c.fill();
+                        c.strokeStyle = '#0284c7';
+                        c.lineWidth = 1;
+                        c.stroke();
+
+                        c.beginPath();
+                        c.arc(cx, cy, r * 0.4, 0, 2 * Math.PI);
+                        c.fillStyle = '#e0f2fe';
+                        c.fill();
+                        c.stroke();
+                    } else {
+                        c.fillStyle = b.isRotated ? '#38bdf8' : '#0284c7';
+                        c.fillRect(ox + b.x*sc, oy + b.y*sc, b.l*sc - 1, b.w*sc - 1);
+                        c.strokeStyle = 'rgba(0,0,0,0.5)';
+                        c.strokeRect(ox + b.x*sc, oy + b.y*sc, b.l*sc - 1, b.w*sc - 1);
+                    }
                 });
             }, 50);
         }
@@ -1936,52 +2109,99 @@
             ctx.strokeStyle = stroke; ctx.lineWidth = width; ctx.stroke();
         }
 
-        // Trailer Shell
+        // Vehicle Shell
         drawPoly([project(0,0,0), project(contL,0,0), project(contL,contW,0), project(0,contW,0)], '#334155');
         drawPoly([project(0,0,0), project(contL,0,0), project(contL,0,contH), project(0,0,contH)], '#1e293b');
         drawPoly([project(0,0,0), project(0,contW,0), project(0,contW,contH), project(0,0,contH)], '#0f172a');
 
         if (optFrontCurve) drawPoly([project(0,0,0), project(100,0,0), project(100,contW,0), project(0,contW,0)], 'rgba(234, 179, 8, 0.4)', '#ca8a04');
 
-        // Render Loaded Blocks
+        // Render Loaded Blocks (Floor or Pallet)
         placedItems.forEach(b => {
-            let pRight = [project(b.x + b.l, b.y, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, b.h), project(b.x + b.l, b.y, b.h)];
-            let pFront = [project(b.x, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, b.h), project(b.x, b.y + b.w, b.h)];
-            let pTop = [project(b.x, b.y, b.h), project(b.x + b.l, b.y, b.h), project(b.x + b.l, b.y + b.w, b.h), project(b.x, b.y + b.w, b.h)];
+            if (b.isPallet) {
+                // 1. Draw Wooden Pallet Base
+                const baseH = b.palletBaseH || 145;
+                let pbRight = [project(b.x + b.l, b.y, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, baseH), project(b.x + b.l, b.y, baseH)];
+                let pbFront = [project(b.x, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, baseH), project(b.x, b.y + b.w, baseH)];
+                drawPoly(pbRight, '#8c6538', 'rgba(0,0,0,0.4)', 1);
+                drawPoly(pbFront, '#a37542', 'rgba(0,0,0,0.4)', 1);
 
-            drawPoly(pRight, b.color.right, 'rgba(0,0,0,0.6)', 1.5);
-            drawPoly(pFront, b.color.left, 'rgba(0,0,0,0.6)', 1.5);
-            drawPoly(pTop, b.color.top, 'rgba(0,0,0,0.6)', 1.5);
+                // 2. Draw Pallet Cargo Block
+                let pRight = [project(b.x + b.l, b.y, baseH), project(b.x + b.l, b.y + b.w, baseH), project(b.x + b.l, b.y + b.w, b.h), project(b.x + b.l, b.y, b.h)];
+                let pFront = [project(b.x, b.y + b.w, baseH), project(b.x + b.l, b.y + b.w, baseH), project(b.x + b.l, b.y + b.w, b.h), project(b.x, b.y + b.w, b.h)];
+                let pTop = [project(b.x, b.y, b.h), project(b.x + b.l, b.y, b.h), project(b.x + b.l, b.y + b.w, b.h), project(b.x, b.y + b.w, b.h)];
 
-            if (b.layers && b.cols) {
-                for (let l = 1; l < b.layers; l++) {
-                    let z = l * b.singleBoxH;
-                    drawLine(project(b.x + b.l, b.y, z), project(b.x + b.l, b.y + b.w, z), 'rgba(0,0,0,0.35)');
-                    drawLine(project(b.x, b.y + b.w, z), project(b.x + b.l, b.y + b.w, z), 'rgba(0,0,0,0.35)');
+                drawPoly(pRight, b.color.right, 'rgba(0,0,0,0.5)', 1);
+                drawPoly(pFront, b.color.left, 'rgba(0,0,0,0.5)', 1);
+                drawPoly(pTop, b.color.top, 'rgba(0,0,0,0.5)', 1);
+
+                // Draw Horizontal Layer Separators on Pallet
+                if (b.palletDesign && b.palletDesign.finalLayers > 1) {
+                    const lyrH = (b.h - baseH) / b.palletDesign.finalLayers;
+                    for (let l = 1; l < b.palletDesign.finalLayers; l++) {
+                        const z = baseH + (l * lyrH);
+                        drawLine(project(b.x + b.l, b.y, z), project(b.x + b.l, b.y + b.w, z), 'rgba(0,0,0,0.4)');
+                        drawLine(project(b.x, b.y + b.w, z), project(b.x + b.l, b.y + b.w, z), 'rgba(0,0,0,0.4)');
+                    }
                 }
-                for (let c = 1; c < b.cols; c++) {
-                    let y = b.y + c * (b.w / b.cols);
-                    drawLine(project(b.x + b.l, y, 0), project(b.x + b.l, y, b.h), 'rgba(0,0,0,0.35)');
-                    drawLine(project(b.x, y, b.h), project(b.x + b.l, y, b.h), 'rgba(0,0,0,0.4)');
+
+                // Top Surface Can/Box Indicators
+                if (b.palletDesign && b.palletDesign.boxPositions) {
+                    b.palletDesign.boxPositions.forEach(bp => {
+                        if (bp.isRound) {
+                            const r = bp.l / 2;
+                            const centerPt = project(b.x + bp.x + r, b.y + bp.y + r, b.h);
+                            const rx = (r * cosA * scale) * 0.82;
+                            const ry = (r * sinA * scale) * 0.82;
+                            ctx.beginPath();
+                            ctx.ellipse(centerPt.x, centerPt.y, rx, ry, 0, 0, 2 * Math.PI);
+                            ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+                            ctx.fill();
+                            ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+                            ctx.lineWidth = 0.8;
+                            ctx.stroke();
+                        }
+                    });
                 }
+            } else {
+                // Floor Loading
+                let pRight = [project(b.x + b.l, b.y, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, b.h), project(b.x + b.l, b.y, b.h)];
+                let pFront = [project(b.x, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, b.h), project(b.x, b.y + b.w, b.h)];
+                let pTop = [project(b.x, b.y, b.h), project(b.x + b.l, b.y, b.h), project(b.x + b.l, b.y + b.w, b.h), project(b.x, b.y + b.w, b.h)];
 
-                // If round (tin cans / silindirik teneke), draw top lid circle indicator
-                if (b.isRound) {
-                    for (let c = 0; c < b.cols; c++) {
-                        let centerX = b.x + b.l / 2;
-                        let centerY = b.y + (c + 0.5) * (b.w / b.cols);
-                        let topZ = b.h;
-                        let ptCenter = project(centerX, centerY, topZ);
-                        let radiusX = (b.l / 2) * cosA * scale * 0.85;
-                        let radiusY = (b.w / b.cols / 2) * sinA * scale * 0.85;
+                drawPoly(pRight, b.color.right, 'rgba(0,0,0,0.6)', 1.5);
+                drawPoly(pFront, b.color.left, 'rgba(0,0,0,0.6)', 1.5);
+                drawPoly(pTop, b.color.top, 'rgba(0,0,0,0.6)', 1.5);
 
-                        ctx.beginPath();
-                        ctx.ellipse(ptCenter.x, ptCenter.y, radiusX, radiusY, 0, 0, 2 * Math.PI);
-                        ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
-                        ctx.fill();
-                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-                        ctx.lineWidth = 1;
-                        ctx.stroke();
+                if (b.layers && b.cols) {
+                    for (let l = 1; l < b.layers; l++) {
+                        let z = l * b.singleBoxH;
+                        drawLine(project(b.x + b.l, b.y, z), project(b.x + b.l, b.y + b.w, z), 'rgba(0,0,0,0.35)');
+                        drawLine(project(b.x, b.y + b.w, z), project(b.x + b.l, b.y + b.w, z), 'rgba(0,0,0,0.35)');
+                    }
+                    for (let c = 1; c < b.cols; c++) {
+                        let y = b.y + c * (b.w / b.cols);
+                        drawLine(project(b.x + b.l, y, 0), project(b.x + b.l, y, b.h), 'rgba(0,0,0,0.35)');
+                        drawLine(project(b.x, y, b.h), project(b.x + b.l, y, b.h), 'rgba(0,0,0,0.4)');
+                    }
+
+                    if (b.isRound) {
+                        for (let c = 0; c < b.cols; c++) {
+                            let centerX = b.x + b.l / 2;
+                            let centerY = b.y + (c + 0.5) * (b.w / b.cols);
+                            let topZ = b.h;
+                            let ptCenter = project(centerX, centerY, topZ);
+                            let radiusX = (b.l / 2) * cosA * scale * 0.85;
+                            let radiusY = (b.w / b.cols / 2) * sinA * scale * 0.85;
+
+                            ctx.beginPath();
+                            ctx.ellipse(ptCenter.x, ptCenter.y, radiusX, radiusY, 0, 0, 2 * Math.PI);
+                            ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+                            ctx.fill();
+                            ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+                            ctx.lineWidth = 1;
+                            ctx.stroke();
+                        }
                     }
                 }
             }
@@ -1999,10 +2219,10 @@
 
     function exportCSV() {
         if (!globalFleet || !globalFleet[0] || globalFleet[0].placedItems.length === 0) return alert("Dışa aktarılacak veri yok.");
-        let csv = "Arac,Siparis_Adi,SKU,Koli,Agirlik(kg),Bolum\n";
+        let csv = "Arac,Siparis_Adi,SKU,Adet,Agirlik(kg),Bolum\n";
         const oName = document.getElementById('orderTitle')?.value.trim() || 'Isimsiz';
         globalFleet.forEach((f, i) => {
-            f.placedItems.forEach(it => { csv += `${i+1},"${oName}","${it.id}",${it.boxes},${it.wgt},"${it.section || 'Zemin'}"\n`; });
+            f.placedItems.forEach(it => { csv += `${i+1},"${oName}","${it.id}",${it.boxes},${it.wgt},"${it.section || (it.isPallet ? 'Palet' : 'Zemin')}"\n`; });
         });
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Elita_${oName}.csv`; a.click();
