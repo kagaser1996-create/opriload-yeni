@@ -79,7 +79,7 @@
             <div id="roundDimensionInput" class="hidden">
                 <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Dış Çap (D - mm)</label>
                 <input type="number" id="cstSkuDia" value="280" class="w-full p-2 border rounded-lg bg-slate-50 font-bold">
-                <span class="text-[10px] text-slate-400 mt-0.5 block">Silindirik tenekelerde çap otomatik olarak taban en ve boyuna eşitlenir.</span>
+                <span class="text-[10px] text-slate-400 mt-0.5 block">Silindirik tenekelerde taban çapı otomatik olarak boy ve ene eşitlenir.</span>
             </div>
 
             <div class="grid grid-cols-3 gap-2">
@@ -392,7 +392,7 @@
                 </div>
                 <div class="input-group mb-3">
                     <label>Ürün Seçimi</label>
-                    <select id="skuSelect" onchange="populateSKU(); isUserDefinedTarget = false; autoSyncSingleTargetCapacity(); debouncedRunEngine();"></select>
+                    <select id="skuSelect" onchange="onSkuSelectChanged()"></select>
                 </div>
                 
                 <div class="input-group mb-3 p-3 bg-fuchsia-50 border border-fuchsia-200 rounded-lg">
@@ -441,15 +441,28 @@
                     </div>
                     <select id="specificBaseSize" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"></select>
                 </div>
+
                 <div class="grid grid-cols-2 gap-2">
                     <div class="input-group">
-                        <label>Depo Raf Yüksekliği (mm)</label>
-                        <input type="number" id="rackHeight" value="1800" class="bg-white border-amber-300 font-bold" oninput="autoSyncSingleTargetCapacity(); debouncedRunEngine();">
+                        <label class="text-amber-900 font-bold">Hedef İstif Katı</label>
+                        <select id="palletTargetLayers" class="bg-white border-amber-400 font-bold text-amber-950" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();">
+                            <option value="auto" selected>Otomatik (Maksimum)</option>
+                            <option value="2">2 Kat (Çift İstif / Duble)</option>
+                            <option value="3">3 Kat</option>
+                            <option value="4">4 Kat (Standart Saha)</option>
+                            <option value="5">5 Kat</option>
+                            <option value="6">6 Kat</option>
+                        </select>
                     </div>
                     <div class="input-group">
-                        <label>Kapı Eşik Limiti (mm)</label>
-                        <input type="number" id="containerDoorHeight" value="2550" class="bg-white border-amber-300 font-bold" oninput="autoSyncSingleTargetCapacity(); debouncedRunEngine();">
+                        <label>Depo Rafı (mm)</label>
+                        <input type="number" id="rackHeight" value="1800" class="bg-white border-amber-300 font-bold" oninput="autoSyncSingleTargetCapacity(); debouncedRunEngine();">
                     </div>
+                </div>
+
+                <div class="input-group mt-1">
+                    <label>Kapı Eşik Limiti (mm)</label>
+                    <input type="number" id="containerDoorHeight" value="2550" class="bg-white border-amber-300 font-bold" oninput="autoSyncSingleTargetCapacity(); debouncedRunEngine();">
                 </div>
             </div>
 
@@ -650,6 +663,24 @@
         if (printVeh) printVeh.innerText = `${vType} (${bType})`;
     }
 
+    function onSkuSelectChanged() {
+        populateSKU();
+        isUserDefinedTarget = false;
+
+        // Yuvarlak teneke seçildiyse ve palet modu aktifse, 100x120 Sanayi paleti 3-2-3 petek dizilimini desteklediğinden önerilir
+        const skuIdx = parseInt(document.getElementById('skuSelect').value) || 0;
+        const sku = skuDatabase[skuIdx];
+        if (sku && sku.shape === 'round') {
+            const palSelect = document.getElementById('specificBaseSize');
+            if (palSelect && palSelect.value === "0") {
+                palSelect.value = "1"; // 100x120 Sanayi Paleti
+            }
+        }
+
+        autoSyncSingleTargetCapacity();
+        debouncedRunEngine();
+    }
+
     // ==========================================
     // CUSTOM SKU & CUSTOM PALLET HANDLERS
     // ==========================================
@@ -691,10 +722,7 @@
         populateSelects();
         const sel = document.getElementById('skuSelect');
         sel.value = skuDatabase.length - 1;
-        populateSKU();
-        isUserDefinedTarget = false;
-        autoSyncSingleTargetCapacity();
-        debouncedRunEngine();
+        onSkuSelectChanged();
         closeModal('customSkuModal');
         nameInput.value = '';
     }
@@ -895,6 +923,7 @@
             baseType: document.getElementById('baseType').value,
             singleSkuIdx: document.getElementById('skuSelect').value,
             palletIdx: document.getElementById('specificBaseSize').value,
+            palletTargetLayers: document.getElementById('palletTargetLayers').value,
             rackH: document.getElementById('rackHeight').value,
             doorH: document.getElementById('containerDoorHeight').value
         };
@@ -1026,6 +1055,7 @@
         }
 
         if (inputs.palletIdx !== undefined) document.getElementById('specificBaseSize').value = inputs.palletIdx;
+        if (inputs.palletTargetLayers !== undefined) document.getElementById('palletTargetLayers').value = inputs.palletTargetLayers;
         if (inputs.rackH !== undefined) document.getElementById('rackHeight').value = inputs.rackH;
         if (inputs.doorH !== undefined) document.getElementById('containerDoorHeight').value = inputs.doorH;
 
@@ -1194,7 +1224,7 @@
     }
 
     // =========================================================================
-    // 📦 ADVANCED PALLET DESIGN & SAFETY ENGINE (BOX + ROUND CAN OPTIMIZATION)
+    // 📦 ADVANCED PALLET DESIGN & SAFETY ENGINE (3-2-3 PETEK & KUTU OPTİMİZASYONU)
     // =========================================================================
     function calculateOptimalPalletDesign(params) {
         const {
@@ -1204,7 +1234,8 @@
             warehouseRackH = 1800,
             containerDoorH = 2550,
             containerCeilingH = 2600,
-            shape = 'box'
+            shape = 'box',
+            targetLayers = 'auto'
         } = params;
 
         const doorSafetyMargin = 50;
@@ -1222,7 +1253,7 @@
         if (shape === 'round') {
             const D = Math.max(boxL, boxW);
 
-            // Pattern 1: Düz Kare Şebeke (Orthogonal Rim-to-Rim)
+            // 1. Düz Kare Şebeke (Orthogonal Grid)
             const colsGrid = Math.floor(palletW / D);
             const rowsGrid = Math.floor(palletL / D);
             const countGrid = colsGrid * rowsGrid;
@@ -1247,43 +1278,99 @@
                 isRound: true
             });
 
-            // Pattern 2: Şaşırtmalı / Petek (Honeycomb / Hexagonal Staggered)
-            const rowPitchX = D * Math.sqrt(3) / 2; // ~0.866 * D
+            // 2. Boyuna Şaşırtmalı / 3-2-3 Petek Dizilimi (Nesting along Length)
+            const rowPitchX = D * Math.sqrt(3) / 2; // ~0.866025 * D
             if (palletL >= D && rowPitchX > 0) {
-                const stagRows = 1 + Math.floor((palletL - D) / rowPitchX);
-                let stagBoxes = [];
-                let totalStag = 0;
-                const totalStagL = D + (stagRows - 1) * rowPitchX;
-                const startXStag = (palletL - totalStagL) / 2;
+                const numColsOdd = Math.floor(palletW / D);
+                const numColsEven = Math.floor((palletW - (D / 2)) / D);
+                const maxRowsL = 1 + Math.floor((palletL - D) / rowPitchX);
 
-                for (let r = 0; r < stagRows; r++) {
-                    const isEven = (r % 2 === 0);
-                    const colsInRow = isEven ? Math.floor(palletW / D) : Math.floor((palletW - D / 2) / D);
-                    const rowW = isEven ? (colsInRow * D) : (colsInRow * D + D / 2);
-                    const startYStag = (palletW - rowW) / 2 + (isEven ? 0 : D / 2);
+                if (maxRowsL >= 2 && numColsOdd >= 2) {
+                    let stagBoxes = [];
+                    let countStag = 0;
+                    const totalL = D + (maxRowsL - 1) * rowPitchX;
+                    const offX = Math.max(0, (palletL - totalL) / 2);
 
-                    for (let c = 0; c < colsInRow; c++) {
-                        stagBoxes.push({
-                            x: startXStag + (r * rowPitchX),
-                            y: startYStag + (c * D),
-                            l: D, w: D,
-                            isRound: true
-                        });
-                        totalStag++;
+                    for (let r = 0; r < maxRowsL; r++) {
+                        // 3-2-3-3 kombinasyonu veya ardışık petek: Son sıra da tam sığıyorsa 3 alır
+                        let isEven = (r % 2 === 1);
+                        let colsInRow = isEven ? numColsEven : numColsOdd;
+                        
+                        // Palet boyu ve eni izin veriyorsa son sırayı 3'lüye tamamlama kontrolü
+                        if (r === maxRowsL - 1 && r >= 3 && numColsOdd >= 3 && (palletW >= numColsOdd * D)) {
+                            colsInRow = numColsOdd;
+                            isEven = false;
+                        }
+
+                        const rowWidth = isEven ? (colsInRow * D + D / 2) : (colsInRow * D);
+                        const offY = Math.max(0, (palletW - rowWidth) / 2) + (isEven ? D / 2 : 0);
+
+                        for (let c = 0; c < colsInRow; c++) {
+                            stagBoxes.push({
+                                x: offX + (r * rowPitchX),
+                                y: offY + (c * D),
+                                l: D, w: D,
+                                isRound: true
+                            });
+                            countStag++;
+                        }
                     }
-                }
 
-                if (totalStag > countGrid) {
                     patterns.push({
-                        type: 'Şaşırtmalı / Petek Dizilimi (Maksimum Doluluk)',
-                        count: totalStag,
+                        type: maxRowsL === 4 && countStag === 11 ? '3-2-3-3 Petek (11 Adet/Kat)' : 'Şaşırtmalı Petek Dizilimi',
+                        count: countStag,
                         layout: stagBoxes,
                         isRound: true
                     });
                 }
             }
+
+            // 3. Enine Şaşırtmalı (Nesting along Width)
+            const rowPitchY = D * Math.sqrt(3) / 2;
+            if (palletW >= D && rowPitchY > 0) {
+                const numRowsOdd = Math.floor(palletL / D);
+                const numRowsEven = Math.floor((palletL - (D / 2)) / D);
+                const maxColsW = 1 + Math.floor((palletW - D) / rowPitchY);
+
+                if (maxColsW >= 2 && numRowsOdd >= 2) {
+                    let stagBoxesW = [];
+                    let countStagW = 0;
+                    const totalW = D + (maxColsW - 1) * rowPitchY;
+                    const offY = Math.max(0, (palletW - totalW) / 2);
+
+                    for (let c = 0; c < maxColsW; c++) {
+                        let isEven = (c % 2 === 1);
+                        let rowsInCol = isEven ? numRowsEven : numRowsOdd;
+
+                        if (c === maxColsW - 1 && c >= 3 && numRowsOdd >= 3 && (palletL >= numRowsOdd * D)) {
+                            rowsInCol = numRowsOdd;
+                            isEven = false;
+                        }
+
+                        const colLen = isEven ? (rowsInCol * D + D / 2) : (rowsInCol * D);
+                        const offX = Math.max(0, (palletL - colLen) / 2) + (isEven ? D / 2 : 0);
+
+                        for (let r = 0; r < rowsInCol; r++) {
+                            stagBoxesW.push({
+                                x: offX + (r * D),
+                                y: offY + (c * rowPitchY),
+                                l: D, w: D,
+                                isRound: true
+                            });
+                            countStagW++;
+                        }
+                    }
+
+                    patterns.push({
+                        type: 'Enine Petek Dizilimi',
+                        count: countStagW,
+                        layout: stagBoxesW,
+                        isRound: true
+                    });
+                }
+            }
         } else {
-            // Rectangular Boxes
+            // Koli / Dikdörtgen Desenleri
             const colsA = Math.floor(palletW / boxW);
             const rowsA = Math.floor(palletL / boxL);
             patterns.push({
@@ -1300,7 +1387,7 @@
                 layout: generateGrid(rowsB, colsB, boxW, boxL, palletL, palletW, true)
             });
 
-            // Length-Split
+            // Boyuna Kilit
             for (let r = 1; r < rowsA; r++) {
                 const remainingL = palletL - (r * boxL);
                 const rowsRot = Math.floor(remainingL / boxW);
@@ -1314,7 +1401,7 @@
                 }
             }
 
-            // Width-Split
+            // Enine Kilit
             for (let c = 1; c < colsA; c++) {
                 const remW = palletW - (c * boxW);
                 const cRot = Math.floor(remW / boxL);
@@ -1337,7 +1424,15 @@
         const maxLayersByWeight = Math.floor((maxPalletWeight - palletTare) / (boxesPerLayer * boxWt));
         const maxLayersByBCT = maxLayersBCT || 8;
 
-        const finalLayers = Math.max(1, Math.min(maxLayersByHeight, maxLayersByWeight, maxLayersByBCT));
+        // Kat Sayısı Kısıtı (Kullanıcı 2 veya 4 kat seçtiğinde doğrudan uygulanır)
+        let calculatedLayers = Math.max(1, Math.min(maxLayersByHeight, maxLayersByWeight, maxLayersByBCT));
+        let finalLayers = calculatedLayers;
+
+        if (targetLayers && targetLayers !== 'auto' && !isNaN(parseInt(targetLayers))) {
+            const requestedLayers = parseInt(targetLayers);
+            finalLayers = Math.min(requestedLayers, maxLayersByBCT, maxLayersByHeight, maxLayersByWeight);
+        }
+
         const totalBoxes = boxesPerLayer * finalLayers;
         const finalCargoH = finalLayers * boxH;
         const finalTotalH = finalCargoH + palletBaseH;
@@ -1347,8 +1442,10 @@
         const rackClearance = warehouseRackH - finalTotalH;
 
         let limitingFactor = "Kutu/Teneke BCT Dayanımı";
-        if (finalLayers === maxLayersByHeight) {
-            if (effectiveMaxH === maxHByDoor) limitingFactor = "Konteyner Kapı Yüksekliği (Forklift Giriş Limiti)";
+        if (targetLayers && targetLayers !== 'auto' && finalLayers === parseInt(targetLayers)) {
+            limitingFactor = `Kullanıcı Hedef Kat Tercihi (${finalLayers} Kat)`;
+        } else if (finalLayers === maxLayersByHeight) {
+            if (effectiveMaxH === maxHByDoor) limitingFactor = "Konteyner Kapı Yüksekliği (Eşik Limiti)";
             else if (effectiveMaxH === maxHByRack) limitingFactor = "Depo Raf Kiriş Yüksekliği";
             else limitingFactor = "Araç İç Tavanı";
         } else if (finalLayers === maxLayersByWeight) {
@@ -1448,6 +1545,8 @@
         } else {
             const pIdx = parseInt(document.getElementById('specificBaseSize').value) || 0;
             const pSpec = standardPalletSizes[pIdx] || standardPalletSizes[0];
+            const targetLayersVal = document.getElementById('palletTargetLayers').value;
+
             const pDesign = calculateOptimalPalletDesign({
                 boxL: sku.L, boxW: sku.W, boxH: sku.H, boxWt: sku.Wt, maxLayersBCT: sku.maxLayers,
                 palletL: pSpec.L, palletW: pSpec.W, palletBaseH: pSpec.H, palletTare: pSpec.tare,
@@ -1455,10 +1554,11 @@
                 warehouseRackH: parseInt(document.getElementById('rackHeight').value) || 1800,
                 containerDoorH: parseInt(document.getElementById('containerDoorHeight').value) || 2550,
                 containerCeilingH: contH,
-                shape: sku.shape || 'box'
+                shape: sku.shape || 'box',
+                targetLayers: targetLayersVal
             });
 
-            // Dual-Orientation Vehicle Pallet Optimization
+            // Hem Enine Hem Boyuna Araç İçi Palet Dizilim Kontrolü
             const palsWacross = Math.floor(effContW / pSpec.W) * Math.floor(effContL / pSpec.L);
             const palsLacross = Math.floor(effContW / pSpec.L) * Math.floor(effContL / pSpec.W);
             const totalPallets = Math.max(palsWacross, palsLacross);
@@ -1602,7 +1702,8 @@
                         warehouseRackH: parseInt(document.getElementById('rackHeight').value) || 1800,
                         containerDoorH: parseInt(document.getElementById('containerDoorHeight').value) || 2550,
                         containerCeilingH: contH,
-                        shape: sku.shape || 'box'
+                        shape: sku.shape || 'box',
+                        targetLayers: document.getElementById('palletTargetLayers').value
                     });
                     const palsWacross = Math.floor(effContW / pSpec.W) * Math.floor(effContL / pSpec.L);
                     const palsLacross = Math.floor(effContW / pSpec.L) * Math.floor(effContL / pSpec.W);
@@ -1684,7 +1785,7 @@
                 const totalWidthUsed = (plan.colsA * plan.dimW1) + (plan.colsB * plan.dimW2);
                 const startY = (effContW - totalWidthUsed) / 2;
 
-                // Load Strip A
+                // Strip A
                 let stripAY = startY;
                 if (plan.colsA > 0) {
                     let higherRowsA = Math.min(plan.rowsA, Math.floor(remainderBoxes / plan.colsA));
@@ -1726,7 +1827,7 @@
                     }
                 }
 
-                // Load Strip B (Split columns)
+                // Strip B
                 if (plan.colsB > 0) {
                     let stripBY = startY + (plan.colsA * plan.dimW1);
                     for (let r = 0; r < plan.rowsB; r++) {
@@ -1761,9 +1862,11 @@
                 if (currentX + Math.min(sku.L, sku.W) > effContL) vehicleFull = true;
 
             } else {
-                // Pallet Loading Mode with Optimal Vehicle Layout Check
+                // Pallet Loading Mode
                 const pIdx = parseInt(document.getElementById('specificBaseSize').value) || 0;
                 const pSpec = standardPalletSizes[pIdx] || standardPalletSizes[0];
+                const targetLayersVal = document.getElementById('palletTargetLayers').value;
+
                 const pDesign = calculateOptimalPalletDesign({
                     boxL: sku.L, boxW: sku.W, boxH: sku.H, boxWt: sku.Wt, maxLayersBCT: sku.maxLayers,
                     palletL: pSpec.L, palletW: pSpec.W, palletBaseH: pSpec.H, palletTare: pSpec.tare,
@@ -1771,12 +1874,12 @@
                     warehouseRackH: parseInt(document.getElementById('rackHeight').value) || 1800,
                     containerDoorH: parseInt(document.getElementById('containerDoorHeight').value) || 2550,
                     containerCeilingH: contH,
-                    shape: sku.shape || 'box'
+                    shape: sku.shape || 'box',
+                    targetLayers: targetLayersVal
                 });
 
                 const availableL = effContL - currentX;
                 
-                // Compare Option 1 (W across) vs Option 2 (L across)
                 const c1 = Math.floor(effContW / pSpec.W);
                 const r1 = Math.floor(availableL / pSpec.L);
                 const count1 = c1 * r1;
@@ -1911,11 +2014,11 @@
 
                 const safetyProtocolText = p.isRound 
                     ? `<div class="bg-amber-50 border border-amber-200 p-2.5 rounded text-amber-900 mt-2">
-                        <strong class="block text-xs uppercase mb-0.5">⚠️ Teneke Paletleme Güvenlik Protokolü:</strong>
+                        <strong class="block text-xs uppercase mb-0.5">⚠️ Teneke Paletleme Güvenlik & Petek Protokolü:</strong>
                         <ul class="list-disc pl-4 space-y-0.5 text-[11px]">
-                            <li><strong>Çember-Çembere (Rim-to-Rim) Dizilim:</strong> Üst tenekeler alt tenekelerin çemberine tam oturmalıdır. Katlar arası şaşırtma / kilit yapılmaz (kapak çökmesini önler).</li>
-                            <li><strong>Seperatör Mukavva:</strong> Katlar arasına mukavva levha yerleştirilerek metal sürtünmesi ve kayma engellenmelidir.</li>
-                            <li><strong>Sıfır Taşma Güvencesi:</strong> Palet kenarından dışarı taşma kesinlikle sıfırdır. Köşebent ve en az 5 tur gerdirilmiş streç uygulanmalıdır.</li>
+                            <li><strong>3-2-3 (11'li Petek) & Çember Koruması:</strong> 100x120 paletlerde 11 adetli petek dizilimi uygulanır. Metal sürtünmesini önlemek için katlar arasına mukavva separatör konulmalıdır.</li>
+                            <li><strong>Kat Tercihi:</strong> Araç içi çift istif için 2 kat (Duble), tek kat sevkiyatlar için 4 kat önerilir.</li>
+                            <li><strong>Sıfır Taşma Güvencesi:</strong> Palet kenarından dışarı taşma kesinlikle sıfırdır. Köşebent ve gerdirilmiş streç uygulanmalıdır.</li>
                         </ul>
                        </div>`
                     : `<div class="bg-indigo-50 border border-indigo-200 p-2.5 rounded text-indigo-900 mt-2">
@@ -1949,7 +2052,7 @@
                                 <canvas id="pallet2DCanvas" width="96" height="96" class="w-full h-full object-contain"></canvas>
                             </div>
                             <div class="text-[11px] text-slate-500">
-                                <strong>Palet 2D Taban Dizilimi (${p.isRound ? 'Dairesel Teneke' : 'Kutu Grid'})</strong><br>
+                                <strong>Palet 2D Taban Dizilimi (${p.isRound ? 'Dairesel Petek Teneke' : 'Kutu Grid'})</strong><br>
                                 Her bir kat yukarıdaki desene göre dizilir. Katlar arası <strong>${p.finalLayers} kat</strong> istiflenerek paletlenir.
                             </div>
                         </div>
@@ -2116,17 +2219,15 @@
 
         if (optFrontCurve) drawPoly([project(0,0,0), project(100,0,0), project(100,contW,0), project(0,contW,0)], 'rgba(234, 179, 8, 0.4)', '#ca8a04');
 
-        // Render Loaded Blocks (Floor or Pallet)
+        // Render Blocks
         placedItems.forEach(b => {
             if (b.isPallet) {
-                // 1. Draw Wooden Pallet Base
                 const baseH = b.palletBaseH || 145;
                 let pbRight = [project(b.x + b.l, b.y, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, baseH), project(b.x + b.l, b.y, baseH)];
                 let pbFront = [project(b.x, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, baseH), project(b.x, b.y + b.w, baseH)];
                 drawPoly(pbRight, '#8c6538', 'rgba(0,0,0,0.4)', 1);
                 drawPoly(pbFront, '#a37542', 'rgba(0,0,0,0.4)', 1);
 
-                // 2. Draw Pallet Cargo Block
                 let pRight = [project(b.x + b.l, b.y, baseH), project(b.x + b.l, b.y + b.w, baseH), project(b.x + b.l, b.y + b.w, b.h), project(b.x + b.l, b.y, b.h)];
                 let pFront = [project(b.x, b.y + b.w, baseH), project(b.x + b.l, b.y + b.w, baseH), project(b.x + b.l, b.y + b.w, b.h), project(b.x, b.y + b.w, b.h)];
                 let pTop = [project(b.x, b.y, b.h), project(b.x + b.l, b.y, b.h), project(b.x + b.l, b.y + b.w, b.h), project(b.x, b.y + b.w, b.h)];
@@ -2135,7 +2236,6 @@
                 drawPoly(pFront, b.color.left, 'rgba(0,0,0,0.5)', 1);
                 drawPoly(pTop, b.color.top, 'rgba(0,0,0,0.5)', 1);
 
-                // Draw Horizontal Layer Separators on Pallet
                 if (b.palletDesign && b.palletDesign.finalLayers > 1) {
                     const lyrH = (b.h - baseH) / b.palletDesign.finalLayers;
                     for (let l = 1; l < b.palletDesign.finalLayers; l++) {
@@ -2145,7 +2245,6 @@
                     }
                 }
 
-                // Top Surface Can/Box Indicators
                 if (b.palletDesign && b.palletDesign.boxPositions) {
                     b.palletDesign.boxPositions.forEach(bp => {
                         if (bp.isRound) {
@@ -2164,7 +2263,6 @@
                     });
                 }
             } else {
-                // Floor Loading
                 let pRight = [project(b.x + b.l, b.y, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, b.h), project(b.x + b.l, b.y, b.h)];
                 let pFront = [project(b.x, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, b.h), project(b.x, b.y + b.w, b.h)];
                 let pTop = [project(b.x, b.y, b.h), project(b.x + b.l, b.y, b.h), project(b.x + b.l, b.y + b.w, b.h), project(b.x, b.y + b.w, b.h)];
