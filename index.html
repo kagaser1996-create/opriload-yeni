@@ -37,7 +37,121 @@
 </head>
 <body class="p-2 md:p-4 min-h-[100dvh] lg:h-[100dvh] flex flex-col">
 
-<!-- 1. AUTHENTICATION MODAL -->
+<!-- MODAL: ÖZEL SKU / TENEKE EKLE -->
+<div id="customSkuModal" class="hidden fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border-t-8 border-sky-500">
+        <div class="flex justify-between items-start mb-3">
+            <h3 class="text-base font-black text-slate-800 uppercase">Yeni Özel SKU / Teneke Tanımla</h3>
+            <button onclick="closeModal('customSkuModal')" class="text-slate-400 hover:text-rose-500 font-bold">✕</button>
+        </div>
+
+        <div class="space-y-3 text-xs">
+            <div>
+                <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">SKU / Ürün Adı</label>
+                <input type="text" id="cstSkuName" placeholder="Örn: 18L Teneke veya 5L Yuvarlak Teneke" class="w-full p-2.5 border rounded-lg bg-slate-50 outline-none font-semibold">
+            </div>
+
+            <div>
+                <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Ürün Geometrisi</label>
+                <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1.5 rounded-lg">
+                    <label class="flex items-center gap-1.5 cursor-pointer p-1.5 rounded font-bold text-slate-700 hover:bg-white transition">
+                        <input type="radio" name="cstSkuShape" value="box" checked onchange="toggleCustomSkuShapeUI()" class="text-sky-600">
+                        <span>⏹ Kare / Dikdörtgen</span>
+                    </label>
+                    <label class="flex items-center gap-1.5 cursor-pointer p-1.5 rounded font-bold text-slate-700 hover:bg-white transition">
+                        <input type="radio" name="cstSkuShape" value="round" onchange="toggleCustomSkuShapeUI()" class="text-sky-600">
+                        <span>⚪ Yuvarlak Teneke</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Dikdörtgen / Kare Ölçüleri -->
+            <div id="boxDimensionInputs" class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Uzunluk (L - mm)</label>
+                    <input type="number" id="cstSkuL" value="260" class="w-full p-2 border rounded-lg bg-slate-50 font-bold">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Genişlik (W - mm)</label>
+                    <input type="number" id="cstSkuW" value="260" class="w-full p-2 border rounded-lg bg-slate-50 font-bold">
+                </div>
+            </div>
+
+            <!-- Yuvarlak Teneke Çap Ölçüsü -->
+            <div id="roundDimensionInput" class="hidden">
+                <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Dış Çap (D - mm)</label>
+                <input type="number" id="cstSkuDia" value="280" class="w-full p-2 border rounded-lg bg-slate-50 font-bold">
+                <span class="text-[10px] text-slate-400 mt-0.5 block">Konteyner tabanında çap boy ve en olarak baz alınır.</span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Yükseklik (H)</label>
+                    <input type="number" id="cstSkuH" value="350" class="w-full p-2 border rounded-lg bg-slate-50 font-bold">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Ağırlık (kg)</label>
+                    <input type="number" id="cstSkuWt" step="0.01" value="16.50" class="w-full p-2 border rounded-lg bg-slate-50 font-bold">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Maks İstif</label>
+                    <input type="number" id="cstSkuMaxLayers" value="6" class="w-full p-2 border rounded-lg bg-slate-50 font-bold">
+                </div>
+            </div>
+        </div>
+
+        <div class="flex gap-2 mt-5">
+            <button onclick="closeModal('customSkuModal')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition">İptal</button>
+            <button onclick="saveCustomSku()" class="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md">Kaydet & Listeye Ekle</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: ÖZEL PALET EKLE -->
+<div id="customPalletModal" class="hidden fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border-t-8 border-amber-500">
+        <div class="flex justify-between items-start mb-3">
+            <h3 class="text-base font-black text-slate-800 uppercase">Yeni Özel Palet Tanımla</h3>
+            <button onclick="closeModal('customPalletModal')" class="text-slate-400 hover:text-rose-500 font-bold">✕</button>
+        </div>
+
+        <div class="space-y-3 text-xs">
+            <div>
+                <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Palet Adı / Tanımı</label>
+                <input type="text" id="cstPalName" placeholder="Örn: 110x130 cm İhracat Paleti" class="w-full p-2.5 border rounded-lg bg-slate-50 outline-none font-semibold">
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Palet Boyu (L - mm)</label>
+                    <input type="number" id="cstPalL" value="1200" class="w-full p-2 border rounded-lg bg-slate-50 font-bold">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Palet Eni (W - mm)</label>
+                    <input type="number" id="cstPalW" value="1000" class="w-full p-2 border rounded-lg bg-slate-50 font-bold">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Taban Kalınlığı (mm)</label>
+                    <input type="number" id="cstPalH" value="145" class="w-full p-2 border rounded-lg bg-slate-50 font-bold">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Dara Ağırlığı (kg)</label>
+                    <input type="number" id="cstPalTare" value="25" class="w-full p-2 border rounded-lg bg-slate-50 font-bold">
+                </div>
+            </div>
+        </div>
+
+        <div class="flex gap-2 mt-5">
+            <button onclick="closeModal('customPalletModal')" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition">İptal</button>
+            <button onclick="saveCustomPallet()" class="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md">Kaydet & Paleti Seç</button>
+        </div>
+    </div>
+</div>
+
+<!-- AUTHENTICATION MODAL -->
 <div id="authModal" class="hidden fixed inset-0 bg-slate-900/90 z-50 flex items-center justify-center p-4 no-print">
     <div class="bg-white p-6 md:p-8 rounded-2xl shadow-2xl max-w-md w-full border-t-8 border-sky-500">
         <div class="flex items-center gap-3 mb-2 justify-center">
@@ -81,7 +195,7 @@
     </div>
 </div>
 
-<!-- 2. INBOX / DASHBOARD MODAL -->
+<!-- INBOX / DASHBOARD MODAL -->
 <div id="adminDashboardModal" class="hidden fixed inset-0 bg-slate-900/80 z-40 flex items-center justify-center p-4 no-print">
     <div class="bg-white rounded-2xl shadow-2xl max-w-[1150px] w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-200">
         <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
@@ -113,7 +227,7 @@
     </div>
 </div>
 
-<!-- 3. LOGISTICS REVIEW REASON MODAL -->
+<!-- REASON MODAL -->
 <div id="reviewReasonModal" class="hidden fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 no-print">
     <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border-t-8 border-indigo-600">
         <div class="flex justify-between items-start mb-3">
@@ -150,7 +264,6 @@
             <button onclick="exportPDF()" class="bg-rose-600 hover:bg-rose-500 text-white px-2.5 py-1.5 md:px-3 md:py-1.5 rounded-lg text-xs font-bold shadow-md transition-all">📄 PDF</button>
             <button onclick="window.print()" class="bg-sky-600 hover:bg-sky-500 text-white px-2.5 py-1.5 md:px-3 md:py-1.5 rounded-lg text-xs font-bold shadow-md transition-all">🖨️ Yazdır</button>
 
-            <!-- AUTH & DASHBOARD TRIGGER -->
             <div id="loggedOutView" class="flex gap-2 ml-1 md:ml-3">
                 <button onclick="openModal('authModal')" class="text-xs font-bold text-slate-300 hover:text-white bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">Giriş / Kayıt</button>
             </div>
@@ -188,18 +301,10 @@
         </div>
     </div>
     <div class="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
-        <button onclick="decideReviewAction('onaylandi')" class="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg text-xs font-black shadow-lg transition-all">
-            ✓ Kabul Et (Onayla)
-        </button>
-        <button onclick="decideReviewAction('duzeltme')" class="flex-1 md:flex-none bg-purple-600 hover:bg-purple-500 text-white px-3 py-2 rounded-lg text-xs font-black shadow-lg transition-all">
-            ↺ Düzelt & İade Et
-        </button>
-        <button onclick="decideReviewAction('reddedildi')" class="flex-1 md:flex-none bg-rose-600 hover:bg-rose-500 text-white px-3 py-2 rounded-lg text-xs font-black shadow-lg transition-all">
-            ✕ Reddet
-        </button>
-        <button onclick="exitReviewMode()" class="text-slate-400 hover:text-white px-2 py-1 text-xs font-bold underline">
-            Kapat
-        </button>
+        <button onclick="decideReviewAction('onaylandi')" class="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg text-xs font-black shadow-lg transition-all">✓ Kabul Et (Onayla)</button>
+        <button onclick="decideReviewAction('duzeltme')" class="flex-1 md:flex-none bg-purple-600 hover:bg-purple-500 text-white px-3 py-2 rounded-lg text-xs font-black shadow-lg transition-all">↺ Düzelt & İade Et</button>
+        <button onclick="decideReviewAction('reddedildi')" class="flex-1 md:flex-none bg-rose-600 hover:bg-rose-500 text-white px-3 py-2 rounded-lg text-xs font-black shadow-lg transition-all">✕ Reddet</button>
+        <button onclick="exitReviewMode()" class="text-slate-400 hover:text-white px-2 py-1 text-xs font-bold underline">Kapat</button>
     </div>
 </div>
 
@@ -216,9 +321,7 @@
         </div>
     </div>
     <div class="flex items-center gap-2">
-        <button onclick="exitSalesFeedbackMode()" class="text-slate-400 hover:text-white px-2 py-1 text-xs font-bold underline">
-            Bildirimi Gizle
-        </button>
+        <button onclick="exitSalesFeedbackMode()" class="text-slate-400 hover:text-white px-2 py-1 text-xs font-bold underline">Bildirimi Gizle</button>
     </div>
 </div>
 
@@ -243,7 +346,7 @@
 
 <div class="flex-grow flex flex-col lg:flex-row max-w-[1400px] mx-auto w-full gap-4 print-full-width lg:overflow-hidden">
     
-    <!-- LEFT SIDEBAR: INPUTS -->
+    <!-- LEFT SIDEBAR -->
     <div class="w-full lg:w-[360px] bg-white rounded-xl shadow-md border border-slate-200 flex flex-col no-print flex-shrink-0">
         <div class="grid grid-cols-2 bg-slate-100 rounded-t-xl border-b border-slate-200">
             <div class="tab-btn active text-sm text-center py-3" id="tab-single" onclick="switchTab('single')">📦 Tekil SKU</div>
@@ -252,7 +355,6 @@
 
         <div class="p-4 md:p-5 lg:overflow-y-auto flex-grow custom-scrollbar">
             
-            <!-- ORDER TITLE INPUT -->
             <div class="mb-3 bg-sky-50 border border-sky-200 p-3 rounded-lg">
                 <label class="text-[10px] font-black text-sky-800 uppercase mb-1 block">Sipariş / Talep Adı (Yazdırmaya Çıkar)</label>
                 <input type="text" id="orderTitle" placeholder="Örn: Sipariş #1042 - ABC Dağıtım" class="w-full p-2 border border-sky-300 rounded bg-white text-xs font-bold text-slate-800 focus:outline-none focus:border-sky-500" oninput="syncOrderTitleToPrint();">
@@ -286,7 +388,10 @@
 
             <!-- SINGLE SKU PANEL -->
             <div id="panel-single" class="block">
-                <div class="section-header">Tekil Ürün Modu</div>
+                <div class="section-header flex justify-between items-center">
+                    <span>Tekil Ürün Modu</span>
+                    <button onclick="openModal('customSkuModal')" class="text-[10px] bg-sky-600 hover:bg-sky-500 text-white font-bold px-2 py-0.5 rounded shadow-sm transition">➕ Özel Teneke / SKU</button>
+                </div>
                 <div class="input-group mb-3">
                     <label>Ürün Seçimi</label>
                     <select id="skuSelect" onchange="populateSKU(); isUserDefinedTarget = false; autoSyncSingleTargetCapacity(); debouncedRunEngine();"></select>
@@ -298,12 +403,12 @@
                         <span id="capacityHintBadge" class="text-[9px] bg-fuchsia-200 text-fuchsia-900 px-1.5 py-0.5 rounded font-bold">Maksimum Kapasite</span>
                     </label>
                     <input type="number" id="targetBoxes" value="" placeholder="Otomatik Maksimum" class="bg-white border-fuchsia-300 font-bold text-fuchsia-900" oninput="isUserDefinedTarget = (this.value !== ''); debouncedRunEngine();">
-                    <span class="text-[10px] text-fuchsia-700 mt-1 block">Boş bıraktığınızda araç, ağırlık ve BCT sınırları içindeki en yüksek koli adedi otomatik yüklenir.</span>
+                    <span class="text-[10px] text-fuchsia-700 mt-1 block">Boş bıraktığınızda araç, tonaj ve BCT sınırları içindeki en yüksek koli adedi otomatik yüklenir.</span>
                 </div>
 
                 <div class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
-                    <div class="input-group"><label>Uzun (L)</label><input type="number" id="boxL" readonly class="bg-slate-100"></div>
-                    <div class="input-group"><label>Geniş (W)</label><input type="number" id="boxW" readonly class="bg-slate-100"></div>
+                    <div class="input-group"><label id="lblBoxL">Uzun (L)</label><input type="number" id="boxL" readonly class="bg-slate-100"></div>
+                    <div class="input-group"><label id="lblBoxW">Geniş (W)</label><input type="number" id="boxW" readonly class="bg-slate-100"></div>
                     <div class="input-group"><label>Yük (H)</label><input type="number" id="boxH" readonly class="bg-slate-100"></div>
                     <div class="input-group"><label>Ağrlk (kg)</label><input type="number" id="boxWt" readonly class="bg-slate-100"></div>
                 </div>
@@ -311,7 +416,10 @@
 
             <!-- MIXED SKU PANEL -->
             <div id="panel-mixed" class="hidden">
-                <div class="section-header flex justify-between items-center mb-2">Karma Yük <span class="text-[9px] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded font-bold">Yoğunluk Dengeli</span></div>
+                <div class="section-header flex justify-between items-center mb-2">
+                    <span>Karma Yük Listesi</span>
+                    <button onclick="openModal('customSkuModal')" class="text-[10px] bg-sky-600 hover:bg-sky-500 text-white font-bold px-2 py-0.5 rounded shadow-sm transition">➕ Özel Teneke / SKU</button>
+                </div>
                 <div class="text-[10px] text-slate-500 mb-2 font-semibold">Ağır/yoğun ürünler tabana yerleştirilerek boyuna yayılır; hafif ürünler üst katlara aktarılır.</div>
                 <div id="mixedList" class="space-y-1 mb-3"></div>
                 <button onclick="addNewMixedRow()" class="w-full bg-slate-200 text-slate-700 text-xs font-bold py-2 rounded border border-slate-300 hover:bg-slate-300 shadow-sm">+ Yeni Satır Ekle</button>
@@ -329,14 +437,11 @@
 
             <div id="palletDropdownGroup" class="space-y-3 mb-3 p-3 bg-amber-50/70 border border-amber-200 rounded-lg" style="display:none;">
                 <div class="input-group">
-                    <label>Palet Tipi</label>
-                    <select id="specificBaseSize" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();">
-                        <option value="0" selected>80x120 cm Euro Palet</option>
-                        <option value="1">100x120 cm Sanayi Paleti</option>
-                        <option value="2">97x97 cm Kare Palet</option>
-                        <option value="3">97x119 cm Palet</option>
-                        <option value="4">97x115 cm Palet</option>
-                    </select>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="!mb-0">Palet Tipi</label>
+                        <button onclick="openModal('customPalletModal')" class="text-[10px] bg-amber-600 hover:bg-amber-500 text-white font-bold px-2 py-0.5 rounded shadow-sm transition">➕ Özel Palet</button>
+                    </div>
+                    <select id="specificBaseSize" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"></select>
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                     <div class="input-group">
@@ -369,7 +474,7 @@
         </div>
     </div>
 
-    <!-- RIGHT SIDEBAR: VISUALIZATION & PAGINATION -->
+    <!-- RIGHT SIDEBAR: VISUALIZATION -->
     <div class="flex-grow flex flex-col gap-4 lg:overflow-y-auto print-full-width custom-scrollbar lg:pr-1" id="printArea">
         <div id="fleetPaginationContainer" class="no-print"></div>
 
@@ -429,27 +534,27 @@
     // =========================================================================
 
     const skuDatabase = [
-        {name: "1,5LX6 KULPLU", L: 230, W: 272, H: 307, Wt: 9.13, maxLayers: 7},
-        {name: "3LX6 Kare", L: 238, W: 362, H: 333, Wt: 17.64, maxLayers: 6},
-        {name: "4LX4 Kare", L: 260, W: 296, H: 332, Wt: 15.24, maxLayers: 6},
-        {name: "4,5LX4 Kare", L: 260, W: 296, H: 363, Wt: 17.32, maxLayers: 6},
-        {name: "5LX4 Kare", L: 260, W: 296, H: 394, Wt: 19.23, maxLayers: 6},
-        {name: "1LX12 VK BÜKLÜM", L: 257, W: 338, H: 283, Wt: 11.69, maxLayers: 8},
-        {name: "2LX6 VK BÜKLÜM", L: 224, W: 329, H: 326, Wt: 11.70, maxLayers: 7},
-        {name: "5LX4 Kubbeli", L: 336, W: 336, H: 355, Wt: 19.42, maxLayers: 6},
-        {name: "5LX4 Yaprak", L: 288, W: 402, H: 346, Wt: 19.75, maxLayers: 6},
-        {name: "1,8LX6 BÜKLÜM", L: 222, W: 326, H: 325, Wt: 10.60, maxLayers: 8},
-        {name: "5LX4 YUVARLAK KAVANOZ", L: 382, W: 382, H: 280, Wt: 19.75, maxLayers: 6},
-        {name: "4,5LX4 KARE KAVANOZ", L: 272, W: 308, H: 335, Wt: 17.32, maxLayers: 6},
-        {name: "0,85LX12 YENİ VK BÜKLÜM", L: 242, W: 318, H: 262, Wt: 9.68, maxLayers: 9},
-        {name: "1LX20 BÜKLÜM (KADOOĞLU)", L: 338, W: 419, H: 294, Wt: 19.63, maxLayers: 8},
-        {name: "1LX12 BÜKLÜM (KADOOĞLU)", L: 257, W: 338, H: 294, Wt: 11.70, maxLayers: 8},
-        {name: "1LX12 İNCEBELLİ", L: 296, W: 326, H: 294, Wt: 11.95, maxLayers: 9},
-        {name: "1LX20 İNCEBELLİ", L: 367, W: 430, H: 294, Wt: 19.73, maxLayers: 8},
-        {name: "2LX6 İNCEBELLİ", L: 212, W: 407, H: 326, Wt: 11.81, maxLayers: 7},
-        {name: "0,75LX12 Yeni Vk Büklüm", L: 236, W: 310, H: 251, Wt: 8.83, maxLayers: 9},
-        {name: "2LX6 Kare (Abalı-Kırlangıç)", L: 214, W: 314, H: 323, Wt: 11.70, maxLayers: 7},
-        {name: "1LX12 Kare (Abalı-Kırlangıç)", L: 230, W: 302, H: 297, Wt: 11.66, maxLayers: 6}
+        {name: "1,5LX6 KULPLU", L: 230, W: 272, H: 307, Wt: 9.13, maxLayers: 7, shape: "box"},
+        {name: "3LX6 Kare", L: 238, W: 362, H: 333, Wt: 17.64, maxLayers: 6, shape: "box"},
+        {name: "4LX4 Kare", L: 260, W: 296, H: 332, Wt: 15.24, maxLayers: 6, shape: "box"},
+        {name: "4,5LX4 Kare", L: 260, W: 296, H: 363, Wt: 17.32, maxLayers: 6, shape: "box"},
+        {name: "5LX4 Kare", L: 260, W: 296, H: 394, Wt: 19.23, maxLayers: 6, shape: "box"},
+        {name: "1LX12 VK BÜKLÜM", L: 257, W: 338, H: 283, Wt: 11.69, maxLayers: 8, shape: "box"},
+        {name: "2LX6 VK BÜKLÜM", L: 224, W: 329, H: 326, Wt: 11.70, maxLayers: 7, shape: "box"},
+        {name: "5LX4 Kubbeli", L: 336, W: 336, H: 355, Wt: 19.42, maxLayers: 6, shape: "box"},
+        {name: "5LX4 Yaprak", L: 288, W: 402, H: 346, Wt: 19.75, maxLayers: 6, shape: "box"},
+        {name: "1,8LX6 BÜKLÜM", L: 222, W: 326, H: 325, Wt: 10.60, maxLayers: 8, shape: "box"},
+        {name: "5LX4 YUVARLAK KAVANOZ", L: 382, W: 382, H: 280, Wt: 19.75, maxLayers: 6, shape: "round"},
+        {name: "4,5LX4 KARE KAVANOZ", L: 272, W: 308, H: 335, Wt: 17.32, maxLayers: 6, shape: "box"},
+        {name: "0,85LX12 YENİ VK BÜKLÜM", L: 242, W: 318, H: 262, Wt: 9.68, maxLayers: 9, shape: "box"},
+        {name: "1LX20 BÜKLÜM (KADOOĞLU)", L: 338, W: 419, H: 294, Wt: 19.63, maxLayers: 8, shape: "box"},
+        {name: "1LX12 BÜKLÜM (KADOOĞLU)", L: 257, W: 338, H: 294, Wt: 11.70, maxLayers: 8, shape: "box"},
+        {name: "1LX12 İNCEBELLİ", L: 296, W: 326, H: 294, Wt: 11.95, maxLayers: 9, shape: "box"},
+        {name: "1LX20 İNCEBELLİ", L: 367, W: 430, H: 294, Wt: 19.73, maxLayers: 8, shape: "box"},
+        {name: "2LX6 İNCEBELLİ", L: 212, W: 407, H: 326, Wt: 11.81, maxLayers: 7, shape: "box"},
+        {name: "0,75LX12 Yeni Vk Büklüm", L: 236, W: 310, H: 251, Wt: 8.83, maxLayers: 9, shape: "box"},
+        {name: "2LX6 Kare (Abalı-Kırlangıç)", L: 214, W: 314, H: 323, Wt: 11.70, maxLayers: 7, shape: "box"},
+        {name: "1LX12 Kare (Abalı-Kırlangıç)", L: 230, W: 302, H: 297, Wt: 11.66, maxLayers: 6, shape: "box"}
     ];
 
     const standardPalletSizes = [
@@ -505,9 +610,10 @@
         }
 
         populateSelects();
+        populatePalletSelect();
         const skuSel = document.getElementById('skuSelect');
         if (skuSel && skuSel.options.length > 4) {
-            skuSel.value = "4"; // 5LX4 Kare default
+            skuSel.value = "4"; // 5LX4 Kare
         }
         populateSKU();
         addMixedRowWithCount(2, 400);
@@ -544,6 +650,85 @@
         const bType = document.getElementById('baseType')?.value === 'floor' ? 'Zemin / Dökme' : 'Paletli';
         const printVeh = document.getElementById('printVehicleSummaryDisplay');
         if (printVeh) printVeh.innerText = `${vType} (${bType})`;
+    }
+
+    // ==========================================
+    // CUSTOM SKU & CUSTOM PALLET HANDLERS
+    // ==========================================
+    function toggleCustomSkuShapeUI() {
+        const shape = document.querySelector('input[name="cstSkuShape"]:checked').value;
+        const boxInputs = document.getElementById('boxDimensionInputs');
+        const roundInput = document.getElementById('roundDimensionInput');
+        if (shape === 'round') {
+            boxInputs.classList.add('hidden');
+            roundInput.classList.remove('hidden');
+        } else {
+            boxInputs.classList.remove('hidden');
+            roundInput.classList.add('hidden');
+        }
+    }
+
+    function saveCustomSku() {
+        const nameInput = document.getElementById('cstSkuName');
+        const name = nameInput.value.trim() || 'Özel Ürün/Teneke';
+        const shape = document.querySelector('input[name="cstSkuShape"]:checked').value;
+        
+        let L, W;
+        if (shape === 'round') {
+            const dia = parseFloat(document.getElementById('cstSkuDia').value) || 280;
+            L = dia;
+            W = dia;
+        } else {
+            L = parseFloat(document.getElementById('cstSkuL').value) || 260;
+            W = parseFloat(document.getElementById('cstSkuW').value) || 260;
+        }
+        
+        const H = parseFloat(document.getElementById('cstSkuH').value) || 350;
+        const Wt = parseFloat(document.getElementById('cstSkuWt').value) || 16.5;
+        const maxLayers = parseInt(document.getElementById('cstSkuMaxLayers').value) || 6;
+
+        const newSku = { name, L, W, H, Wt, maxLayers, shape };
+        skuDatabase.push(newSku);
+
+        populateSelects();
+        // Set to newly added SKU
+        const sel = document.getElementById('skuSelect');
+        sel.value = skuDatabase.length - 1;
+        populateSKU();
+        isUserDefinedTarget = false;
+        autoSyncSingleTargetCapacity();
+        debouncedRunEngine();
+        closeModal('customSkuModal');
+        nameInput.value = '';
+    }
+
+    function populatePalletSelect() {
+        const select = document.getElementById('specificBaseSize');
+        if (!select) return;
+        select.innerHTML = "";
+        standardPalletSizes.forEach((p, idx) => {
+            select.options.add(new Option(`${p.name} (${p.L}x${p.W}x${p.H} mm)`, idx));
+        });
+    }
+
+    function saveCustomPallet() {
+        const nameInput = document.getElementById('cstPalName');
+        const name = nameInput.value.trim() || 'Özel Palet';
+        const L = parseFloat(document.getElementById('cstPalL').value) || 1200;
+        const W = parseFloat(document.getElementById('cstPalW').value) || 1000;
+        const H = parseFloat(document.getElementById('cstPalH').value) || 145;
+        const tare = parseFloat(document.getElementById('cstPalTare').value) || 25;
+
+        const newPallet = { name, L, W, H, tare };
+        standardPalletSizes.push(newPallet);
+
+        populatePalletSelect();
+        const sel = document.getElementById('specificBaseSize');
+        sel.value = standardPalletSizes.length - 1;
+        autoSyncSingleTargetCapacity();
+        debouncedRunEngine();
+        closeModal('customPalletModal');
+        nameInput.value = '';
     }
 
     // ==========================================
@@ -592,25 +777,15 @@
     async function handleAuthSubmit() {
         const errLabel = document.getElementById('authErrorMsg');
         errLabel.classList.add('hidden');
-        
-        if (!supabaseClient) { 
-            errLabel.innerText = "Veritabanı bağlantısı kurulamadı."; 
-            errLabel.classList.remove('hidden'); 
-            return; 
-        }
+        if (!supabaseClient) { errLabel.innerText = "Veritabanı bağlantısı kurulamadı."; errLabel.classList.remove('hidden'); return; }
         
         const email = document.getElementById('authEmail').value.trim();
         const password = document.getElementById('authPassword').value;
-        if (!email || !password) { 
-            errLabel.innerText = "E-posta ve şifre gereklidir."; 
-            errLabel.classList.remove('hidden'); 
-            return; 
-        }
+        if (!email || !password) { errLabel.innerText = "E-posta ve şifre gereklidir."; errLabel.classList.remove('hidden'); return; }
         
         const btn = document.getElementById('authSubmitBtn');
         try {
             btn.innerText = "İşlem yapılıyor..."; btn.disabled = true;
-
             if (authMode === 'login') {
                 const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
                 if (error) throw error;
@@ -777,7 +952,6 @@
         tbody.innerHTML = '';
 
         let query = supabaseClient.from('simulations').select('*').order('created_at', { ascending: false });
-
         if (currentUserProfile?.role === 'sales') {
             modalHeader.innerText = "Girdiğim Talepler & Durum Takibi";
             query = query.eq('sales_email', currentUser.email);
@@ -820,10 +994,7 @@
                         <td class="p-3 text-slate-500 whitespace-nowrap">${dateStr}</td>
                         <td class="p-3 font-bold text-slate-900">${orderNameDisplay}</td>
                         <td class="p-3">${statusBadge}</td>
-                        <td class="p-3 font-semibold text-slate-700">
-                            <span class="block">${salesRep}</span>
-                            <span class="text-[10px] text-slate-400 font-normal">${row.sales_email || ''}</span>
-                        </td>
+                        <td class="p-3 font-semibold text-slate-700"><span class="block">${salesRep}</span><span class="text-[10px] text-slate-400 font-normal">${row.sales_email || ''}</span></td>
                         <td class="p-3 text-[11px]"><strong class="text-slate-800 block">${row.vehicle_type} (${row.base_type})</strong><span class="text-slate-500">${row.total_boxes} Koli | ${row.total_weight} kg</span></td>
                         <td class="p-3 text-slate-600 font-medium text-[11px] max-w-[200px] truncate" title="${reviewNote}">${reviewNote}</td>
                         <td class="p-3 text-center whitespace-nowrap">${actionBtn}</td>
@@ -972,18 +1143,28 @@
         const boxH = sku.H;
         const boxWt = sku.Wt;
 
-        // Cutoff 1: Vertical Layers Limit (BCT & Ceiling Clearance)
         const physMaxLayers = Math.max(1, Math.min(sku.maxLayers, Math.floor((contH - 20) / boxH)));
-
-        // Cutoff 2: Legal Gross Weight Limit
         const maxBoxesByWeight = Math.floor(maxWgt / boxWt);
 
         let bestPlan = null;
         let maxBoxesFound = 0;
 
-        // Exhaustive combinatorial search across the container width:
-        // Strip A: 'a' columns of boxW (running boxL along length)
-        // Strip B: 'b' columns of boxL (running boxW along length)
+        // Yuvarlak tenekelerde L == W olduğu için tek simetrik eksen yeterlidir
+        if (sku.shape === 'round') {
+            const cols = Math.floor(effW / boxW);
+            const rows = Math.floor(effL / boxL);
+            const layerBoxes = cols * rows;
+            const volumeBoxes = layerBoxes * physMaxLayers;
+            const feasibleBoxes = Math.min(volumeBoxes, maxBoxesByWeight);
+
+            return {
+                colsA: cols, rowsA: rows, dimL1: boxL, dimW1: boxW,
+                colsB: 0, rowsB: 0, dimL2: boxW, dimW2: boxL,
+                layerBoxes: layerBoxes, maxBoxes: feasibleBoxes,
+                physMaxLayers: physMaxLayers, isSplit: false, isRound: true
+            };
+        }
+
         const maxA = Math.floor(effW / boxW);
         for (let a = 0; a <= maxA; a++) {
             const widthUsedByA = a * boxW;
@@ -998,7 +1179,6 @@
             const layerBoxes = (a * rowsA) + (b * rowsB);
             if (layerBoxes <= 0) continue;
 
-            // Maximum volume boxes possible across all available layers
             const volumeBoxes = layerBoxes * physMaxLayers;
             const feasibleBoxes = Math.min(volumeBoxes, maxBoxesByWeight);
 
@@ -1006,18 +1186,10 @@
                (feasibleBoxes === maxBoxesFound && layerBoxes > (bestPlan ? bestPlan.layerBoxes : 0))) {
                 maxBoxesFound = feasibleBoxes;
                 bestPlan = {
-                    colsA: a,
-                    rowsA: rowsA,
-                    dimL1: boxL,
-                    dimW1: boxW,
-                    colsB: b,
-                    rowsB: rowsB,
-                    dimL2: boxW,
-                    dimW2: boxL,
-                    layerBoxes: layerBoxes,
-                    maxBoxes: feasibleBoxes,
-                    physMaxLayers: physMaxLayers,
-                    isSplit: (a > 0 && b > 0)
+                    colsA: a, rowsA: rowsA, dimL1: boxL, dimW1: boxW,
+                    colsB: b, rowsB: rowsB, dimL2: boxW, dimW2: boxL,
+                    layerBoxes: layerBoxes, maxBoxes: feasibleBoxes,
+                    physMaxLayers: physMaxLayers, isSplit: (a > 0 && b > 0), isRound: false
                 };
             }
         }
@@ -1179,7 +1351,7 @@
             singleTruckMaxBoxes = plan ? plan.maxBoxes : Math.floor(maxWgt / sku.Wt);
         } else {
             const pIdx = parseInt(document.getElementById('specificBaseSize').value) || 0;
-            const pSpec = standardPalletSizes[pIdx];
+            const pSpec = standardPalletSizes[pIdx] || standardPalletSizes[0];
             const pDesign = calculateOptimalPalletDesign({
                 boxL: sku.L, boxW: sku.W, boxH: sku.H, boxWt: sku.Wt, maxLayersBCT: sku.maxLayers,
                 palletL: pSpec.L, palletW: pSpec.W, palletBaseH: pSpec.H, palletTare: pSpec.tare,
@@ -1226,7 +1398,17 @@
         const select = document.getElementById('skuSelect');
         if (!select) return;
         select.innerHTML = "";
-        skuDatabase.forEach((sku, idx) => select.options.add(new Option(`${sku.name} (${sku.L}x${sku.W}x${sku.H})`, idx)));
+        skuDatabase.forEach((sku, idx) => {
+            const icon = sku.shape === 'round' ? '⚪' : '⏹';
+            select.options.add(new Option(`${icon} ${sku.name} (${sku.L}x${sku.W}x${sku.H})`, idx));
+        });
+
+        // Update any mixed SKU rows currently open
+        document.querySelectorAll('.mixed-sku').forEach(sel => {
+            const currentVal = sel.value;
+            sel.innerHTML = skuDatabase.map((s, i) => `<option value="${i}">${s.shape === 'round' ? '⚪' : '⏹'} ${s.name}</option>`).join('');
+            sel.value = currentVal;
+        });
     }
 
     function populateSKU() {
@@ -1239,6 +1421,14 @@
         document.getElementById('boxW').value = sku.W;
         document.getElementById('boxH').value = sku.H;
         document.getElementById('boxWt').value = sku.Wt;
+
+        if (sku.shape === 'round') {
+            document.getElementById('lblBoxL').innerText = "Çap (D)";
+            document.getElementById('lblBoxW').innerText = "Çap (D)";
+        } else {
+            document.getElementById('lblBoxL').innerText = "Uzun (L)";
+            document.getElementById('lblBoxW').innerText = "Geniş (W)";
+        }
     }
 
     function updateVehicleDims() {
@@ -1265,7 +1455,7 @@
         if (!list) return;
         const div = document.createElement('div');
         div.className = "flex gap-2 items-center mixed-row mb-1 p-1 bg-white border border-slate-200 rounded shadow-sm";
-        let options = skuDatabase.map((s, i) => `<option value="${i}" ${i === prefillIdx ? 'selected' : ''}>${s.name}</option>`).join('');
+        let options = skuDatabase.map((s, i) => `<option value="${i}" ${i === prefillIdx ? 'selected' : ''}>${s.shape === 'round' ? '⚪' : '⏹'} ${s.name}</option>`).join('');
         div.innerHTML = `
             <div class="drag-handle text-slate-400 font-bold px-1 hover:text-slate-700 text-lg">☰</div>
             <select class="w-[50%] p-1.5 border rounded text-xs mixed-sku" onchange="debouncedRunEngine()">${options}</select>
@@ -1357,7 +1547,6 @@
                 const availableL = effContL - currentX;
                 if (availableL <= 0) { vehicleFull = true; continue; }
 
-                // 1. Solve optimal floor plan with all width partitions and cutoffs
                 const plan = findOptimalFloorPlan(effContW, availableL, contH, sku, maxWgt - totalWgt);
                 if (!plan || plan.layerBoxes <= 0) { vehicleFull = true; continue; }
 
@@ -1365,8 +1554,6 @@
                 const boxesForThisTruck = Math.min(item.remaining, maxBoxesByWeight);
                 if (boxesForThisTruck <= 0) { vehicleFull = true; break; }
 
-                // 2. Uniform Floor-First Distribution
-                // Calculate baseline layers that run across ALL available rows to the door
                 let baseLayers = Math.floor(boxesForThisTruck / plan.layerBoxes);
                 baseLayers = Math.max(1, Math.min(baseLayers, plan.physMaxLayers));
 
@@ -1414,7 +1601,7 @@
                             boxes: rowBoxes, wgt: rowWgt, color: item.color,
                             cols: plan.colsA, rows: 1, layers: rowLayers, targetLayers: rowLayers,
                             singleBoxL: plan.dimL1, singleBoxW: plan.dimW1, singleBoxH: sku.H,
-                            isRotated: false, priority: item.priority, section: 'Strip A'
+                            isRotated: false, isRound: (sku.shape === 'round'), priority: item.priority, section: 'Strip A'
                         });
 
                         totalWgt += rowWgt;
@@ -1445,7 +1632,7 @@
                             boxes: rowBoxes, wgt: rowWgt, color: item.color,
                             cols: plan.colsB, rows: 1, layers: rowLayers, targetLayers: rowLayers,
                             singleBoxL: plan.dimL2, singleBoxW: plan.dimW2, singleBoxH: sku.H,
-                            isRotated: true, priority: item.priority, section: 'Strip B'
+                            isRotated: true, isRound: (sku.shape === 'round'), priority: item.priority, section: 'Strip B'
                         });
 
                         totalWgt += rowWgt;
@@ -1460,7 +1647,7 @@
             } else {
                 // Pallet Loading Mode
                 const pIdx = parseInt(document.getElementById('specificBaseSize').value) || 0;
-                const pSpec = standardPalletSizes[pIdx];
+                const pSpec = standardPalletSizes[pIdx] || standardPalletSizes[0];
                 const pDesign = calculateOptimalPalletDesign({
                     boxL: sku.L, boxW: sku.W, boxH: sku.H, boxWt: sku.Wt, maxLayersBCT: sku.maxLayers,
                     palletL: pSpec.L, palletW: pSpec.W, palletBaseH: pSpec.H, palletTare: pSpec.tare,
@@ -1487,7 +1674,7 @@
                             l: pSpec.L, w: pSpec.W, h: pDesign.totalHeight,
                             boxes: b, wgt: w, color: item.color,
                             palletDesign: pDesign,
-                            isPallet: true, priority: item.priority
+                            isPallet: true, isRound: (sku.shape === 'round'), priority: item.priority
                         });
                         totalWgt += w; totalBoxes += b; item.remaining -= b;
                     }
@@ -1516,7 +1703,7 @@
             let pagHtml = `<div class="flex gap-2 mb-2 p-2 bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">`;
             globalFleet.forEach((v, idx) => {
                 let activeClass = idx === currentVehicleIdx ? 'bg-sky-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200';
-                pagHtml += `<button onclick="currentVehicleIdx = ${idx}; updateFleetUI();" class="px-4 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap ${activeClass}">🚚 Araç ${idx + 1} (${v.totalBoxes} Koli)</button>`;
+                pagHtml += `<button onclick="currentVehicleIdx = ${idx}; updateFleetUI();" class="px-4 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap ${activeClass}">🚚 Araç ${idx + 1} (${v.totalBoxes} Koli/Teneke)</button>`;
             });
             pagHtml += `</div>`;
             pagContainer.innerHTML = pagHtml;
@@ -1548,7 +1735,7 @@
                 if (!groupedItems[item.id]) {
                     groupedItems[item.id] = {
                         name: item.id, totalBoxes: 0, totalRows: 0, cols: item.cols, isRotated: item.isRotated,
-                        color: item.color, singleBoxL: item.singleBoxL, singleBoxW: item.singleBoxW, layerCounts: {}
+                        color: item.color, singleBoxL: item.singleBoxL, singleBoxW: item.singleBoxW, isRound: item.isRound, layerCounts: {}
                     };
                 }
                 groupedItems[item.id].totalBoxes += item.boxes;
@@ -1566,13 +1753,13 @@
                 detailsHtml += `
                     <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm text-xs space-y-2">
                         <div class="flex items-center justify-between border-b pb-2">
-                            <strong class="text-slate-900 text-sm">${g.name} &bull; Taban Dağılım Raporu</strong>
-                            <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-black text-xs">${g.totalBoxes} Koli (${g.totalRows} Blok/Sıra)</span>
+                            <strong class="text-slate-900 text-sm">${g.isRound ? '⚪ ' : '⏹ '}${g.name} &bull; Taban Dağılım Raporu</strong>
+                            <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-black text-xs">${g.totalBoxes} Adet (${g.totalRows} Blok/Sıra)</span>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-2 pt-1 text-slate-700">
-                            <div class="bg-slate-50 p-2.5 rounded border"><strong class="block text-indigo-900 text-xs mb-0.5">Boyuna Tam Yayılım</strong>Kutular dorse tabanına yayılarak kapıya kadar ${g.totalRows} sıra olarak uzatılmış, arkada boşluk bırakılmamıştır.</div>
-                            <div class="bg-slate-50 p-2.5 rounded border"><strong class="block text-indigo-900 text-xs mb-0.5">Kat Dağılımı</strong>${layerStepDesc} olarak kademelendirilmiş, alt koliler üzerindeki BCT yükü eşitlenmiştir.</div>
-                            <div class="bg-slate-50 p-2.5 rounded border"><strong class="block text-indigo-900 text-xs mb-0.5">Hacim Kullanımı</strong>Enine ve boyuna ölçüler dinamik çözücüyle optimize edilip maksimum doluluk elde edilmiştir.</div>
+                            <div class="bg-slate-50 p-2.5 rounded border"><strong class="block text-indigo-900 text-xs mb-0.5">Boyuna Tam Yayılım</strong>Yük dorse tabanına yayılarak kapıya kadar ${g.totalRows} sıra boyunca yerleştirilmiş ve arka boşluk minimize edilmiştir.</div>
+                            <div class="bg-slate-50 p-2.5 rounded border"><strong class="block text-indigo-900 text-xs mb-0.5">Kat Dağılımı</strong>${layerStepDesc} olarak kademelendirilmiş, alt ürünler üzerindeki BCT / ezilme yükü dengelenmiştir.</div>
+                            <div class="bg-slate-50 p-2.5 rounded border"><strong class="block text-indigo-900 text-xs mb-0.5">Geometri & Doluluk</strong>${g.isRound ? 'Silindirik teneke formatında çap bazlı dizilmiştir.' : 'Kutu / kare teneke formatında enine-boyuna optimum yön seçilmiştir.'}</div>
                         </div>
                     </div>
                 `;
@@ -1594,9 +1781,9 @@
                             <span class="text-indigo-700 bg-indigo-50 font-bold px-2 py-1 rounded">Dizilim Deseni: ${p.bestPattern}</span>
                         </div>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                            <div class="p-2 bg-slate-50 rounded border"><span class="text-slate-500 block text-[10px] uppercase font-bold">Kat Başına Koli</span><strong>${p.boxesPerLayer} Koli</strong></div>
+                            <div class="p-2 bg-slate-50 rounded border"><span class="text-slate-500 block text-[10px] uppercase font-bold">Kat Başına Adet</span><strong>${p.boxesPerLayer} Adet</strong></div>
                             <div class="p-2 bg-slate-50 rounded border"><span class="text-slate-500 block text-[10px] uppercase font-bold">İstif Kat Sayısı</span><strong>${p.finalLayers} Kat</strong></div>
-                            <div class="p-2 bg-slate-50 rounded border"><span class="text-slate-500 block text-[10px] uppercase font-bold">Palet Başı Toplam</span><strong class="text-emerald-600">${p.totalBoxes} Koli</strong></div>
+                            <div class="p-2 bg-slate-50 rounded border"><span class="text-slate-500 block text-[10px] uppercase font-bold">Palet Başı Toplam</span><strong class="text-emerald-600">${p.totalBoxes} Adet</strong></div>
                             <div class="p-2 bg-slate-50 rounded border"><span class="text-slate-500 block text-[10px] uppercase font-bold">Palet Toplam Yükseklik</span><strong class="text-slate-800">${p.totalHeight} mm</strong></div>
                         </div>
                         <div class="p-3 bg-slate-50 rounded-lg border space-y-1.5">
@@ -1776,6 +1963,26 @@
                     let y = b.y + c * (b.w / b.cols);
                     drawLine(project(b.x + b.l, y, 0), project(b.x + b.l, y, b.h), 'rgba(0,0,0,0.35)');
                     drawLine(project(b.x, y, b.h), project(b.x + b.l, y, b.h), 'rgba(0,0,0,0.4)');
+                }
+
+                // If round (tin cans / silindirik teneke), draw top lid circle indicator
+                if (b.isRound) {
+                    for (let c = 0; c < b.cols; c++) {
+                        let centerX = b.x + b.l / 2;
+                        let centerY = b.y + (c + 0.5) * (b.w / b.cols);
+                        let topZ = b.h;
+                        let ptCenter = project(centerX, centerY, topZ);
+                        let radiusX = (b.l / 2) * cosA * scale * 0.85;
+                        let radiusY = (b.w / b.cols / 2) * sinA * scale * 0.85;
+
+                        ctx.beginPath();
+                        ctx.ellipse(ptCenter.x, ptCenter.y, radiusX, radiusY, 0, 0, 2 * Math.PI);
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+                        ctx.fill();
+                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    }
                 }
             }
         });
