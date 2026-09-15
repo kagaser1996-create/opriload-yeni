@@ -82,13 +82,13 @@
 
                 <div id="mngRoundDimGroup" class="hidden">
                     <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Dış Çap (D - mm)</label>
-                    <input type="number" id="mngSkuDia" value="280" class="w-full p-2 border rounded bg-white font-bold">
+                    <input type="number" id="mngSkuDia" value="285" class="w-full p-2 border rounded bg-white font-bold">
                 </div>
 
                 <div class="grid grid-cols-3 gap-2">
                     <div>
                         <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Yükseklik (H - mm)</label>
-                        <input type="number" id="mngSkuH" value="350" class="w-full p-2 border rounded bg-white font-bold">
+                        <input type="number" id="mngSkuH" value="330" class="w-full p-2 border rounded bg-white font-bold">
                     </div>
                     <div>
                         <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Brüt Ağırlık (kg)</label>
@@ -412,6 +412,7 @@
 
 <script>
     const defaultSkuDatabase = [
+        {name: "kızartmalık (285×285×330)", L: 285, W: 285, H: 330, Wt: 16.50, maxLayers: 6, shape: "round"},
         {name: "1,5LX6 KULPLU", L: 230, W: 272, H: 307, Wt: 9.13, maxLayers: 7, shape: "box"},
         {name: "3LX6 Kare", L: 238, W: 362, H: 333, Wt: 17.64, maxLayers: 6, shape: "box"},
         {name: "4LX4 Kare", L: 260, W: 296, H: 332, Wt: 15.24, maxLayers: 6, shape: "box"},
@@ -481,8 +482,8 @@
         populateSelects();
         populatePalletSelect();
         const skuSel = document.getElementById('skuSelect');
-        if (skuSel && skuSel.options.length > 4) {
-            skuSel.value = "4"; // 5LX4 Kare default
+        if (skuSel) {
+            skuSel.value = "0"; // Default: kızartmalık (285×285×330)
         }
         populateSKU();
         addMixedRowWithCount(2, 400);
@@ -527,16 +528,6 @@
     function onSkuSelectChanged() {
         populateSKU();
         isUserDefinedTarget = false;
-
-        const skuIdx = parseInt(document.getElementById('skuSelect').value) || 0;
-        const sku = skuDatabase[skuIdx];
-        if (sku && sku.shape === 'round') {
-            const palSelect = document.getElementById('specificBaseSize');
-            if (palSelect && palSelect.value === "0") {
-                palSelect.value = "1"; // 100x120 Sanayi Paleti
-            }
-        }
-
         autoSyncSingleTargetCapacity();
         debouncedRunEngine();
     }
@@ -594,14 +585,14 @@
         
         let L, W;
         if (shape === 'round') {
-            const dia = parseFloat(document.getElementById('mngSkuDia').value) || 280;
+            const dia = parseFloat(document.getElementById('mngSkuDia').value) || 285;
             L = dia; W = dia;
         } else {
             L = parseFloat(document.getElementById('mngSkuL').value) || 260;
             W = parseFloat(document.getElementById('mngSkuW').value) || 260;
         }
         
-        const H = parseFloat(document.getElementById('mngSkuH').value) || 350;
+        const H = parseFloat(document.getElementById('mngSkuH').value) || 330;
         const Wt = parseFloat(document.getElementById('mngSkuWt').value) || 16.5;
         const maxLayers = parseInt(document.getElementById('mngSkuMaxLayers').value) || 6;
 
@@ -906,7 +897,7 @@
     }
 
     // =========================================================================
-    // 📦 GÜVENLİK KORUMALI & DENGELİ PALET TASARIMI (ARKA PLANDA ÇALIŞIR)
+    // 📦 ÇİFT YÖNLÜ ŞAŞIRTMA (HİDROSTATİK 4-3-4 & 11'Lİ PETEK ÇÖZÜCÜ)
     // =========================================================================
     function calculateOptimalPalletDesign(params) {
         const {
@@ -928,12 +919,12 @@
 
         if (shape === 'round') {
             const D = Math.max(boxL, boxW);
+            const pitch = D * Math.sqrt(3) / 2; // ~0.866025 * D
 
-            // A. Düz Şebeke
+            // Pattern A: Düz Kare Şebeke (Orthogonal)
             const colsGrid = Math.floor(palletW / D);
             const rowsGrid = Math.floor(palletL / D);
             const countGrid = colsGrid * rowsGrid;
-
             const gridBoxes = [];
             const offXGrid = (palletL - (rowsGrid * D)) / 2;
             const offYGrid = (palletW - (colsGrid * D)) / 2;
@@ -942,46 +933,71 @@
                     gridBoxes.push({ x: offXGrid + (r * D), y: offYGrid + (c * D), l: D, w: D, isRound: true });
                 }
             }
-            patterns.push({ type: 'Düz Çember Dizilimi (Rim-to-Rim)', count: countGrid, layout: gridBoxes, isRound: true });
+            patterns.push({ type: 'Düz Çember (Kare Şebeke)', count: countGrid, layout: gridBoxes, isRound: true });
 
-            // B. 3-2-3-3 Petek
-            const rowPitchX = D * Math.sqrt(3) / 2;
-            if (palletL >= D && rowPitchX > 0) {
-                const numColsOdd = Math.floor(palletW / D);
-                const numColsEven = Math.floor((palletW - (D / 2)) / D);
-                const maxRowsL = 1 + Math.floor((palletL - D) / rowPitchX);
+            // Pattern B: Genişlik Boyunca Şaşırtmalı (Petek across Pallet Width - 4-3-4 Düzeni)
+            if (palletW >= D && pitch > 0) {
+                const numRowsAcrossW = 1 + Math.floor((palletW - D) / pitch);
+                if (numRowsAcrossW >= 2) {
+                    const stagBoxesW = [];
+                    let countW = 0;
+                    const totalWUsed = D + (numRowsAcrossW - 1) * pitch;
+                    const startY = (palletW - totalWUsed) / 2;
 
-                if (maxRowsL >= 2 && numColsOdd >= 2) {
-                    let stagBoxes = [];
-                    let countStag = 0;
-                    const totalL = D + (maxRowsL - 1) * rowPitchX;
-                    const offX = Math.max(0, (palletL - totalL) / 2);
+                    for (let r = 0; r < numRowsAcrossW; r++) {
+                        const isShifted = (r % 2 === 1);
+                        const rowShift = isShifted ? (D / 2) : 0;
+                        const pailsInRow = Math.floor((palletL - rowShift) / D);
+                        const rowStartX = (palletL - (pailsInRow * D + rowShift)) / 2 + rowShift;
+                        const rowY = startY + (r * pitch);
 
-                    for (let r = 0; r < maxRowsL; r++) {
-                        let isEven = (r % 2 === 1);
-                        let colsInRow = isEven ? numColsEven : numColsOdd;
-                        
-                        if (r === maxRowsL - 1 && r >= 3 && numColsOdd >= 3 && (palletW >= numColsOdd * D)) {
-                            colsInRow = numColsOdd;
-                            isEven = false;
-                        }
-
-                        const rowWidth = isEven ? (colsInRow * D + D / 2) : (colsInRow * D);
-                        const offY = Math.max(0, (palletW - rowWidth) / 2) + (isEven ? D / 2 : 0);
-
-                        for (let c = 0; c < colsInRow; c++) {
-                            stagBoxes.push({ x: offX + (r * rowPitchX), y: offY + (c * D), l: D, w: D, isRound: true });
-                            countStag++;
+                        for (let c = 0; c < pailsInRow; c++) {
+                            stagBoxesW.push({ x: rowStartX + (c * D), y: rowY, l: D, w: D, isRound: true });
+                            countW++;
                         }
                     }
 
                     patterns.push({
-                        type: (maxRowsL === 4 && countStag === 11) ? '3-2-3-3 Petek Formasyonu (11 Adet/Kat)' : 'Şaşırtmalı Petek Dizilimi',
-                        count: countStag, layout: stagBoxes, isRound: true
+                        type: (numRowsAcrossW === 3 && countW === 11) ? '4-3-4 Petek Formasyonu (11 Adet/Kat)' : 'Genişliğe Şaşırtmalı Petek',
+                        count: countW,
+                        layout: stagBoxesW,
+                        isRound: true
+                    });
+                }
+            }
+
+            // Pattern C: Uzunluk Boyunca Şaşırtmalı (Petek across Pallet Length - 3-2-3 Düzeni)
+            if (palletL >= D && pitch > 0) {
+                const numRowsAcrossL = 1 + Math.floor((palletL - D) / pitch);
+                if (numRowsAcrossL >= 2) {
+                    const stagBoxesL = [];
+                    let countL = 0;
+                    const totalLUsed = D + (numRowsAcrossL - 1) * pitch;
+                    const startX = (palletL - totalLUsed) / 2;
+
+                    for (let r = 0; r < numRowsAcrossL; r++) {
+                        const isShifted = (r % 2 === 1);
+                        const rowShift = isShifted ? (D / 2) : 0;
+                        const pailsInRow = Math.floor((palletW - rowShift) / D);
+                        const rowStartY = (palletW - (pailsInRow * D + rowShift)) / 2 + rowShift;
+                        const rowX = startX + (r * pitch);
+
+                        for (let c = 0; c < pailsInRow; c++) {
+                            stagBoxesL.push({ x: rowX, y: rowStartY + (c * D), l: D, w: D, isRound: true });
+                            countL++;
+                        }
+                    }
+
+                    patterns.push({
+                        type: (numRowsAcrossL === 4 && countL === 11) ? '3-2-3-3 Petek Formasyonu (11 Adet/Kat)' : 'Uzunluğa Şaşırtmalı Petek',
+                        count: countL,
+                        layout: stagBoxesL,
+                        isRound: true
                     });
                 }
             }
         } else {
+            // Koli / Dikdörtgen Desenleri
             const colsA = Math.floor(palletW / boxW);
             const rowsA = Math.floor(palletL / boxL);
             patterns.push({ type: 'Düz (Boyuna)', count: colsA * rowsA, layout: generateGrid(rowsA, colsA, boxL, boxW, palletL, palletW, false) });
@@ -1017,8 +1033,7 @@
         let limitingFactor = "Kutu/Teneke BCT Dayanımı";
 
         if (strategy === 'stable') {
-            // Güvenli stabilite oranı (SR) arka planda devrilmezliği garanti eder
-            const targetMaxSR = (shape === 'round') ? 1.40 : 1.45;
+            const targetMaxSR = (shape === 'round') ? 1.45 : 1.50;
             const maxHBySR = minPalletDim * targetMaxSR;
             const maxLayersBySR = Math.floor((maxHBySR - palletBaseH) / boxH);
 
@@ -1450,7 +1465,7 @@
             document.getElementById('resLoadsSub').innerText = "Dorse Boyunca Sıralı";
         }
 
-        // 4. Yük Emniyeti & Sevk Durumu (TEMİZ, GÜVEN VEREN STATÜ)
+        // 4. Yük Emniyeti & Sevk Durumu
         let momentX = 0;
         truck.placedItems.forEach(p => { momentX += (p.x + p.l/2) * p.wgt; });
         let cogX = truck.totalWgt > 0 ? (momentX / truck.totalWgt) : 0;
@@ -1517,7 +1532,6 @@
                     ? `<span class="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded font-bold">✓ Rafa Sığar (${Math.floor(p.clearances.rackClearance)}mm Boşluk)</span>`
                     : `<span class="text-rose-700 bg-rose-100 px-2 py-0.5 rounded font-bold">⚠️ Rafa Sığmaz (Yükseklik Aşımı)</span>`;
 
-                // OTOMATİK KORUYUCU DONANIM VE EMNİYET ÖNERİLERİ (GEREKLİ AKSESUARLAR)
                 const airbagOrStraforText = truck.gapW > 120 
                     ? `<li><strong class="text-amber-800">Hava Yastığı & Strafor (EPS) Dolgu:</strong> Yan duvarlarda ${Math.floor(truck.gapW)} mm boşluk kalmaktadır. Palet aralarına ve yan duvarlara <strong>Hava Yastığı (Dunnage Airbag)</strong> ve <strong>Strafor Takoz Paneller</strong> yerleştirilerek yana kayma sıfırlanmalıdır.</li>`
                     : (truck.gapW > 60 
