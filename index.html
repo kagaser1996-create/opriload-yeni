@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Elita OptiLoad | Akıllı Lojistik & Palet Sentezleme Motoru</title>
+    <title>Elita OptiLoad | Akıllı Lojistik & Sevk Onay Sistemi</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Supabase JS Library -->
@@ -37,7 +37,104 @@
 </head>
 <body class="p-2 md:p-4 min-h-[100dvh] lg:h-[100dvh] flex flex-col">
 
-<!-- 1. SKU YÖNETİMİ & EKLE / SİL MODALI -->
+<!-- 1. AUTHENTICATION MODAL -->
+<div id="authModal" class="hidden fixed inset-0 bg-slate-900/90 z-50 flex items-center justify-center p-4 no-print">
+    <div class="bg-white p-6 md:p-8 rounded-2xl shadow-2xl max-w-md w-full border-t-8 border-sky-500">
+        <div class="flex items-center gap-3 mb-2 justify-center">
+            <div class="w-10 h-10 bg-sky-500 rounded flex items-center justify-center font-black text-white text-2xl">E</div>
+            <h2 class="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">Elita <span class="font-light text-sky-500">OptiLoad</span></h2>
+        </div>
+        <p class="text-center text-slate-500 font-bold mb-6 uppercase text-[11px] tracking-widest">Saha & Sevk Onay Paneli</p>
+        
+        <div class="flex border-b border-slate-200 mb-6">
+            <button id="authTabLogin" onclick="switchAuthTab('login')" class="flex-1 py-2 font-bold text-sm border-b-2 border-sky-500 text-sky-600">Giriş Yap</button>
+            <button id="authTabRegister" onclick="switchAuthTab('register')" class="flex-1 py-2 font-bold text-sm text-slate-400 border-b-2 border-transparent">Kayıt Ol</button>
+        </div>
+
+        <div id="registerFields" class="hidden space-y-3 mb-3">
+            <div>
+                <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">Ad Soyad</label>
+                <input type="text" id="regFullName" class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm focus:border-sky-500 outline-none" placeholder="Ad Soyad">
+            </div>
+            <div>
+                <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">Departman Yetkisi</label>
+                <select id="regRole" class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm focus:border-sky-500 outline-none font-semibold">
+                    <option value="sales">Satış Ekibi (Talep Oluşturur & Takip Eder)</option>
+                    <option value="logistics">Lojistik & Saha (İnceler, Düzeltme İster, Onaylar)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="space-y-3">
+            <div>
+                <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">E-Posta</label>
+                <input type="email" id="authEmail" class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm focus:border-sky-500 outline-none" placeholder="ornek@sirket.com">
+            </div>
+            <div>
+                <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">Şifre</label>
+                <input type="password" id="authPassword" class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm focus:border-sky-500 outline-none" placeholder="••••••••">
+            </div>
+        </div>
+
+        <button id="authSubmitBtn" onclick="handleAuthSubmit()" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 rounded-xl transition-all shadow-md mt-6 text-sm">Giriş Yap</button>
+        <p id="authErrorMsg" class="text-rose-500 text-xs font-bold text-center mt-3 hidden"></p>
+    </div>
+</div>
+
+<!-- 2. INBOX / DASHBOARD MODAL -->
+<div id="adminDashboardModal" class="hidden fixed inset-0 bg-slate-900/80 z-40 flex items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-[1150px] w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-200">
+        <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <span class="text-lg">📥</span>
+                <h3 class="font-bold text-base" id="dashboardModalHeader">Sevk Talepleri & Durum Takibi</h3>
+            </div>
+            <button onclick="closeDashboard()" class="text-slate-400 hover:text-white font-black text-lg">✕</button>
+        </div>
+        <div class="p-4 md:p-6 overflow-y-auto flex-grow custom-scrollbar">
+            <div id="dashboardLoading" class="text-center text-slate-400 py-8 font-semibold">Kayıtlar yükleniyor, lütfen bekleyin...</div>
+            <div class="overflow-x-auto">
+                <table id="dashboardTable" class="w-full text-left text-xs bg-white rounded border border-slate-200 hidden min-w-[800px]">
+                    <thead class="bg-slate-100 text-slate-700 uppercase font-bold border-b">
+                        <tr>
+                            <th class="p-3">Tarih</th>
+                            <th class="p-3">Sipariş / Talep Adı</th>
+                            <th class="p-3">Durum</th>
+                            <th class="p-3">Satış Temsilcisi</th>
+                            <th class="p-3">Araç & Yük</th>
+                            <th class="p-3">Lojistik Karar / Düzeltme Notu</th>
+                            <th class="p-3 text-center">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dashboardTableBody" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 3. LOJİSTİK KARAR & DÜZELTME NOTU MODALI -->
+<div id="reviewReasonModal" class="hidden fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border-t-8 border-indigo-600">
+        <div class="flex justify-between items-start mb-3">
+            <h3 class="text-lg font-black text-slate-800" id="reviewReasonModalTitle">Karar Gerekçesi</h3>
+            <button onclick="closeModal('reviewReasonModal')" class="text-slate-400 hover:text-rose-500 font-bold">✕</button>
+        </div>
+        <input type="hidden" id="pendingActionType">
+        
+        <div class="mb-4">
+            <label class="text-xs font-bold text-slate-700 uppercase mb-1 block" id="reviewReasonFieldLabel">Açıklama / Düzeltme Notu:</label>
+            <textarea id="reviewReasonInput" rows="3" class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm focus:border-indigo-500 outline-none" placeholder="Satış ekibine iletilecek notu yazın..."></textarea>
+        </div>
+
+        <div class="flex gap-2">
+            <button onclick="closeModal('reviewReasonModal')" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition">İptal</button>
+            <button onclick="executeFinalDecision()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md">Kaydet & Satışa Bildir</button>
+        </div>
+    </div>
+</div>
+
+<!-- 4. SKU YÖNETİMİ MODALI -->
 <div id="skuManagerModal" class="hidden fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 no-print">
     <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 border-t-8 border-sky-500 max-h-[90vh] flex flex-col">
         <div class="flex justify-between items-start mb-3">
@@ -111,7 +208,7 @@
     </div>
 </div>
 
-<!-- 2. PALET YÖNETİMİ & BESPOKE SENTEZLEME MODALI -->
+<!-- 5. PALET YÖNETİMİ & BESPOKE SENTEZLEME MODALI -->
 <div id="palletManagerModal" class="hidden fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 no-print">
     <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 border-t-8 border-amber-500 max-h-[90vh] flex flex-col">
         <div class="flex justify-between items-start mb-3">
@@ -171,14 +268,14 @@
     </div>
 </div>
 
-<!-- TOP NAVIGATION BAR -->
+<!-- TOP NAVIGATION BAR WITH AUTH & WORKFLOW CONTROLS -->
 <nav class="bg-slate-900 text-white shadow-md rounded-t-xl md:rounded-xl mx-auto max-w-[1400px] w-full z-10 relative no-print mb-3">
     <div class="px-4 md:px-6 py-3 flex flex-col md:flex-row justify-between items-center gap-3">
         <div class="flex items-center gap-3 w-full md:w-auto">
             <div class="w-8 h-8 bg-sky-500 rounded flex items-center justify-center font-black text-xl tracking-tighter">E</div>
             <div>
                 <h1 class="text-lg md:text-xl font-black tracking-tight leading-none">Elita <span class="font-light text-sky-400">OptiLoad</span></h1>
-                <p class="text-[9px] md:text-[10px] text-slate-400 font-semibold tracking-widest uppercase mt-1">Akıllı Lojistik, Emniyet & Taşıma Planlayıcı</p>
+                <p class="text-[9px] md:text-[10px] text-slate-400 font-semibold tracking-widest uppercase mt-1">Akıllı Lojistik, Emniyet & Sevk Onay Planlayıcı</p>
             </div>
         </div>
 
@@ -186,9 +283,69 @@
             <button onclick="exportCSV()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1.5 md:px-3 md:py-1.5 rounded-lg text-xs font-bold shadow-md transition-all">📊 CSV</button>
             <button onclick="exportPDF()" class="bg-rose-600 hover:bg-rose-500 text-white px-2.5 py-1.5 md:px-3 md:py-1.5 rounded-lg text-xs font-bold shadow-md transition-all">📄 PDF</button>
             <button onclick="window.print()" class="bg-sky-600 hover:bg-sky-500 text-white px-2.5 py-1.5 md:px-3 md:py-1.5 rounded-lg text-xs font-bold shadow-md transition-all">🖨️ Yazdır</button>
+
+            <!-- GİRİŞ / KAYIT BUTONU -->
+            <div id="loggedOutView" class="flex gap-2 ml-1 md:ml-3">
+                <button onclick="openModal('authModal')" class="text-xs font-bold text-slate-300 hover:text-white bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">Giriş / Kayıt</button>
+            </div>
+
+            <!-- GİRİŞ YAPILMIŞ KULLANICI & ONAY ÇUBUĞU -->
+            <div id="loggedInView" class="hidden flex items-center gap-2 flex-wrap ml-1 md:ml-3">
+                <div id="userProfileBadge" class="flex items-center gap-2 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 text-xs">
+                    <span id="userRoleBadge" class="px-1.5 py-0.5 rounded font-black text-[9px] uppercase">Kullanıcı</span>
+                    <span id="userEmailLabel" class="text-slate-300 font-medium hidden sm:inline">user@mail.com</span>
+                </div>
+                
+                <button id="btnDashboard" onclick="openDashboard()" class="relative bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm">
+                    <span id="dashboardBtnText">📥 Taleplerim</span>
+                    <span id="pendingBadgeBubble" class="hidden absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full shadow-md animate-pulse">0</span>
+                </button>
+
+                <button id="btnSubmitSales" onclick="saveSimulation('bekliyor')" class="hidden bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg transition-all items-center gap-1">
+                    ↗ Onaya Gönder
+                </button>
+                <button onclick="handleLogout()" class="text-xs text-rose-400 hover:text-rose-300 font-bold ml-1">Çıkış</button>
+            </div>
         </div>
     </div>
 </nav>
+
+<!-- LOJİSTİK İNCELEME & KARAR ÇUBUĞU -->
+<div id="activeReviewBar" class="hidden max-w-[1400px] mx-auto w-full mb-3 bg-gradient-to-r from-slate-900 to-indigo-950 text-white border-2 border-indigo-500 rounded-xl p-3 md:p-4 shadow-xl flex flex-col md:flex-row items-center justify-between gap-3 no-print">
+    <div class="flex items-center gap-3">
+        <span class="text-2xl animate-bounce">📋</span>
+        <div>
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="bg-amber-500 text-slate-950 px-2 py-0.5 rounded font-black text-[10px] uppercase">Lojistik İnceleme Modu</span>
+                <span id="reviewBarTalepMeta" class="text-xs font-bold text-slate-200">Talep #--</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-0.5">3D modeli ve yükleme planını inceledikten sonra nihai kararınızı verin:</p>
+        </div>
+    </div>
+    <div class="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
+        <button onclick="decideReviewAction('onaylandi')" class="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg text-xs font-black shadow-lg transition-all">✓ Kabul Et (Onayla)</button>
+        <button onclick="decideReviewAction('duzeltme')" class="flex-1 md:flex-none bg-purple-600 hover:bg-purple-500 text-white px-3 py-2 rounded-lg text-xs font-black shadow-lg transition-all">↺ Düzelt & İade Et</button>
+        <button onclick="decideReviewAction('reddedildi')" class="flex-1 md:flex-none bg-rose-600 hover:bg-rose-500 text-white px-3 py-2 rounded-lg text-xs font-black shadow-lg transition-all">✕ Reddet</button>
+        <button onclick="exitReviewMode()" class="text-slate-400 hover:text-white px-2 py-1 text-xs font-bold underline">Kapat</button>
+    </div>
+</div>
+
+<!-- SATIŞ GERİ BİLDİRİM / DÜZELTME BİLDİRİM BANNERI -->
+<div id="salesFeedbackBar" class="hidden max-w-[1400px] mx-auto w-full mb-3 bg-gradient-to-r from-purple-950 to-slate-900 text-white border-2 border-purple-500 rounded-xl p-3 md:p-4 shadow-xl flex flex-col md:flex-row items-center justify-between gap-3 no-print">
+    <div class="flex items-center gap-3">
+        <span class="text-2xl" id="salesFeedbackIcon">⚠️</span>
+        <div>
+            <div class="flex items-center gap-2">
+                <span id="salesFeedbackBadge" class="bg-purple-600 text-white px-2 py-0.5 rounded font-black text-[10px] uppercase">Lojistik İade Bildirimi</span>
+                <span id="salesFeedbackMeta" class="text-xs font-bold text-purple-200">Talep #--</span>
+            </div>
+            <p id="salesFeedbackMessage" class="text-xs text-slate-200 font-semibold mt-1">Lojistik Notu: -</p>
+        </div>
+    </div>
+    <div class="flex items-center gap-2">
+        <button onclick="exitSalesFeedbackMode()" class="text-slate-400 hover:text-white px-2 py-1 text-xs font-bold underline">Bildirimi Gizle</button>
+    </div>
+</div>
 
 <!-- PRINTABLE FORM HEADER -->
 <div class="hidden print-only mb-4 border-b-2 border-slate-900 pb-3">
@@ -309,7 +466,6 @@
                     <select id="specificBaseSize" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"></select>
                 </div>
 
-                <!-- BASİTLEŞTİRİLMİŞ İSTİF SEÇİCİSİ -->
                 <div class="input-group">
                     <label class="text-amber-900 font-bold flex justify-between">
                         <span>Palet İstif Katı</span>
@@ -411,6 +567,20 @@
 </div>
 
 <script>
+    // =========================================================================
+    // 🔑 SUPABASE BAĞLANTI PARAMETRELERİ
+    // =========================================================================
+    const SUPABASE_URL = 'https://wukjeatpuysvlosbtahf.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1a2plYXRwdXlzdmxvc2J0YWhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1MTk4NjMsImV4cCI6MjEwNDA5NTg2M30.-HitB_MtlNXIYvd1qqgydWmr0UxpnSP4Q29EMugF8P8';
+    // =========================================================================
+
+    let supabaseClient = null;
+    let currentUser = null;
+    let currentUserProfile = null;
+    let authMode = 'login';
+    let currentSimulationId = null;
+    let currentExaminedOrder = null;
+
     const defaultSkuDatabase = [
         {name: "kızartmalık (285×285×330)", L: 285, W: 285, H: 330, Wt: 16.50, maxLayers: 6, shape: "round"},
         {name: "1,5LX6 KULPLU", L: 230, W: 272, H: 307, Wt: 9.13, maxLayers: 7, shape: "box"},
@@ -469,6 +639,20 @@
     let lastRenderData = null;
 
     function initApp() {
+        if (window.supabase) {
+            try {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                supabaseClient.auth.getSession().then(({ data: { session } }) => {
+                    if (session) handleAuthChange(session.user);
+                });
+                supabaseClient.auth.onAuthStateChange((_event, session) => {
+                    handleAuthChange(session?.user || null);
+                });
+            } catch (e) {
+                console.error("Supabase başlatma hatası:", e);
+            }
+        }
+
         try {
             const savedSkus = localStorage.getItem('optiload_skus');
             skuDatabase = savedSkus ? JSON.parse(savedSkus) : [...defaultSkuDatabase];
@@ -483,7 +667,7 @@
         populatePalletSelect();
         const skuSel = document.getElementById('skuSelect');
         if (skuSel) {
-            skuSel.value = "0"; // Default: kızartmalık (285×285×330)
+            skuSel.value = "0"; // kızartmalık (285×285×330)
         }
         populateSKU();
         addMixedRowWithCount(2, 400);
@@ -534,7 +718,415 @@
 
     function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+    function closeDashboard() { document.getElementById('adminDashboardModal').classList.add('hidden'); }
 
+    // =========================================================================
+    // 🔐 SUPABASE AUTH & ROL BAZLI YETKİLENDİRME SİSTEMİ
+    // =========================================================================
+    function handleAuthChange(user) {
+        currentUser = user;
+        if (user) {
+            document.getElementById('authModal').classList.add('hidden');
+            document.getElementById('loggedOutView').classList.add('hidden');
+            document.getElementById('loggedInView').classList.remove('hidden');
+            loadUserProfile(user.id);
+        } else {
+            document.getElementById('authModal').classList.add('hidden');
+            document.getElementById('loggedOutView').classList.remove('hidden');
+            document.getElementById('loggedInView').classList.add('hidden');
+        }
+    }
+
+    function switchAuthTab(mode) {
+        authMode = mode;
+        const btnLogin = document.getElementById('authTabLogin');
+        const btnReg = document.getElementById('authTabRegister');
+        const regFields = document.getElementById('registerFields');
+        const submitBtn = document.getElementById('authSubmitBtn');
+        const err = document.getElementById('authErrorMsg');
+        err.classList.add('hidden');
+
+        if (mode === 'login') {
+            btnLogin.className = "flex-1 py-2 font-bold text-sm border-b-2 border-sky-500 text-sky-600";
+            btnReg.className = "flex-1 py-2 font-bold text-sm text-slate-400 border-b-2 border-transparent";
+            regFields.classList.add('hidden');
+            submitBtn.innerText = "Giriş Yap";
+        } else {
+            btnReg.className = "flex-1 py-2 font-bold text-sm border-b-2 border-sky-500 text-sky-600";
+            btnLogin.className = "flex-1 py-2 font-bold text-sm text-slate-400 border-b-2 border-transparent";
+            regFields.classList.remove('hidden');
+            submitBtn.innerText = "Kayıt Ol ve Başla";
+        }
+    }
+
+    async function handleAuthSubmit() {
+        const errLabel = document.getElementById('authErrorMsg');
+        errLabel.classList.add('hidden');
+        if (!supabaseClient) { errLabel.innerText = "Veritabanı bağlantısı kurulamadı."; errLabel.classList.remove('hidden'); return; }
+        
+        const email = document.getElementById('authEmail').value.trim();
+        const password = document.getElementById('authPassword').value;
+        if (!email || !password) { errLabel.innerText = "E-posta ve şifre gereklidir."; errLabel.classList.remove('hidden'); return; }
+        
+        const btn = document.getElementById('authSubmitBtn');
+        try {
+            btn.innerText = "İşlem yapılıyor..."; btn.disabled = true;
+            if (authMode === 'login') {
+                const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                if (error) throw error;
+            } else {
+                const fullName = document.getElementById('regFullName').value.trim() || 'Kullanıcı';
+                let role = document.getElementById('regRole').value;
+                if (email.toLowerCase() === 'admin96@admin.com' && password === 'admin96') { role = 'admin'; }
+
+                const { error } = await supabaseClient.auth.signUp({ 
+                    email, password, options: { data: { full_name: fullName, role: role } } 
+                });
+                if (error) throw error;
+                errLabel.innerText = "Kayıt başarılı! Giriş yapabilirsiniz.";
+                errLabel.classList.remove('hidden', 'text-rose-500'); 
+                errLabel.classList.add('text-emerald-600');
+            }
+        } catch (e) {
+            errLabel.classList.remove('hidden', 'text-emerald-600'); 
+            errLabel.classList.add('text-rose-500');
+            errLabel.innerText = "Hata: " + e.message;
+        } finally {
+            btn.innerText = authMode === 'login' ? "Giriş Yap" : "Kayıt Ol ve Başla"; 
+            btn.disabled = false;
+        }
+    }
+
+    async function loadUserProfile(userId) {
+        if (!supabaseClient) return;
+        const { data } = await supabaseClient.from('profiles').select('*').eq('id', userId).single();
+        currentUserProfile = data || { role: currentUser.user_metadata?.role || 'sales', full_name: currentUser.user_metadata?.full_name || currentUser.email };
+        applyRolePermissions();
+        updatePendingBadgeCount();
+    }
+
+    function applyRolePermissions() {
+        const role = currentUserProfile?.role || 'sales';
+        const roleBadge = document.getElementById('userRoleBadge');
+        const btnSales = document.getElementById('btnSubmitSales');
+        const dashBtn = document.getElementById('btnDashboard');
+        const dashText = document.getElementById('dashboardBtnText');
+        
+        document.getElementById('userEmailLabel').innerText = currentUserProfile?.full_name || currentUser?.email || 'Kullanıcı';
+        dashBtn.classList.remove('hidden'); dashBtn.classList.add('flex');
+
+        if (role === 'logistics' || role === 'admin') {
+            roleBadge.innerText = role === 'admin' ? "YÖNETİCİ" : "LOJİSTİK & AR-GE"; 
+            roleBadge.className = role === 'admin' ? "px-1.5 py-0.5 rounded font-black text-[9px] bg-indigo-600 text-white uppercase" : "px-1.5 py-0.5 rounded font-black text-[9px] bg-sky-600 text-white uppercase";
+            dashText.innerText = "📥 Gelen Sevk Talepleri";
+            btnSales.classList.add('hidden');
+        } else {
+            roleBadge.innerText = "SATIŞ EKİBİ"; 
+            roleBadge.className = "px-1.5 py-0.5 rounded font-black text-[9px] bg-amber-600 text-white uppercase";
+            dashText.innerText = "📥 Taleplerim";
+            btnSales.classList.remove('hidden'); 
+            btnSales.classList.add('flex');
+        }
+    }
+
+    async function handleLogout() { 
+        if (supabaseClient) await supabaseClient.auth.signOut(); 
+        location.reload(); 
+    }
+
+    async function updatePendingBadgeCount() {
+        if (!supabaseClient || !currentUserProfile) return;
+        const badge = document.getElementById('pendingBadgeBubble');
+        if (!badge) return;
+
+        if (currentUserProfile.role === 'logistics' || currentUserProfile.role === 'admin') {
+            const { count, error } = await supabaseClient.from('simulations').select('*', { count: 'exact', head: true }).eq('status', 'bekliyor');
+            if (!error && count > 0) {
+                badge.innerText = count;
+                badge.className = "absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full shadow-md animate-pulse";
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        } else {
+            const { count, error } = await supabaseClient.from('simulations').select('*', { count: 'exact', head: true }).eq('sales_email', currentUser.email).eq('status', 'duzeltme');
+            if (!error && count > 0) {
+                badge.innerText = count;
+                badge.className = "absolute -top-1.5 -right-1.5 bg-purple-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full shadow-md animate-bounce";
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+    }
+
+    // =========================================================================
+    // 📋 SEVK TALEP ONAY / DÜZELTME / RED HİYERARŞİSİ
+    // =========================================================================
+    async function saveSimulation(status) {
+        if (!globalFleet || globalFleet.length === 0 || globalFleet[0].placedItems.length === 0) {
+            alert("Lütfen önce geçerli bir yükleme planı oluşturun.");
+            return;
+        }
+
+        const btnSales = document.getElementById('btnSubmitSales');
+        btnSales.innerText = "Gönderiliyor..."; btnSales.disabled = true;
+
+        let tBoxes = 0; let tWgt = 0;
+        globalFleet.forEach(v => { tBoxes += v.totalBoxes; tWgt += v.totalWgt; });
+
+        const orderTitleValue = document.getElementById('orderTitle')?.value.trim() || 'İsimsiz Talep';
+
+        let input_data = {
+            mode: currentMode,
+            orderName: orderTitleValue,
+            vehicleType: document.getElementById('vehicleType').value,
+            maxWgt: document.getElementById('maxWgt').value,
+            targetBoxes: document.getElementById('targetBoxes').value,
+            baseType: document.getElementById('baseType').value,
+            singleSkuIdx: document.getElementById('skuSelect').value,
+            palletIdx: document.getElementById('specificBaseSize').value,
+            palletStrategy: document.getElementById('palletStrategy').value,
+            rackH: document.getElementById('rackHeight').value,
+            doorH: document.getElementById('containerDoorHeight').value
+        };
+
+        const payload = {
+            status: status,
+            order_name: orderTitleValue,
+            mode: currentMode,
+            vehicle_type: document.getElementById('vehicleType').value,
+            base_type: document.getElementById('baseType').value,
+            total_boxes: tBoxes,
+            total_weight: tWgt,
+            total_loads: `${globalFleet.length} Araç`,
+            layout_data: { inputs: input_data, results: globalFleet, order_name: orderTitleValue }
+        };
+
+        if (currentUserProfile?.role === 'sales') {
+            payload.sales_email = currentUser.email;
+            payload.sales_name = currentUserProfile.full_name || 'Satış Temsilcisi';
+        }
+
+        let dbError = null;
+        if (currentSimulationId) { 
+            payload.layout_data_review_note = "Satış ekibi tarafından revize edilip yeniden onaya sunuldu.";
+            const { error } = await supabaseClient.from('simulations').update(payload).eq('id', currentSimulationId); 
+            dbError = error;
+        } else { 
+            const { error } = await supabaseClient.from('simulations').insert([payload]); 
+            dbError = error;
+        }
+
+        btnSales.innerText = "↗ Onaya Gönder"; btnSales.disabled = false;
+
+        if (dbError) {
+            alert("Kayıt hatası: " + dbError.message);
+        } else {
+            alert(currentSimulationId ? "✅ Planınız revize edildi ve Lojistik onayına iletildi!" : "✅ Sevk talebiniz başarıyla Lojistik onay havuzuna iletildi!");
+            exitSalesFeedbackMode();
+            currentSimulationId = null;
+            updatePendingBadgeCount();
+        }
+    }
+
+    async function openDashboard() {
+        document.getElementById('adminDashboardModal').classList.remove('hidden');
+        const loading = document.getElementById('dashboardLoading');
+        const table = document.getElementById('dashboardTable');
+        const tbody = document.getElementById('dashboardTableBody');
+        const modalHeader = document.getElementById('dashboardModalHeader');
+        loading.classList.remove('hidden');
+        table.classList.add('hidden');
+        tbody.innerHTML = '';
+
+        let query = supabaseClient.from('simulations').select('*').order('created_at', { ascending: false });
+        if (currentUserProfile?.role === 'sales') {
+            modalHeader.innerText = "Girdiğim Sevk Talepleri & Durum Takibi";
+            query = query.eq('sales_email', currentUser.email);
+        } else {
+            modalHeader.innerText = "Tüm Gelen Talepler & Onay Havuzu (Lojistik Karar Paneli)";
+        }
+
+        const { data } = await query.limit(50);
+        loading.classList.add('hidden');
+        table.classList.remove('hidden');
+
+        if (data && data.length > 0) {
+            data.forEach(row => {
+                const dateStr = new Date(row.created_at).toLocaleString('tr-TR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+                const salesRep = row.sales_name || row.sales_email || '-';
+                const orderNameDisplay = row.order_name || row.layout_data?.order_name || row.layout_data?.inputs?.orderName || 'İsimsiz Sipariş';
+                
+                let statusBadge = '<span class="bg-amber-100 text-amber-700 px-2 py-1 rounded text-[10px] font-black uppercase">Onay Bekliyor</span>';
+                if (row.status === 'onaylandi') statusBadge = '<span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px] font-black uppercase">✓ Onaylandı</span>';
+                else if (row.status === 'reddedildi') statusBadge = '<span class="bg-rose-100 text-rose-700 px-2 py-1 rounded text-[10px] font-black uppercase">✕ Reddedildi</span>';
+                else if (row.status === 'duzeltme') statusBadge = '<span class="bg-purple-100 text-purple-700 px-2 py-1 rounded text-[10px] font-black uppercase">↺ Düzeltme İstendi</span>';
+
+                let reviewNote = row.layout_data_review_note || row.layout_data?.review_note || '-';
+                let actionBtn = '';
+
+                if (currentUserProfile?.role === 'logistics' || currentUserProfile?.role === 'admin') {
+                    actionBtn = `<button onclick="loadSimulationIntoEditor(${row.id})" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm text-[11px] uppercase transition flex items-center justify-center gap-1 mx-auto">🔍 İncele & Karar Ver</button>`;
+                } else {
+                    if (row.status === 'duzeltme') {
+                        actionBtn = `<button onclick="loadSimulationIntoEditor(${row.id})" class="bg-purple-600 hover:bg-purple-500 text-white font-bold px-3 py-1.5 rounded-lg shadow-md text-[11px] uppercase transition">✏️ Düzelt & Yeniden Gönder</button>`;
+                    } else if (row.status === 'onaylandi') {
+                        actionBtn = `<button onclick="loadSimulationIntoEditor(${row.id})" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-lg shadow-sm text-[11px] uppercase transition">🖨️ Planı Aç / Yazdır</button>`;
+                    } else {
+                        actionBtn = `<button onclick="loadSimulationIntoEditor(${row.id})" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-[11px] uppercase transition">👁️ İncele</button>`;
+                    }
+                }
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition border-b">
+                        <td class="p-3 text-slate-500 whitespace-nowrap">${dateStr}</td>
+                        <td class="p-3 font-bold text-slate-900">${orderNameDisplay}</td>
+                        <td class="p-3">${statusBadge}</td>
+                        <td class="p-3 font-semibold text-slate-700"><span class="block">${salesRep}</span><span class="text-[10px] text-slate-400 font-normal">${row.sales_email || ''}</span></td>
+                        <td class="p-3 text-[11px]"><strong class="text-slate-800 block">${row.vehicle_type} (${row.base_type})</strong><span class="text-slate-500">${row.total_boxes} Adet | ${row.total_weight} kg</span></td>
+                        <td class="p-3 text-slate-600 font-medium text-[11px] max-w-[200px] truncate" title="${reviewNote}">${reviewNote}</td>
+                        <td class="p-3 text-center whitespace-nowrap">${actionBtn}</td>
+                    </tr>`;
+            });
+        } else {
+            tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400 font-semibold">Kayıt bulunamadı.</td></tr>`;
+        }
+    }
+
+    async function loadSimulationIntoEditor(id) {
+        const { data, error } = await supabaseClient.from('simulations').select('*').eq('id', id).single();
+        if (error || !data) return alert("Talep yüklenemedi.");
+        
+        currentSimulationId = data.id; 
+        currentExaminedOrder = data;
+        const inputs = data.layout_data?.inputs || {};
+
+        const loadedOrderName = data.order_name || inputs.orderName || data.layout_data?.order_name || '';
+        document.getElementById('orderTitle').value = loadedOrderName;
+        syncOrderTitleToPrint();
+
+        switchTab(inputs.mode || 'single');
+        document.getElementById('vehicleType').value = inputs.vehicleType || 'TIR';
+        document.getElementById('maxWgt').value = inputs.maxWgt || 25000;
+        document.getElementById('targetBoxes').value = inputs.targetBoxes || '';
+        document.getElementById('baseType').value = inputs.baseType || 'floor';
+
+        if (inputs.mode === 'single') {
+            document.getElementById('skuSelect').value = inputs.singleSkuIdx || 0;
+            populateSKU();
+        }
+
+        if (inputs.palletIdx !== undefined) document.getElementById('specificBaseSize').value = inputs.palletIdx;
+        if (inputs.palletStrategy !== undefined) document.getElementById('palletStrategy').value = inputs.palletStrategy;
+        if (inputs.rackH !== undefined) document.getElementById('rackHeight').value = inputs.rackH;
+        if (inputs.doorH !== undefined) document.getElementById('containerDoorHeight').value = inputs.doorH;
+
+        isUserDefinedTarget = (inputs.targetBoxes !== '' && inputs.targetBoxes !== undefined);
+        updateVehicleDims(); 
+        handleBaseChange(); 
+        debouncedRunEngine(); 
+        closeDashboard();
+
+        if (currentUserProfile?.role === 'logistics' || currentUserProfile?.role === 'admin') {
+            const bar = document.getElementById('activeReviewBar');
+            const meta = document.getElementById('reviewBarTalepMeta');
+            const salesRep = data.sales_name || data.sales_email || 'Satış';
+            const dateStr = new Date(data.created_at).toLocaleDateString('tr-TR');
+            meta.innerText = `${loadedOrderName || 'İsimsiz Talep'} (Temsilci: ${salesRep} &bull; ${dateStr})`;
+            bar.classList.remove('hidden');
+        } else if (currentUserProfile?.role === 'sales') {
+            const feedbackBar = document.getElementById('salesFeedbackBar');
+            const feedbackMeta = document.getElementById('salesFeedbackMeta');
+            const feedbackMsg = document.getElementById('salesFeedbackMessage');
+            const feedbackIcon = document.getElementById('salesFeedbackIcon');
+            const feedbackBadge = document.getElementById('salesFeedbackBadge');
+            const btnSales = document.getElementById('btnSubmitSales');
+
+            feedbackMeta.innerText = `${loadedOrderName || 'İsimsiz Talep'} (${data.vehicle_type})`;
+            feedbackMsg.innerText = `Lojistik Notu / Karar Gerekçesi: ${data.layout_data_review_note || 'Açıklama belirtilmedi.'}`;
+
+            if (data.status === 'duzeltme') {
+                feedbackIcon.innerText = "✏️";
+                feedbackBadge.innerText = "DÜZELTME VE İADE";
+                feedbackBadge.className = "bg-purple-600 text-white px-2 py-0.5 rounded font-black text-[10px] uppercase";
+                btnSales.innerText = "↗ Düzeltip Yeniden Onaya Gönder";
+                feedbackBar.classList.remove('hidden');
+            } else if (data.status === 'reddedildi') {
+                feedbackIcon.innerText = "✕";
+                feedbackBadge.innerText = "REDDEDİLDİ";
+                feedbackBadge.className = "bg-rose-600 text-white px-2 py-0.5 rounded font-black text-[10px] uppercase";
+                btnSales.innerText = "↗ Yeni Talep Olarak Gönder";
+                feedbackBar.classList.remove('hidden');
+            } else if (data.status === 'onaylandi') {
+                feedbackIcon.innerText = "✓";
+                feedbackBadge.innerText = "ONAYLANDI";
+                feedbackBadge.className = "bg-emerald-600 text-white px-2 py-0.5 rounded font-black text-[10px] uppercase";
+                feedbackBar.classList.remove('hidden');
+            } else {
+                feedbackBar.classList.add('hidden');
+                btnSales.innerText = "↗ Onaya Gönder";
+            }
+        }
+    }
+
+    function exitReviewMode() { document.getElementById('activeReviewBar').classList.add('hidden'); currentExaminedOrder = null; }
+    function exitSalesFeedbackMode() { document.getElementById('salesFeedbackBar').classList.add('hidden'); document.getElementById('btnSubmitSales').innerText = "↗ Onaya Gönder"; currentSimulationId = null; }
+
+    function decideReviewAction(actionType) {
+        if (!currentExaminedOrder) return alert("İncelenen talep bulunamadı.");
+        if (actionType === 'onaylandi') {
+            if (confirm("Bu sevk planını incelediniz ve onaylıyor musunuz?")) submitFinalDecision('onaylandi', 'Yükleme planı incelendi, sevkiyata uygundur.');
+        } else {
+            document.getElementById('pendingActionType').value = actionType;
+            const titleEl = document.getElementById('reviewReasonModalTitle');
+            const labelEl = document.getElementById('reviewReasonFieldLabel');
+            const inputEl = document.getElementById('reviewReasonInput');
+            inputEl.value = '';
+
+            if (actionType === 'reddedildi') {
+                titleEl.innerText = "Talebi Reddet";
+                labelEl.innerText = "Reddetme Gerekçesi (Satış görecek):";
+                inputEl.placeholder = "Örn: Tonaj sınırı aşıldı, kapı eşiğine sığmıyor...";
+            } else if (actionType === 'duzeltme') {
+                titleEl.innerText = "Düzeltme İste & Geri Gönder";
+                labelEl.innerText = "Satış Ekibinden İstenen Düzeltme Notu:";
+                inputEl.placeholder = "Örn: Palet istif katını 4'e düşürün, 100x120 palet seçin...";
+            }
+            openModal('reviewReasonModal');
+        }
+    }
+
+    async function executeFinalDecision() {
+        const actionType = document.getElementById('pendingActionType').value;
+        const reason = document.getElementById('reviewReasonInput').value.trim();
+        if (!reason) return alert("Lütfen Satış ekibine açıklama/gerekçe yazın.");
+        closeModal('reviewReasonModal');
+        await submitFinalDecision(actionType, reason);
+    }
+
+    async function submitFinalDecision(actionType, reason) {
+        if (!currentExaminedOrder) return;
+        let formattedNote = actionType === 'onaylandi' ? `✓ Onaylandı (${reason})` : (actionType === 'reddedildi' ? `✕ Reddedildi - Gerekçe: ${reason}` : `↺ Düzeltme İstendi - Açıklama: ${reason}`);
+
+        const { error } = await supabaseClient.from('simulations').update({
+            status: actionType,
+            logistics_email: currentUser.email,
+            logistics_name: currentUserProfile.full_name || 'Lojistik Yetkilisi',
+            layout_data_review_note: formattedNote
+        }).eq('id', currentExaminedOrder.id);
+
+        if (error) alert("Karar kaydedilemedi: " + error.message);
+        else {
+            alert(`✅ Karar Satış ekibine iletildi: ${formattedNote}`);
+            exitReviewMode();
+            updatePendingBadgeCount();
+        }
+    }
+
+    // =========================================================================
+    // ⚙️ SKU VE PALET YÖNETİMİ & BESPOKE SENTEZLEME
+    // =========================================================================
     function openSkuManager() { renderSkuManagerList(); openModal('skuManagerModal'); }
 
     function toggleSkuManagerShapeUI() {
@@ -897,7 +1489,7 @@
     }
 
     // =========================================================================
-    // 📦 ÇİFT YÖNLÜ ŞAŞIRTMA (HİDROSTATİK 4-3-4 & 11'Lİ PETEK ÇÖZÜCÜ)
+    // 📦 ÇİFT YÖNLÜ ŞAŞIRTMA (4-3-4 VE 11'Lİ PETEK ÇÖZÜCÜ)
     // =========================================================================
     function calculateOptimalPalletDesign(params) {
         const {
@@ -921,7 +1513,7 @@
             const D = Math.max(boxL, boxW);
             const pitch = D * Math.sqrt(3) / 2; // ~0.866025 * D
 
-            // Pattern A: Düz Kare Şebeke (Orthogonal)
+            // Pattern A: Düz Kare Şebeke
             const colsGrid = Math.floor(palletW / D);
             const rowsGrid = Math.floor(palletL / D);
             const countGrid = colsGrid * rowsGrid;
@@ -935,7 +1527,7 @@
             }
             patterns.push({ type: 'Düz Çember (Kare Şebeke)', count: countGrid, layout: gridBoxes, isRound: true });
 
-            // Pattern B: Genişlik Boyunca Şaşırtmalı (Petek across Pallet Width - 4-3-4 Düzeni)
+            // Pattern B: Genişlik Boyunca Şaşırtmalı (4-3-4 Düzeni -> 11 Adet)
             if (palletW >= D && pitch > 0) {
                 const numRowsAcrossW = 1 + Math.floor((palletW - D) / pitch);
                 if (numRowsAcrossW >= 2) {
@@ -966,7 +1558,7 @@
                 }
             }
 
-            // Pattern C: Uzunluk Boyunca Şaşırtmalı (Petek across Pallet Length - 3-2-3 Düzeni)
+            // Pattern C: Uzunluk Boyunca Şaşırtmalı (3-2-3-3 Düzeni)
             if (palletL >= D && pitch > 0) {
                 const numRowsAcrossL = 1 + Math.floor((palletL - D) / pitch);
                 if (numRowsAcrossL >= 2) {
@@ -997,7 +1589,6 @@
                 }
             }
         } else {
-            // Koli / Dikdörtgen Desenleri
             const colsA = Math.floor(palletW / boxW);
             const rowsA = Math.floor(palletL / boxL);
             patterns.push({ type: 'Düz (Boyuna)', count: colsA * rowsA, layout: generateGrid(rowsA, colsA, boxL, boxW, palletL, palletW, false) });
@@ -1592,7 +2183,6 @@
                             </div>
                         </div>
 
-                        <!-- SAHA KORUYUCU DONANIM & YÜK EMNİYETİ TALİMATI -->
                         <div class="bg-indigo-50/70 border border-indigo-200 p-3 rounded-xl text-slate-800 space-y-2">
                             <strong class="text-xs uppercase font-black text-indigo-950 block">🛡️ Saha Koruyucu Donanım & Yük Emniyeti Talimatı:</strong>
                             <ul class="list-disc pl-4 space-y-1 text-[11px] text-slate-700">
