@@ -23,6 +23,8 @@
         .section-header { font-size: 0.85rem; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.4rem; margin-top: 1.25rem; margin-bottom: 0.75rem; }
         .tab-btn { padding: 0.75rem 1.5rem; font-weight: 600; border-bottom: 3px solid transparent; cursor: pointer; transition: all 0.2s; }
         .tab-btn.active { border-bottom-color: #0284c7; color: #0284c7; background: white; }
+        .drag-handle { cursor: grab; }
+        .drag-handle:active { cursor: grabbing; }
 
         @media print {
             @page { size: A4 landscape; margin: 8mm; }
@@ -187,7 +189,7 @@
         <div class="w-full lg:w-[360px] bg-white rounded-xl shadow-md border border-slate-200 flex flex-col no-print flex-shrink-0">
             <div class="grid grid-cols-2 bg-slate-100 rounded-t-xl border-b border-slate-200">
                 <div class="tab-btn active text-sm text-center py-3" id="tab-single" onclick="switchTab('single')">📦 Tekil SKU</div>
-                <div class="tab-btn text-sm text-slate-500 text-center py-3" id="tab-mixed" onclick="switchTab('mixed')">🔀 Karma (Mixed)</div>
+                <div class="tab-btn text-sm text-slate-500 text-center py-3" id="tab-mixed" onclick="switchTab('mixed')">🔀 Karma (Blok)</div>
             </div>
 
             <div class="p-4 md:p-5 lg:overflow-y-auto flex-grow custom-scrollbar">
@@ -251,21 +253,20 @@
                     </div>
                 </div>
 
-                <!-- MIXED SKU PANEL (REACTIVE DRAG-AND-DROP REORDERING) -->
+                <!-- MIXED SKU PANEL (AYRI BLOK İSTİF DÜZENİ) -->
                 <div id="panel-mixed" class="hidden">
                     <div class="section-header flex justify-between items-center mb-2">
                         <span>Karma Yük Listesi</span>
                         <button onclick="openSkuManager()" class="text-[10px] bg-sky-600 hover:bg-sky-500 text-white font-bold px-2 py-0.5 rounded shadow-sm transition">⚙️ SKU Ekle / Sil</button>
                     </div>
 
-                    <div class="input-group mb-2 p-2.5 bg-indigo-50 border border-indigo-200 rounded-lg">
-                        <label class="!text-indigo-900 font-bold">Karma İstifleme Modu</label>
-                        <select id="mixedStackStrategy" class="bg-white border-indigo-300 text-xs font-bold" onchange="debouncedRunEngine()">
-                            <option value="floating" selected>🔀 Yüzen Katmanlar (1. Sıra Altta, 2. Sıra Üstte)</option>
-                            <option value="sequential">➡️ Sıralı Blok Yükleme (Sırasıyla Dorse Boyunca)</option>
-                        </select>
-                        <span class="text-[10px] text-slate-600 mt-1 block">
-                            🖱️ <strong>Sürükle & Bırak:</strong> Tutamaktan (⋮⋮) sürükleyip bırakarak dikey katman sıralamasını belirleyin.
+                    <div class="p-2.5 bg-indigo-50 border border-indigo-200 rounded-lg mb-3">
+                        <strong class="text-xs text-indigo-950 uppercase font-black block mb-0.5">📦 Bağımsız Blok Düzeni (Homojen İstif)</strong>
+                        <p class="text-[11px] text-slate-600 leading-relaxed">
+                            Her SKU dorse tabanında kendine ait ayrı bir kompartıman/blok halinde sıralanır. Farklı SKU'lar kesinlikle üst üste istiflenmez (sıfır ezilme ve karışıklık riski).
+                        </p>
+                        <span class="text-[10px] text-indigo-700 font-bold block mt-1">
+                            🖱️ Sürükle-Bırak ile yükleme sırasını (Ön ➔ Arka) değiştirebilirsiniz.
                         </span>
                     </div>
 
@@ -611,6 +612,7 @@
     let skuDatabase = [];
     let standardPalletSizes = [];
 
+    // Reactive Mixed State Array (Homojen Bloklar)
     let mixedItemsState = [
         { skuIdx: 0, count: 300 },
         { skuIdx: 1, count: 200 }
@@ -635,7 +637,6 @@
     let isDragging = false, startX = 0, startY = 0;
     let lastRenderData = null;
 
-    // Helper: Null-safe text setter (prevents script crashes)
     function setElText(id, text) {
         const el = document.getElementById(id);
         if (el) el.innerText = text;
@@ -703,7 +704,6 @@
             }
         }
 
-        // Normalization: Ensure Strip A is never empty if items were found via Strip B rotation
         if (bestPlan && bestPlan.colsA === 0 && bestPlan.colsB > 0) {
             bestPlan.colsA = bestPlan.colsB;
             bestPlan.rowsA = bestPlan.rowsB;
@@ -734,7 +734,7 @@
             const D = Math.max(boxL, boxW);
             const pitch = D * Math.sqrt(3) / 2; // 246.82 mm for 285 mm
 
-            // Pattern 1: Straight Grid
+            // Pattern 1: Düz Kare Şebeke
             const colsGrid = Math.floor(palletW / D);
             const rowsGrid = Math.floor(palletL / D);
             const gridBoxes = [];
@@ -747,7 +747,7 @@
             }
             patterns.push({ type: 'Düz Çember (Rim-to-Rim)', count: colsGrid * rowsGrid, layout: gridBoxes, isRound: true });
 
-            // Pattern 2: Width Nesting (4-3-4 -> 11 units/tier)
+            // Pattern 2: 4-3-4 Genişlik Petek (11 Adet)
             if (palletW >= D && pitch > 0) {
                 const numRowsAcrossW = 1 + Math.floor((palletW - D) / pitch);
                 if (numRowsAcrossW >= 2) {
@@ -1066,7 +1066,7 @@
     }
 
     // =========================================================================
-    // 🔀 REAKTİF DRAG-AND-DROP (SIFIR ÇÖKME / NATIVE STATE MUTASYONU)
+    // 🔀 REAKTİF DRAG-AND-DROP: AYRIK BLOK SIRALAMASI
     // =========================================================================
     let draggedIndex = null;
 
@@ -1083,8 +1083,12 @@
 
             let options = skuDatabase.map((s, i) => `<option value="${i}" ${i === item.skuIdx ? 'selected' : ''}>${s.shape === 'round' ? '⚪' : '⏹'} ${s.name}</option>`).join('');
 
-            const badgeText = idx === 0 ? "Kat 1 (Taban / En Ağır)" : `Kat ${idx + 1} (Yüzen Katman)`;
-            const badgeClass = idx === 0 ? "bg-indigo-100 text-indigo-900 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tight" : "bg-sky-100 text-sky-800 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tight";
+            const badgeText = idx === 0 
+                ? "1. Blok (Ön Bölüm / Bulkhead)" 
+                : (idx === mixedItemsState.length - 1 ? `${idx + 1}. Blok (Kapı Tarafı)` : `${idx + 1}. Blok (Orta Bölüm)`);
+            const badgeClass = idx === 0 
+                ? "bg-indigo-100 text-indigo-900 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tight" 
+                : "bg-sky-100 text-sky-800 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tight";
 
             row.innerHTML = `
                 <div class="flex items-center justify-between gap-2 border-b pb-1.5">
@@ -1159,7 +1163,7 @@
     }
 
     // =========================================================================
-    // 🚚 SIMULATION ENGINE
+    // 🚚 SIMULATION ENGINE (AYRIK BLOK İSTİF - HİÇBİR SKU ÜST ÜSTE GELMEZ)
     // =========================================================================
     function runEngine() {
         const baseType = document.getElementById('baseType')?.value || 'floor';
@@ -1199,15 +1203,18 @@
                     targetBoxes = Math.min(totalPallets * pDesign.totalBoxes, Math.floor(maxWgt / sku.Wt));
                 }
             }
-            queue.push({ sku, target: targetBoxes, color: colorMap[0] });
+            queue.push({ sku, target: targetBoxes, color: colorMap[0], blockName: 'Tekil Yük' });
         } else {
+            // Drag-and-drop sırasına göre her SKU ayrı blok olarak yüklenir
             mixedItemsState.forEach((item, idx) => {
                 const sku = skuDatabase[item.skuIdx];
                 if (sku && item.count > 0) {
                     queue.push({
                         sku,
                         target: item.count,
-                        color: colorMap[idx % colorMap.length]
+                        color: colorMap[idx % colorMap.length],
+                        blockIndex: idx + 1,
+                        blockName: `${idx + 1}. Blok (${sku.name})`
                     });
                 }
             });
@@ -1241,65 +1248,7 @@
         let currentX = optFrontCurve ? 100 : 0;
         let vehicleFull = false;
 
-        const isMixedFloating = (currentMode === 'mixed' && document.getElementById('mixedStackStrategy')?.value === 'floating');
-
-        if (isMixedFloating && baseType === 'floor' && queue.length > 1) {
-            const baseSkuItem = queue[0];
-            const topSkuItem = queue[1];
-            const availableL = effContL - currentX;
-            const planBase = findOptimalFloorPlan(effContW, availableL, contH, baseSkuItem.sku, maxWgt);
-
-            if (planBase && planBase.layerBoxes > 0) {
-                const baseLayersAllowed = Math.min(2, Math.floor(baseSkuItem.sku.maxLayers / 2));
-                const rowsCount = planBase.rowsA || Math.floor(availableL / baseSkuItem.sku.L);
-                const colsCount = planBase.colsA || Math.floor(effContW / baseSkuItem.sku.W);
-                const widthUsed = colsCount * planBase.dimW1;
-                const startY = Math.max(0, (effContW - widthUsed) / 2);
-                const baseLayerH = baseLayersAllowed * baseSkuItem.sku.H;
-
-                // Kat 1 (Taban) -> z = 0
-                for (let r = 0; r < rowsCount; r++) {
-                    if (baseSkuItem.remaining <= 0 || totalWgt + baseSkuItem.sku.Wt > maxWgt) break;
-                    let bCount = Math.min(colsCount * baseLayersAllowed, baseSkuItem.remaining);
-                    let rX = currentX + (r * planBase.dimL1);
-                    let rWgt = bCount * baseSkuItem.sku.Wt;
-
-                    placedItems.push({
-                        id: baseSkuItem.sku.name, x: rX, y: startY, z: 0,
-                        l: planBase.dimL1, w: widthUsed, h: baseLayerH,
-                        boxes: bCount, wgt: rWgt, color: baseSkuItem.color,
-                        cols: colsCount, rows: 1, layers: baseLayersAllowed,
-                        singleBoxL: planBase.dimL1, singleBoxW: planBase.dimW1, singleBoxH: baseSkuItem.sku.H,
-                        isRound: (baseSkuItem.sku.shape === 'round')
-                    });
-                    totalWgt += rWgt; totalBoxes += bCount; baseSkuItem.remaining -= bCount;
-                }
-
-                // Kat 2 (Yüzen Katman) -> z = baseLayerH
-                const remainingH = contH - baseLayerH - 50;
-                const topLayers = Math.max(1, Math.min(topSkuItem.sku.maxLayers, Math.floor(remainingH / topSkuItem.sku.H)));
-                const topLayerH = topLayers * topSkuItem.sku.H;
-
-                for (let r = 0; r < rowsCount; r++) {
-                    if (topSkuItem.remaining <= 0 || totalWgt + topSkuItem.sku.Wt > maxWgt) break;
-                    let bCount = Math.min(colsCount * topLayers, topSkuItem.remaining);
-                    let rX = currentX + (r * planBase.dimL1);
-                    let rWgt = bCount * topSkuItem.sku.Wt;
-
-                    placedItems.push({
-                        id: topSkuItem.sku.name, x: rX, y: startY, z: baseLayerH,
-                        l: planBase.dimL1, w: widthUsed, h: topLayerH,
-                        boxes: bCount, wgt: rWgt, color: topSkuItem.color,
-                        cols: colsCount, rows: 1, layers: topLayers,
-                        singleBoxL: planBase.dimL1, singleBoxW: planBase.dimW1, singleBoxH: topSkuItem.sku.H,
-                        isRound: (topSkuItem.sku.shape === 'round')
-                    });
-                    totalWgt += rWgt; totalBoxes += bCount; topSkuItem.remaining -= bCount;
-                }
-                currentX = placedItems.reduce((max, it) => Math.max(max, it.x + it.l), 0);
-            }
-        }
-
+        // HER SKU SADECE KENDİ HOMOJEN BLOK / PALETİNDE YÜKLENİR (ÜST ÜSTE BİNME YOKTUR, z=0)
         for (let item of queue) {
             if (item.remaining <= 0 || vehicleFull) continue;
             const sku = item.sku;
@@ -1326,7 +1275,7 @@
                 const totalWidthUsed = (plan.colsA * plan.dimW1) + (plan.colsB * plan.dimW2);
                 const startY = Math.max(0, (effContW - totalWidthUsed) / 2);
 
-                // Strip A Packing
+                // Strip A Yerleşimi
                 if (plan.colsA > 0 && plan.rowsA > 0) {
                     const stripAY = startY;
                     const widthA = plan.colsA * plan.dimW1;
@@ -1360,7 +1309,8 @@
                             boxes: rowBoxes, wgt: rowWgt, color: item.color,
                             cols: plan.colsA, rows: 1, layers: rowLayers,
                             singleBoxL: plan.dimL1, singleBoxW: plan.dimW1, singleBoxH: sku.H,
-                            isRound: (sku.shape === 'round')
+                            isRound: (sku.shape === 'round'),
+                            blockName: item.blockName || `${sku.name} Bloğu`
                         });
 
                         totalWgt += rowWgt;
@@ -1369,7 +1319,7 @@
                     }
                 }
 
-                // Strip B Packing (if rotated second strip exists)
+                // Strip B Yerleşimi (Kare kutular döndürüldüğünde)
                 if (plan.colsB > 0 && plan.rowsB > 0) {
                     const stripBY = startY + (plan.colsA * plan.dimW1);
                     const widthB = plan.colsB * plan.dimW2;
@@ -1390,7 +1340,8 @@
                             boxes: rowBoxes, wgt: rowWgt, color: item.color,
                             cols: plan.colsB, rows: 1, layers: baseLayers,
                             singleBoxL: plan.dimL2, singleBoxW: plan.dimW2, singleBoxH: sku.H,
-                            isRound: (sku.shape === 'round')
+                            isRound: (sku.shape === 'round'),
+                            blockName: item.blockName || `${sku.name} Bloğu`
                         });
 
                         totalWgt += rowWgt;
@@ -1399,8 +1350,10 @@
                     }
                 }
 
+                // Bu SKU'nun bloğu bitti; bir sonraki SKU bu bloğun hemen arkasından başlar
                 currentX = placedItems.reduce((max, it) => Math.max(max, it.x + it.l), 0);
             } else {
+                // Paletli Mod: Her palet SADECE bu SKU'yu taşır (Ayrık Paletler)
                 const pIdx = parseInt(document.getElementById('specificBaseSize')?.value) || 0;
                 const pSpec = standardPalletSizes[pIdx] || standardPalletSizes[0];
                 const strat = document.getElementById('palletStrategy')?.value || 'stable';
@@ -1428,6 +1381,7 @@
 
                 if (colsAcross <= 0 || rowsDeep <= 0) { vehicleFull = true; continue; }
 
+                let palletsPlacedForThisSku = 0;
                 for (let r = 0; r < rowsDeep; r++) {
                     for (let c = 0; c < colsAcross; c++) {
                         if (item.remaining <= 0) break;
@@ -1441,13 +1395,15 @@
                             l: palStepL, w: palStepW, h: pDesign.totalHeight,
                             boxes: b, wgt: w, color: item.color,
                             palletDesign: pDesign, palletBaseH: pSpec.H,
-                            isPallet: true, isRound: (sku.shape === 'round')
+                            isPallet: true, isRound: (sku.shape === 'round'),
+                            blockName: item.blockName || `${sku.name} Paleti`
                         });
                         totalWgt += w; totalBoxes += b; item.remaining -= b;
+                        palletsPlacedForThisSku++;
                     }
                     if (vehicleFull || item.remaining <= 0) break;
                 }
-                currentX += rowsDeep * palStepL;
+                currentX = placedItems.reduce((max, it) => Math.max(max, it.x + it.l), 0);
             }
         }
 
@@ -1496,8 +1452,8 @@
             setElText('resLoadsSub', `Palet Başı: ${uPerPal} Adet`);
         } else {
             setElText('lblMetricLoads', "Taşıma Sıra / Blok");
-            setElText('resLoads', `${truck.placedItems.length} Blok / Sıra`);
-            setElText('resLoadsSub', currentMode === 'mixed' ? "Karma Katmanlı Yük" : "Dorse Boyunca Sıralı");
+            setElText('resLoads', `${truck.placedItems.length} Sıra / Kompartıman`);
+            setElText('resLoadsSub', currentMode === 'mixed' ? "Ayrık Homojen Bloklar" : "Dorse Boyunca Sıralı");
         }
 
         let momentX = 0;
@@ -1505,26 +1461,49 @@
         let cogX = truck.totalWgt > 0 ? (momentX / truck.totalWgt) : 0;
         setElText('resStatusSub', `Dengeli Yük (CoG: ${(cogX/1000).toFixed(1)}m)`);
 
+        // DETAYLI SEVK VE BLOK RAPORU
         let detailsHtml = '';
-        if (isPalletMode && truck.placedItems.length > 0 && truck.placedItems[0].palletDesign) {
-            const p = truck.placedItems[0].palletDesign;
-            const tPal = truck.placedItems.length;
-            const tBoxes = truck.totalBoxes;
+        if (truck.placedItems.length > 0) {
+            let groupedItems = {};
+            truck.placedItems.forEach(item => {
+                if (!groupedItems[item.id]) {
+                    groupedItems[item.id] = {
+                        name: item.id, totalBoxes: 0, totalRows: 0, color: item.color,
+                        isRound: item.isRound, totalWeight: 0, isPallet: item.isPallet,
+                        palletDesign: item.palletDesign
+                    };
+                }
+                groupedItems[item.id].totalBoxes += item.boxes;
+                groupedItems[item.id].totalRows += (item.rows || 1);
+                groupedItems[item.id].totalWeight += item.wgt;
+            });
+
+            let groupList = Object.values(groupedItems);
+            let blocksHtml = groupList.map((g, bIdx) => `
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-800">
+                    <div class="flex items-center justify-between mb-1.5 border-b pb-1">
+                        <strong class="text-xs font-black text-slate-900">${bIdx + 1}. Blok: ${g.isRound ? '⚪ ' : '⏹ '}${g.name}</strong>
+                        <span class="text-emerald-700 bg-emerald-100 font-bold px-2 py-0.5 rounded text-[11px]">${g.totalBoxes} Adet</span>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px] text-slate-600">
+                        <div><strong>Konum:</strong> Dorse Tabanda Ayrık Blok</div>
+                        <div><strong>Ağırlık:</strong> ${g.totalWeight.toLocaleString(undefined, {maximumFractionDigits:1})} kg</div>
+                        <div><strong>İstif Prensibi:</strong> Sadece kendi ürününden oluşur (üstünde başka ürün yoktur)</div>
+                    </div>
+                </div>
+            `).join('');
 
             detailsHtml = `
                 <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-xs space-y-3">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-2 gap-2">
                         <div>
-                            <strong class="text-slate-800 text-sm block">🚚 ARAÇ TAŞIMA KAPASİTESİ & SEVKİYAT PLANI</strong>
-                            <span class="text-[11px] text-slate-500">Seçilen Araç ve Palet Boyutlarına Göre Net Yük Dağılımı</span>
+                            <strong class="text-slate-800 text-sm block">🚚 DORSE İÇİ HOMOJEN BLOK DAĞILIM RAPORU</strong>
+                            <span class="text-[11px] text-slate-500">Ürünler dorse tabanına ayrı bloklar olarak yerleştirilmiş, dikey karışım engellenmiştir.</span>
                         </div>
-                        <span class="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded font-bold">${p.bestPattern}</span>
+                        <span class="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded font-bold">✓ Ayrık Blok Standartı</span>
                     </div>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
-                        <div class="p-2.5 bg-white rounded-lg border"><span class="text-slate-500 block text-[10px] uppercase font-bold">Araçtaki Palet</span><strong class="text-base text-indigo-900 font-black">${tPal} Palet</strong></div>
-                        <div class="p-2.5 bg-white rounded-lg border"><span class="text-slate-500 block text-[10px] uppercase font-bold">Palet Başı Adet</span><strong class="text-base text-slate-800 font-black">${p.totalBoxes} Adet</strong></div>
-                        <div class="p-2.5 bg-white rounded-lg border"><span class="text-emerald-700 block text-[10px] uppercase font-bold">Toplam Taşıma Miktarı</span><strong class="text-base text-emerald-600 font-black">${tBoxes.toLocaleString()} Adet</strong></div>
-                        <div class="p-2.5 bg-white rounded-lg border"><span class="text-rose-700 block text-[10px] uppercase font-bold">Brüt Taşıma Ağırlığı</span><strong class="text-base text-rose-600 font-black">${truck.totalWgt.toLocaleString(undefined, {maximumFractionDigits:1})} kg</strong></div>
+                    <div class="space-y-2">
+                        ${blocksHtml}
                     </div>
                 </div>
             `;
@@ -1553,7 +1532,7 @@
         performRender(lastRenderData);
     }
 
-    // 3D ISOMETRIC RENDER WITH ELEVATION & NULL-SAFETY
+    // 3D ISOMETRIC RENDER WITH HOMOGENEOUS GROUND BLOCKS
     function performRender(data) {
         if (!data) return;
         const { placedItems, contL, contW, contH, optFrontCurve, cogX } = data;
@@ -1586,7 +1565,7 @@
             if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = width; ctx.stroke(); }
         }
 
-        // Vehicle Base & Walls
+        // Araç Gövdesi
         drawPoly([project(0,0,0), project(validContL,0,0), project(validContL,validContW,0), project(0,validContW,0)], '#334155');
         drawPoly([project(0,0,0), project(validContL,0,0), project(validContL,0,validContH), project(0,0,validContH)], '#1e293b');
         drawPoly([project(0,0,0), project(0,validContW,0), project(0,validContW,validContH), project(0,0,validContH)], '#0f172a');
