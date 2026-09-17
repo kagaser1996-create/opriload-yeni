@@ -23,8 +23,6 @@
         .section-header { font-size: 0.85rem; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.4rem; margin-top: 1.25rem; margin-bottom: 0.75rem; }
         .tab-btn { padding: 0.75rem 1.5rem; font-weight: 600; border-bottom: 3px solid transparent; cursor: pointer; transition: all 0.2s; }
         .tab-btn.active { border-bottom-color: #0284c7; color: #0284c7; background: white; }
-        .drag-handle { cursor: grab; }
-        .drag-handle:active { cursor: grabbing; }
 
         @media print {
             @page { size: A4 landscape; margin: 8mm; }
@@ -38,7 +36,7 @@
 <body class="p-2 md:p-4 min-h-[100dvh] lg:h-[100dvh] flex flex-col justify-between">
 
 <!-- ========================================================================= -->
-<!-- 🔒 GİRİŞ & KAYIT AÇILIŞ SAYFASI (LANDING AUTH GATE)                        -->
+<!-- 🔒 GİRİŞ & KAYIT AÇILIŞ EKRANI (LANDING AUTH GATE)                         -->
 <!-- ========================================================================= -->
 <div id="authLandingPage" class="flex-grow flex items-center justify-center p-4">
     <div class="bg-white p-6 md:p-8 rounded-2xl shadow-2xl max-w-md w-full border-t-8 border-sky-500">
@@ -86,7 +84,7 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- 🔓 KORUMALI ÇALIŞMA ALANI & ÜST MENÜ (GİRİŞ YAPILINCA GÖRÜNÜR)              -->
+<!-- 🔓 KORUMALI ÇALIŞMA ALANI & ÜST MENÜ (GİRİŞ YAPILDIĞINDA AÇILIR)            -->
 <!-- ========================================================================= -->
 <div id="protectedApp" class="hidden flex flex-col flex-grow">
 
@@ -253,22 +251,25 @@
                     </div>
                 </div>
 
-                <!-- MIXED SKU PANEL -->
+                <!-- MIXED SKU PANEL (ÖNCELİK GİRİŞLİ & YÜZEN KATMANLAR) -->
                 <div id="panel-mixed" class="hidden">
                     <div class="section-header flex justify-between items-center mb-2">
                         <span>Karma Yük Listesi</span>
                         <button onclick="openSkuManager()" class="text-[10px] bg-sky-600 hover:bg-sky-500 text-white font-bold px-2 py-0.5 rounded shadow-sm transition">⚙️ SKU Ekle / Sil</button>
                     </div>
 
-                    <div class="input-group mb-2 p-2 bg-indigo-50 border border-indigo-200 rounded-lg">
+                    <div class="input-group mb-2 p-2.5 bg-indigo-50 border border-indigo-200 rounded-lg">
                         <label class="!text-indigo-900 font-bold">Karma İstif Stratejisi</label>
                         <select id="mixedStackStrategy" class="bg-white border-indigo-300 text-xs font-bold" onchange="debouncedRunEngine()">
-                            <option value="floating" selected>🔀 Yüzen Katmanlar (Ağır Altta, Hafif Üstte)</option>
-                            <option value="sequential">➡️ Öncelik Sıralaması (Kullanıcı Sırasına Göre)</option>
+                            <option value="floating" selected>🔀 Yüzen Katmanlar (Öncelik 1 Altta, Öncelik 2 Üstte)</option>
+                            <option value="sequential">➡️ Sıralı Blok Yükleme (Öncelik Sırasına Göre Boyuna)</option>
                         </select>
+                        <span class="text-[10px] text-slate-600 mt-1 block">
+                            💡 <strong>Öncelik 1</strong> olan ürün tabana yerleşir; <strong>Öncelik 2</strong> olan ürün ise onun üzerine dikey katman olarak biner.
+                        </span>
                     </div>
 
-                    <div id="mixedList" class="space-y-1.5 mb-3"></div>
+                    <div id="mixedList" class="space-y-2 mb-3"></div>
                     <button onclick="addNewMixedRow()" class="w-full bg-slate-200 text-slate-700 text-xs font-bold py-2 rounded border border-slate-300 hover:bg-slate-300 shadow-sm">+ Yeni Satır Ekle</button>
                 </div>
                 
@@ -568,10 +569,9 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- JAVASCRIPT: ENGINE, AUTHENTICATION & PACKING SOLVER                       -->
+<!-- JAVASCRIPT LOGIC                                                          -->
 <!-- ========================================================================= -->
 <script>
-    // 1. SUPABASE CLIENT
     const SUPABASE_URL = 'https://wukjeatpuysvlosbtahf.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1a2plYXRwdXlzdmxvc2J0YWhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1MTk4NjMsImV4cCI6MjEwNDA5NTg2M30.-HitB_MtlNXIYvd1qqgydWmr0UxpnSP4Q29EMugF8P8';
 
@@ -582,7 +582,6 @@
     let currentSimulationId = null;
     let currentExaminedOrder = null;
 
-    // 2. DATA STORES
     const defaultSkuDatabase = [
         {name: "kızartmalık (285×285×330)", L: 285, W: 285, H: 330, Wt: 16.50, maxLayers: 6, shape: "round"},
         {name: "1,5LX6 KULPLU", L: 230, W: 272, H: 307, Wt: 9.13, maxLayers: 7, shape: "box"},
@@ -617,6 +616,7 @@
         { base: '#16a34a', top: '#4ade80', right: '#15803d', left: '#166534' },
         { base: '#d97706', top: '#fbbf24', right: '#b45309', left: '#92400e' },
         { base: '#9333ea', top: '#c084fc', right: '#7e22ce', left: '#6b21a8' },
+        { base: '#db2777', top: '#f472b6', right: '#be185d', left: '#9d174d' },
         { base: '#ea580c', top: '#fb923c', right: '#c2410c', left: '#9a3412' }
     ];
 
@@ -632,7 +632,7 @@
     let initialPinchDist = null;
     let lastRenderData = null;
 
-    // 3. MATHEMATICAL HELPER FUNCTIONS
+    // MATH & SOLVER FUNCTIONS
     function generateGrid(rows, cols, cellL, cellW, palletL, palletW, isRotated) {
         const boxes = [];
         const offsetX = (palletL - (rows * cellL)) / 2;
@@ -728,7 +728,7 @@
 
         if (shape === 'round') {
             const D = Math.max(boxL, boxW);
-            const pitch = D * Math.sqrt(3) / 2; // ~246.82 mm for 285 mm
+            const pitch = D * Math.sqrt(3) / 2; // ~246.82 mm
 
             // Pattern 1: Düz Grid
             const colsGrid = Math.floor(palletW / D);
@@ -743,7 +743,7 @@
             }
             patterns.push({ type: 'Düz Çember (Rim-to-Rim)', count: colsGrid * rowsGrid, layout: gridBoxes, isRound: true });
 
-            // Pattern 2: Genişlik Boyunca Petek (4-3-4 -> 11 Adet Formasyonu)
+            // Pattern 2: 4-3-4 Genişlik Petek (11 Adet)
             if (palletW >= D && pitch > 0) {
                 const numRowsAcrossW = 1 + Math.floor((palletW - D) / pitch);
                 if (numRowsAcrossW >= 2) {
@@ -774,7 +774,7 @@
                 }
             }
 
-            // Pattern 3: Boyuna Petek (3-2-3-3)
+            // Pattern 3: 3-2-3-3 Boyuna Petek
             if (palletL >= D && pitch > 0) {
                 const numRowsAcrossL = 1 + Math.floor((palletL - D) / pitch);
                 if (numRowsAcrossL >= 2) {
@@ -867,7 +867,7 @@
         };
     }
 
-    // 4. INITIALIZATION & AUTH PIPELINE
+    // INITIALIZATION
     function initApp() {
         if (window.supabase) {
             try {
@@ -879,7 +879,6 @@
                     handleAuthChange(session?.user || null);
                 });
             } catch (e) {
-                console.error("Supabase bağlantı hatası:", e);
                 handleAuthChange(null);
             }
         } else {
@@ -902,8 +901,9 @@
         if (skuSel) skuSel.value = "0";
         populateSKU();
 
-        addMixedRowWithCount(0, 300);
-        addMixedRowWithCount(1, 200);
+        // Add 2 mixed rows with explicit priority values (1 and 2)
+        addMixedRowWithCount(0, 300, 1);
+        addMixedRowWithCount(1, 200, 2);
 
         updateVehicleDims();
         handleBaseChange();
@@ -1082,63 +1082,61 @@
         } catch(e){}
     }
 
-    // 5. KARMA LIST & FLOATING TIERS
-    function addMixedRowWithCount(prefillIdx, prefillCount) {
+    // =========================================================================
+    // 🔀 KARMA PANELİ: ÖNCELİK SAYISAL INPUTU (ARROWS KALDIRILDI)
+    // =========================================================================
+    function addMixedRowWithCount(prefillIdx, prefillCount, prefillPriority) {
         const list = document.getElementById('mixedList');
         if (!list) return;
+
+        const currentRowsCount = document.querySelectorAll('.mixed-row').length;
+        const initialPriority = prefillPriority !== undefined ? prefillPriority : (currentRowsCount + 1);
+
         const div = document.createElement('div');
-        div.className = "mixed-row p-2 bg-white border border-slate-200 rounded-lg shadow-xs flex flex-col gap-1.5";
+        div.className = "mixed-row p-2.5 bg-white border border-slate-200 rounded-xl shadow-xs flex flex-col gap-2";
+
         let options = skuDatabase.map((s, i) => `<option value="${i}" ${i === prefillIdx ? 'selected' : ''}>${s.shape === 'round' ? '⚪' : '⏹'} ${s.name}</option>`).join('');
 
         div.innerHTML = `
-            <div class="flex items-center justify-between gap-1 border-b pb-1">
-                <div class="flex items-center gap-1.5">
-                    <span class="row-priority-badge bg-sky-100 text-sky-800 text-[10px] font-black px-1.5 py-0.5 rounded uppercase">Öncelik #1</span>
+            <div class="flex items-center justify-between gap-2">
+                <!-- FLOATING STYLE NUMERIC PRIORITY INPUT -->
+                <div class="flex items-center gap-1.5 bg-sky-50 border border-sky-200 px-2.5 py-1 rounded-lg">
+                    <label class="text-[10px] font-black text-sky-800 uppercase tracking-tight">Öncelik:</label>
+                    <input type="number" class="mixed-priority w-12 text-center text-xs font-black text-sky-950 bg-white border border-sky-300 rounded px-1 py-0.5 outline-none focus:border-sky-600 focus:ring-1 focus:ring-sky-500" value="${initialPriority}" min="1" oninput="debouncedRunEngine()">
                 </div>
+
                 <div class="flex items-center gap-1">
-                    <button onclick="moveMixedRow(this, -1)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-black px-1.5 py-0.5 rounded text-[10px]" title="Önceliği Artır">▲</button>
-                    <button onclick="moveMixedRow(this, 1)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-black px-1.5 py-0.5 rounded text-[10px]" title="Önceliği Düşür">▼</button>
-                    <button onclick="removeMixedRow(this)" class="text-rose-500 hover:text-rose-700 font-bold px-1.5 py-0.5 text-xs">✕</button>
+                    <span class="text-[10px] text-slate-400 font-semibold">(1: Taban, 2: Üst Kat)</span>
+                    <button onclick="removeMixedRow(this)" class="text-rose-500 hover:text-rose-700 font-bold px-2 py-1 text-xs" title="Satırı Sil">✕</button>
                 </div>
             </div>
+
             <div class="flex gap-2 items-center">
-                <select class="w-[60%] p-1.5 border rounded text-xs mixed-sku font-semibold" onchange="debouncedRunEngine()">${options}</select>
-                <input type="number" class="w-[40%] p-1.5 border rounded text-xs mixed-val font-bold text-sky-700" placeholder="Adet" value="${prefillCount}" oninput="debouncedRunEngine()">
+                <select class="w-[60%] p-2 border rounded-lg text-xs mixed-sku font-semibold bg-slate-50" onchange="debouncedRunEngine()">${options}</select>
+                <input type="number" class="w-[40%] p-2 border rounded-lg text-xs mixed-val font-bold text-sky-700 bg-slate-50" placeholder="Adet" value="${prefillCount}" oninput="debouncedRunEngine()">
             </div>
         `;
         list.appendChild(div);
-        updateMixedRowBadges();
     }
 
-    function addNewMixedRow() { addMixedRowWithCount(0, 100); debouncedRunEngine(); }
+    function addNewMixedRow() {
+        const nextPriority = document.querySelectorAll('.mixed-row').length + 1;
+        addMixedRowWithCount(0, 100, nextPriority);
+        debouncedRunEngine();
+    }
+
     function removeMixedRow(btn) {
         if (document.querySelectorAll('.mixed-row').length > 1) {
             btn.closest('.mixed-row').remove();
-            updateMixedRowBadges();
             debouncedRunEngine();
         } else {
             alert("En az bir karma yük satırı bulunmalıdır.");
         }
     }
-    function moveMixedRow(btn, direction) {
-        const row = btn.closest('.mixed-row');
-        const list = document.getElementById('mixedList');
-        if (direction === -1 && row.previousElementSibling) {
-            list.insertBefore(row, row.previousElementSibling);
-        } else if (direction === 1 && row.nextElementSibling) {
-            list.insertBefore(row.nextElementSibling, row);
-        }
-        updateMixedRowBadges();
-        debouncedRunEngine();
-    }
-    function updateMixedRowBadges() {
-        document.querySelectorAll('.mixed-row').forEach((r, idx) => {
-            const b = r.querySelector('.row-priority-badge');
-            if (b) b.innerText = `Öncelik #${idx + 1}`;
-        });
-    }
 
-    // 6. SIMULATION LOGIC
+    // =========================================================================
+    // 🚚 SIMULATION ENGINE (FLOATING MULTI-TIER WITH NUMERIC PRIORITY)
+    // =========================================================================
     function runEngine() {
         const baseType = document.getElementById('baseType').value;
         const contL = parseInt(document.getElementById('contL').value) || 13600;
@@ -1177,25 +1175,29 @@
                     targetBoxes = Math.min(totalPallets * pDesign.totalBoxes, Math.floor(maxWgt / sku.Wt));
                 }
             }
-            queue.push({ sku, target: targetBoxes, color: colorMap[0], priority: 0 });
+            queue.push({ sku, target: targetBoxes, color: colorMap[0], priority: 1 });
         } else {
             let rawQueue = [];
-            const mixedStrategy = document.getElementById('mixedStackStrategy')?.value || 'floating';
             document.querySelectorAll('.mixed-row').forEach((r, idx) => {
                 const skuIdx = parseInt(r.querySelector('.mixed-sku').value) || 0;
                 const sku = skuDatabase[skuIdx];
                 let target = parseInt(r.querySelector('.mixed-val').value) || 0;
+                let priorityVal = parseInt(r.querySelector('.mixed-priority')?.value) || (idx + 1);
+
                 if (target > 0) {
                     const volM3 = (sku.L * sku.W * sku.H) / 1000000000;
                     const density = sku.Wt / volM3;
-                    rawQueue.push({ sku, target, color: colorMap[idx % colorMap.length], priority: idx, density });
+                    rawQueue.push({
+                        sku, target,
+                        color: colorMap[idx % colorMap.length],
+                        priority: priorityVal,
+                        density
+                    });
                 }
             });
-            if (mixedStrategy === 'floating') {
-                rawQueue.sort((a, b) => b.density - a.density);
-            } else {
-                rawQueue.sort((a, b) => a.priority - b.priority);
-            }
+
+            // Sorter respects user's explicit numeric priority input
+            rawQueue.sort((a, b) => a.priority - b.priority);
             queue = rawQueue;
         }
 
@@ -1230,6 +1232,7 @@
         const isMixedFloating = (currentMode === 'mixed' && document.getElementById('mixedStackStrategy')?.value === 'floating');
 
         if (isMixedFloating && baseType === 'floor' && queue.length > 1) {
+            // Queue is ordered by Priority: [0] = Priority 1 (Base), [1] = Priority 2 (Top), etc.
             const baseSkuItem = queue[0];
             const topSkuItem = queue[1];
             const availableL = effContL - currentX;
@@ -1243,6 +1246,7 @@
                 const startY = (effContW - widthUsed) / 2;
                 const baseLayerH = baseLayersAllowed * baseSkuItem.sku.H;
 
+                // 1. Taban Katmanı (Öncelik 1) -> z = 0
                 for (let r = 0; r < rowsCount; r++) {
                     if (baseSkuItem.remaining <= 0 || totalWgt + baseSkuItem.sku.Wt > maxWgt) break;
                     let bCount = Math.min(colsCount * baseLayersAllowed, baseSkuItem.remaining);
@@ -1260,6 +1264,7 @@
                     totalWgt += rWgt; totalBoxes += bCount; baseSkuItem.remaining -= bCount;
                 }
 
+                // 2. Yüzen Katman (Öncelik 2) -> z = baseLayerH
                 const remainingH = contH - baseLayerH - 50;
                 const topLayers = Math.max(1, Math.min(topSkuItem.sku.maxLayers, Math.floor(remainingH / topSkuItem.sku.H)));
                 const topLayerH = topLayers * topSkuItem.sku.H;
@@ -1284,6 +1289,7 @@
             }
         }
 
+        // Sequential placement for remaining items or pallet mode
         for (let item of queue) {
             if (item.remaining <= 0 || vehicleFull) continue;
             const sku = item.sku;
@@ -1373,7 +1379,7 @@
         };
     }
 
-    // 7. STATS & UI REPORTING
+    // STATS & UI REPORTING
     function updateFleetUI() {
         let pagContainer = document.getElementById('fleetPaginationContainer');
         if (globalFleet.length > 1) {
@@ -1407,7 +1413,7 @@
         } else {
             document.getElementById('lblMetricLoads').innerText = "Taşıma Sıra / Blok";
             document.getElementById('resLoads').innerText = `${truck.placedItems.length} Blok / Sıra`;
-            document.getElementById('resLoadsSub').innerText = "Dorse Boyunca Sıralı";
+            document.getElementById('resLoadsSub').innerText = currentMode === 'mixed' ? "Karma Katmanlı Yük" : "Dorse Boyunca Sıralı";
         }
 
         let momentX = 0;
@@ -1420,7 +1426,6 @@
             const p = truck.placedItems[0].palletDesign;
             const tPal = truck.placedItems.length;
             const tBoxes = truck.totalBoxes;
-            const pTare = tPal * (standardPalletSizes[document.getElementById('specificBaseSize').value]?.tare || 25);
 
             detailsHtml = `
                 <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-xs space-y-3">
@@ -1461,7 +1466,7 @@
         performRender(lastRenderData);
     }
 
-    // 8. 3D ISOMETRIC RENDER WITH ELEVATION
+    // 3D ISOMETRIC RENDER WITH DYNAMIC Z-AXIS ELEVATION
     function performRender(data) {
         const { placedItems, contL, contW, contH, optFrontCurve, cogX } = data;
         const canvas = document.getElementById('contCanvas');
@@ -1487,7 +1492,7 @@
             if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = width; ctx.stroke(); }
         }
 
-        // Vehicle Hull
+        // Vehicle Base & Walls
         drawPoly([project(0,0,0), project(contL,0,0), project(contL,contW,0), project(0,contW,0)], '#334155');
         drawPoly([project(0,0,0), project(contL,0,0), project(contL,0,contH), project(0,0,contH)], '#1e293b');
         drawPoly([project(0,0,0), project(0,contW,0), project(0,contW,contH), project(0,0,contH)], '#0f172a');
@@ -1527,7 +1532,7 @@
 
     function resetView() { panX = 0; panY = 0; zoomLevel = 1; if (lastRenderData) performRender(lastRenderData); }
 
-    // 9. FORM & MODAL HANDLERS
+    // STANDARD MODALS & UTILITIES
     function populateSelects() {
         const select = document.getElementById('skuSelect');
         if (!select) return;
@@ -1705,6 +1710,8 @@
         const effContW = (parseInt(document.getElementById('contW').value) || 2420) - 20;
         const effContL = (parseInt(document.getElementById('contL').value) || 13600) - 100;
         const sku = skuDatabase[parseInt(document.getElementById('skuSelect').value) || 0];
+        if (!sku) return;
+
         let bestPallet = null, bestScore = 0;
 
         [2, 3].forEach(cols => {
