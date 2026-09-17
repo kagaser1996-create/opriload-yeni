@@ -38,7 +38,7 @@
 <body class="p-2 md:p-4 min-h-[100dvh] lg:h-[100dvh] flex flex-col justify-between">
 
 <!-- ========================================================================= -->
-<!-- 🔒 GİRİŞ & KAYIT AÇILIŞ SAYFASI (AUTH GATE - SADECE HESAP SAHİPLERİ)       -->
+<!-- 🔒 GİRİŞ & KAYIT LANDING SAYFASI (GİRİŞ YAPILANA KADAR GÖRÜNEN TEK EKRAN)    -->
 <!-- ========================================================================= -->
 <div id="authLandingPage" class="flex-grow flex items-center justify-center p-4">
     <div class="bg-white p-6 md:p-8 rounded-2xl shadow-2xl max-w-md w-full border-t-8 border-sky-500">
@@ -146,7 +146,7 @@
         </div>
     </div>
 
-    <!-- SATIŞ GERİ BİLDİRİM / DÜZELTME BİLDİRİM BANNERI -->
+    <!-- SATIŞ GERİ BİLDİRİM BANNERI -->
     <div id="salesFeedbackBar" class="hidden max-w-[1400px] mx-auto w-full mb-3 bg-gradient-to-r from-purple-950 to-slate-900 text-white border-2 border-purple-500 rounded-xl p-3 md:p-4 shadow-xl flex flex-col md:flex-row items-center justify-between gap-3 no-print">
         <div class="flex items-center gap-3">
             <span class="text-2xl" id="salesFeedbackIcon">⚠️</span>
@@ -395,7 +395,7 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- MODALLER: DASHBOARD, SKU & PALET YÖNETİMİ                                 -->
+<!-- MODALLER                                                                  -->
 <!-- ========================================================================= -->
 <div id="adminDashboardModal" class="hidden fixed inset-0 bg-slate-900/80 z-40 flex items-center justify-center p-4 no-print">
     <div class="bg-white rounded-2xl shadow-2xl max-w-[1150px] w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-200">
@@ -570,7 +570,7 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- JAVASCRIPT: ENGINE, DATA STORES & EVENT LOGIC                             -->
+<!-- JAVASCRIPT: ENGINE, DATA STORES & VISUALIZATION LOGIC                     -->
 <!-- ========================================================================= -->
 <script>
     const SUPABASE_URL = 'https://wukjeatpuysvlosbtahf.supabase.co';
@@ -612,7 +612,6 @@
     let skuDatabase = [];
     let standardPalletSizes = [];
 
-    // Reactive Mixed State Array (Homojen Bloklar)
     let mixedItemsState = [
         { skuIdx: 0, count: 300 },
         { skuIdx: 1, count: 200 }
@@ -732,9 +731,9 @@
 
         if (shape === 'round') {
             const D = Math.max(boxL, boxW);
-            const pitch = D * Math.sqrt(3) / 2; // 246.82 mm for 285 mm
+            const pitch = D * Math.sqrt(3) / 2; // ~246.82 mm for 285 mm
 
-            // Pattern 1: Düz Kare Şebeke
+            // Pattern 1: Düz Grid
             const colsGrid = Math.floor(palletW / D);
             const rowsGrid = Math.floor(palletL / D);
             const gridBoxes = [];
@@ -1205,7 +1204,6 @@
             }
             queue.push({ sku, target: targetBoxes, color: colorMap[0], blockName: 'Tekil Yük' });
         } else {
-            // Drag-and-drop sırasına göre her SKU ayrı blok olarak yüklenir
             mixedItemsState.forEach((item, idx) => {
                 const sku = skuDatabase[item.skuIdx];
                 if (sku && item.count > 0) {
@@ -1248,7 +1246,6 @@
         let currentX = optFrontCurve ? 100 : 0;
         let vehicleFull = false;
 
-        // HER SKU SADECE KENDİ HOMOJEN BLOK / PALETİNDE YÜKLENİR (ÜST ÜSTE BİNME YOKTUR, z=0)
         for (let item of queue) {
             if (item.remaining <= 0 || vehicleFull) continue;
             const sku = item.sku;
@@ -1275,7 +1272,7 @@
                 const totalWidthUsed = (plan.colsA * plan.dimW1) + (plan.colsB * plan.dimW2);
                 const startY = Math.max(0, (effContW - totalWidthUsed) / 2);
 
-                // Strip A Yerleşimi
+                // Strip A
                 if (plan.colsA > 0 && plan.rowsA > 0) {
                     const stripAY = startY;
                     const widthA = plan.colsA * plan.dimW1;
@@ -1319,7 +1316,7 @@
                     }
                 }
 
-                // Strip B Yerleşimi (Kare kutular döndürüldüğünde)
+                // Strip B (Kare Kutu Çevirme)
                 if (plan.colsB > 0 && plan.rowsB > 0) {
                     const stripBY = startY + (plan.colsA * plan.dimW1);
                     const widthB = plan.colsB * plan.dimW2;
@@ -1350,10 +1347,9 @@
                     }
                 }
 
-                // Bu SKU'nun bloğu bitti; bir sonraki SKU bu bloğun hemen arkasından başlar
                 currentX = placedItems.reduce((max, it) => Math.max(max, it.x + it.l), 0);
             } else {
-                // Paletli Mod: Her palet SADECE bu SKU'yu taşır (Ayrık Paletler)
+                // Paletli Mod
                 const pIdx = parseInt(document.getElementById('specificBaseSize')?.value) || 0;
                 const pSpec = standardPalletSizes[pIdx] || standardPalletSizes[0];
                 const strat = document.getElementById('palletStrategy')?.value || 'stable';
@@ -1381,7 +1377,6 @@
 
                 if (colsAcross <= 0 || rowsDeep <= 0) { vehicleFull = true; continue; }
 
-                let palletsPlacedForThisSku = 0;
                 for (let r = 0; r < rowsDeep; r++) {
                     for (let c = 0; c < colsAcross; c++) {
                         if (item.remaining <= 0) break;
@@ -1399,11 +1394,10 @@
                             blockName: item.blockName || `${sku.name} Paleti`
                         });
                         totalWgt += w; totalBoxes += b; item.remaining -= b;
-                        palletsPlacedForThisSku++;
                     }
                     if (vehicleFull || item.remaining <= 0) break;
                 }
-                currentX = placedItems.reduce((max, it) => Math.max(max, it.x + it.l), 0);
+                currentX += rowsDeep * palStepL;
             }
         }
 
@@ -1417,7 +1411,9 @@
         };
     }
 
-    // STATS & UI REPORTING
+    // =========================================================================
+    // 📊 STATS & DETAYLI AÇIKLAMA / ÇİZİM MOTORU (YAZILI VE GÖRSEL TALİMAT)
+    // =========================================================================
     function updateFleetUI() {
         let pagContainer = document.getElementById('fleetPaginationContainer');
         if (pagContainer) {
@@ -1461,52 +1457,138 @@
         let cogX = truck.totalWgt > 0 ? (momentX / truck.totalWgt) : 0;
         setElText('resStatusSub', `Dengeli Yük (CoG: ${(cogX/1000).toFixed(1)}m)`);
 
-        // DETAYLI SEVK VE BLOK RAPORU
+        // DETAYLI YAZILI ANLATIM & SAHA TALİMATLARI
         let detailsHtml = '';
-        if (truck.placedItems.length > 0) {
+
+        if (!isPalletMode) {
+            // Dökme / Zemin Yükleme Detaylı Açıklaması
             let groupedItems = {};
             truck.placedItems.forEach(item => {
                 if (!groupedItems[item.id]) {
                     groupedItems[item.id] = {
-                        name: item.id, totalBoxes: 0, totalRows: 0, color: item.color,
-                        isRound: item.isRound, totalWeight: 0, isPallet: item.isPallet,
-                        palletDesign: item.palletDesign
+                        name: item.id, totalBoxes: 0, totalRows: 0, cols: item.cols,
+                        singleBoxL: item.singleBoxL, singleBoxW: item.singleBoxW, singleBoxH: item.singleBoxH,
+                        color: item.color, isRound: item.isRound, totalWeight: 0, layerCounts: {}
                     };
                 }
                 groupedItems[item.id].totalBoxes += item.boxes;
                 groupedItems[item.id].totalRows += (item.rows || 1);
                 groupedItems[item.id].totalWeight += item.wgt;
+                groupedItems[item.id].layerCounts[item.layers] = (groupedItems[item.id].layerCounts[item.layers] || 0) + 1;
             });
 
             let groupList = Object.values(groupedItems);
-            let blocksHtml = groupList.map((g, bIdx) => `
-                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-800">
-                    <div class="flex items-center justify-between mb-1.5 border-b pb-1">
-                        <strong class="text-xs font-black text-slate-900">${bIdx + 1}. Blok: ${g.isRound ? '⚪ ' : '⏹ '}${g.name}</strong>
-                        <span class="text-emerald-700 bg-emerald-100 font-bold px-2 py-0.5 rounded text-[11px]">${g.totalBoxes} Adet</span>
+            let blocksExplanation = groupList.map((g, bIdx) => {
+                let layerBreakdownText = Object.entries(g.layerCounts)
+                    .sort((a,b) => b[0] - a[0])
+                    .map(([lyr, rws]) => `<strong>${rws} Sıra ${lyr} Kat</strong> (${rws * g.cols * lyr} Adet)`).join(' ve ');
+
+                const widthCoverage = g.cols * g.singleBoxW;
+                const lengthCoverage = g.totalRows * g.singleBoxL;
+
+                return `
+                    <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-slate-800 space-y-2">
+                        <div class="flex items-center justify-between border-b pb-2">
+                            <strong class="text-xs font-black text-slate-900">${bIdx + 1}. Blok: ${g.isRound ? '⚪ ' : '⏹ '}${g.name}</strong>
+                            <span class="text-emerald-700 bg-emerald-100 font-bold px-2.5 py-0.5 rounded text-xs">${g.totalBoxes.toLocaleString()} Adet &bull; ${g.totalWeight.toLocaleString(undefined, {maximumFractionDigits:1})} kg</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-[11px] text-slate-700">
+                            <div class="bg-white p-2 rounded border border-slate-200">
+                                <strong class="text-indigo-900 block font-bold mb-0.5">📐 Enine Yerleşim:</strong>
+                                ${g.cols} Adet yan yana (${widthCoverage} mm genişlik). Yanlarda güvenli pay bırakılarak form-fit yerleşmiştir.
+                            </div>
+                            <div class="bg-white p-2 rounded border border-slate-200">
+                                <strong class="text-indigo-900 block font-bold mb-0.5">📏 Boyuna Dağılım:</strong>
+                                ${g.totalRows} Sıra arka arkaya (${lengthCoverage} mm dorse uzunluğu).
+                            </div>
+                            <div class="bg-white p-2 rounded border border-slate-200">
+                                <strong class="text-indigo-900 block font-bold mb-0.5">⬆️ Kademeli Kat İstifi:</strong>
+                                ${layerBreakdownText}. Yük dorse boyuna yayılarak kapıya dayanmış ve devrilme engellenmiştir.
+                            </div>
+                        </div>
                     </div>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px] text-slate-600">
-                        <div><strong>Konum:</strong> Dorse Tabanda Ayrık Blok</div>
-                        <div><strong>Ağırlık:</strong> ${g.totalWeight.toLocaleString(undefined, {maximumFractionDigits:1})} kg</div>
-                        <div><strong>İstif Prensibi:</strong> Sadece kendi ürününden oluşur (üstünde başka ürün yoktur)</div>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
 
             detailsHtml = `
                 <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-xs space-y-3">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-2 gap-2">
                         <div>
-                            <strong class="text-slate-800 text-sm block">🚚 DORSE İÇİ HOMOJEN BLOK DAĞILIM RAPORU</strong>
-                            <span class="text-[11px] text-slate-500">Ürünler dorse tabanına ayrı bloklar olarak yerleştirilmiş, dikey karışım engellenmiştir.</span>
+                            <strong class="text-slate-800 text-sm block">🚚 DORSE TABANI DÖKME YERLEŞİM PLANI</strong>
+                            <span class="text-[11px] text-slate-500">Ürünlerin dorse içine nasıl yerleştirildiği ve kat kademelendirmesi</span>
                         </div>
-                        <span class="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded font-bold">✓ Ayrık Blok Standartı</span>
+                        <span class="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded font-bold">✓ Homojen Blok Düzeni</span>
                     </div>
-                    <div class="space-y-2">
-                        ${blocksHtml}
+                    <div class="space-y-2.5">
+                        ${blocksExplanation}
                     </div>
                 </div>
             `;
+        } else {
+            // Paletli Mod Detaylı Açıklaması & 2D Çizim Kartı
+            if (truck.placedItems.length > 0 && truck.placedItems[0].palletDesign) {
+                const p = truck.placedItems[0].palletDesign;
+                const tPal = truck.placedItems.length;
+                const tBoxes = truck.totalBoxes;
+                const pTare = tPal * (standardPalletSizes[document.getElementById('specificBaseSize')?.value || 0]?.tare || 25);
+                const netWeight = truck.totalWgt - pTare;
+
+                const dBadge = p.clearances.isDoorSafe
+                    ? `<span class="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded font-bold">✓ Kapıdan Rahat Geçer (${Math.floor(p.clearances.doorClearance)}mm Eşik Payı)</span>`
+                    : `<span class="text-rose-700 bg-rose-100 px-2 py-0.5 rounded font-bold">⚠️ Kapı Eşiğine Çarpar (-${Math.abs(Math.floor(p.clearances.doorClearance))}mm)</span>`;
+                const rBadge = p.clearances.isRackSafe
+                    ? `<span class="text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded font-bold">✓ Rafa Sığar (${Math.floor(p.clearances.rackClearance)}mm Boşluk)</span>`
+                    : `<span class="text-rose-700 bg-rose-100 px-2 py-0.5 rounded font-bold">⚠️ Rafa Sığmaz (Yükseklik Aşımı)</span>`;
+
+                const patternExplanation = p.isRound 
+                    ? `<strong>4-3-4 Petek Şaşırtmalı Formasyonu:</strong> 1. Sırada 4 teneke, 2. Sırada 3 teneke (tenekeler arasındaki doğal vadi boşluklarına geçmeli girinti), 3. Sırada 4 teneke yerleştirilerek kat başına tam <strong>${p.boxesPerLayer} teneke</strong> yerleştirilir. Bu dizilim sayesinde 800 mm Euro palet sınırları içinde <strong>0 mm taşma</strong> ile maksimum yoğunluk elde edilir.`
+                    : `<strong>Kutu Grid Formasyonu:</strong> Kutular palet tabanına en ve boy ekseninde tam sıfır taşma ile oturtulmuş, kat başına <strong>${p.boxesPerLayer} koli</strong> yerleştirilmiştir.`;
+
+                detailsHtml = `
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-xs space-y-3">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-2 gap-2">
+                            <div>
+                                <strong class="text-slate-800 text-sm block">🚚 PALET İSTİF VE ARAÇ SEVKİYAT TALİMATI</strong>
+                                <span class="text-[11px] text-slate-500">Palet kat dizilimi ve dorse yerleşim kuralı</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded font-bold">✓ Sevkiyata Hazır</span>
+                                <span class="text-indigo-700 bg-indigo-50 font-bold px-2.5 py-1 rounded">${p.bestPattern}</span>
+                            </div>
+                        </div>
+
+                        <!-- 4 ANA GÖSTERGE KARTI -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                            <div class="p-2.5 bg-white rounded-lg border shadow-xs"><span class="text-slate-500 block text-[10px] uppercase font-bold">Araçtaki Palet</span><strong class="text-base text-indigo-900 font-black">${tPal} Palet</strong><span class="text-[10px] text-slate-400 block mt-0.5">Dorse Tabanı Dolu</span></div>
+                            <div class="p-2.5 bg-white rounded-lg border shadow-xs"><span class="text-slate-500 block text-[10px] uppercase font-bold">Palet Başı Adet</span><strong class="text-base text-slate-800 font-black">${p.totalBoxes} Adet</strong><span class="text-[10px] text-slate-400 block mt-0.5">${p.finalLayers} Kat × ${p.boxesPerLayer} Adet</span></div>
+                            <div class="p-2.5 bg-white rounded-lg border shadow-xs"><span class="text-emerald-700 block text-[10px] uppercase font-bold">Toplam Taşıma</span><strong class="text-base text-emerald-600 font-black">${tBoxes.toLocaleString()} Adet</strong><span class="text-[10px] text-emerald-700 block mt-0.5">${tPal} Palet × ${p.totalBoxes} Adet</span></div>
+                            <div class="p-2.5 bg-white rounded-lg border shadow-xs"><span class="text-rose-700 block text-[10px] uppercase font-bold">Brüt Ağırlık</span><strong class="text-base text-rose-600 font-black">${truck.totalWgt.toLocaleString(undefined, {maximumFractionDigits:1})} kg</strong><span class="text-[10px] text-slate-400 block mt-0.5">${netWeight.toLocaleString(undefined, {maximumFractionDigits:0})} kg Net + ${pTare} kg Dara</span></div>
+                        </div>
+
+                        <!-- YÜKSEKLİK & EŞİK DETAYLARI -->
+                        <div class="p-3 bg-slate-50 rounded-lg border space-y-1.5">
+                            <div class="flex justify-between items-center"><span><strong>Konteyner Kapı Girişi:</strong> (Eşik Payı: ${p.clearances.doorClearance.toFixed(0)} mm)</span>${dBadge}</div>
+                            <div class="flex justify-between items-center"><span><strong>Depo Raf Yüksekliği:</strong> (Kalan Boşluk: ${p.clearances.rackClearance.toFixed(0)} mm)</span>${rBadge}</div>
+                            <div class="text-[11px] text-slate-500 pt-1 border-t flex justify-between items-center">
+                                <span><strong>Palet Ölçüsü:</strong> <strong class="text-slate-800">${p.palletL} x ${p.palletW} mm</strong></span>
+                                <span><strong>Toplam Palet Boyu:</strong> <strong class="text-slate-800">${p.totalHeight} mm</strong></span>
+                            </div>
+                        </div>
+
+                        <!-- 2D PALET ŞEMASI & GÖRSEL ANLATIM -->
+                        <div class="flex flex-col sm:flex-row items-center gap-4 border-t pt-3 bg-slate-50/50 p-2.5 rounded-xl border border-slate-200">
+                            <div class="w-28 h-28 bg-white border border-slate-300 rounded-lg p-1.5 shadow-xs flex-shrink-0 flex items-center justify-center">
+                                <canvas id="pallet2DCanvas" width="112" height="112" class="w-full h-full object-contain"></canvas>
+                            </div>
+                            <div class="text-[11px] text-slate-600 leading-relaxed">
+                                <strong class="text-slate-900 block text-xs mb-1">🔍 Palet 2D Kat Dizilimi Şeması</strong>
+                                <p class="mb-1">${patternExplanation}</p>
+                                <p>Her palet <strong>${p.finalLayers} kat</strong> istiflenir ve gerdirilmiş streç film sarılarak monolitik blok halinde dorseye yüklenir.</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
         }
 
         const useAirbag = document.getElementById('optAirbag')?.checked;
@@ -1516,11 +1598,11 @@
         if (optListEl) {
             optListEl.innerHTML = `
                 <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-200 shadow-sm text-xs text-indigo-950 space-y-3">
-                    <h4 class="font-black text-sm text-indigo-900 uppercase">👷 SAHA OPERASYON TALİMATI (ARAÇ ${currentVehicleIdx + 1} / ${globalFleet.length})</h4>
+                    <h4 class="font-black text-sm text-indigo-900 uppercase">👷 SAHA OPERASYON VE SEVKİYAT TALİMATI (ARAÇ ${currentVehicleIdx + 1} / ${globalFleet.length})</h4>
                     ${detailsHtml}
                     <div class="pt-2 border-t border-indigo-200">
                         <ul class="list-disc pl-5 space-y-1 text-slate-700">
-                            <li>${(useAirbag && truck.gapW > 80) ? `🔄 <strong>Yanal Boşluk:</strong> Yanlarda ${Math.floor(truck.gapW)} mm boşluk kalmaktadır. Hava Yastığı / Strafor takoz uygulayın.` : '✅ Yanal alan emniyetli seviyede doludur.'}</li>
+                            <li>${(useAirbag && truck.gapW > 80) ? `🔄 <strong>Yanal Boşluk:</strong> Yanlarda ${Math.floor(truck.gapW)} mm boşluk kalmaktadır. Hava Yastığı (Airbag) / Strafor takoz uygulayın.` : '✅ Yanal alan emniyetli seviyede doludur.'}</li>
                             <li>${(useLashing && truck.gapL > 250) ? `🚚 <strong>Boyuna Boşluk:</strong> Yük kapıya ${Math.floor(truck.gapL)} mm mesafede bitmektedir. Spanset (Lashing) çekilmelidir.` : '✅ Yük kapıya kadar tam oturmuştur.'}</li>
                         </ul>
                     </div>
@@ -1528,11 +1610,68 @@
             `;
         }
 
+        // 2D Palet Şemasını Çiz (Görsel Anlatım)
+        if (isPalletMode && truck.placedItems.length > 0 && truck.placedItems[0].palletDesign) {
+            setTimeout(() => {
+                const cvs = document.getElementById('pallet2DCanvas');
+                if (!cvs) return;
+                const p = truck.placedItems[0].palletDesign;
+                const c = cvs.getContext('2d');
+                c.clearRect(0, 0, cvs.width, cvs.height);
+
+                const pad = 6;
+                const sc = Math.min((cvs.width - pad*2) / p.palletL, (cvs.height - pad*2) / p.palletW);
+                const ox = (cvs.width - p.palletL * sc) / 2;
+                const oy = (cvs.height - p.palletW * sc) / 2;
+
+                // Ahşap Palet Tabanı
+                c.fillStyle = '#d7ba89';
+                c.fillRect(ox, oy, p.palletL * sc, p.palletW * sc);
+                c.strokeStyle = '#8c6d3b';
+                c.lineWidth = 1.5;
+                c.strokeRect(ox, oy, p.palletL * sc, p.palletW * sc);
+
+                // Kutu veya Petek Teneke Çizimi
+                p.boxPositions.forEach(b => {
+                    if (b.isRound) {
+                        const r = (b.l * sc) / 2;
+                        const cx = ox + b.x * sc + r;
+                        const cy = oy + b.y * sc + r;
+
+                        c.beginPath();
+                        c.arc(cx, cy, r - 0.5, 0, 2 * Math.PI);
+                        c.fillStyle = '#38bdf8';
+                        c.fill();
+                        c.strokeStyle = '#0284c7';
+                        c.lineWidth = 1;
+                        c.stroke();
+
+                        // İç Kordon Rimi
+                        c.beginPath();
+                        c.arc(cx, cy, r * 0.45, 0, 2 * Math.PI);
+                        c.fillStyle = '#e0f2fe';
+                        c.fill();
+                        c.strokeStyle = '#0284c7';
+                        c.lineWidth = 0.6;
+                        c.stroke();
+                    } else {
+                        c.fillStyle = b.isRotated ? '#38bdf8' : '#0284c7';
+                        c.fillRect(ox + b.x*sc, oy + b.y*sc, b.l*sc - 1, b.w*sc - 1);
+                        c.strokeStyle = '#0369a1';
+                        c.lineWidth = 1;
+                        c.strokeRect(ox + b.x*sc, oy + b.y*sc, b.l*sc - 1, b.w*sc - 1);
+                    }
+                });
+            }, 60);
+        }
+
         lastRenderData = { placedItems: truck.placedItems, contL: ctx.contL, contW: ctx.contW, contH: ctx.contH, optFrontCurve: ctx.optFrontCurve, cogX };
         performRender(lastRenderData);
     }
 
-    // 3D ISOMETRIC RENDER WITH HOMOGENEOUS GROUND BLOCKS
+    // =========================================================================
+    // 🎨 3D İZOMETRİK ÇİZİM MOTORU (KAT VE ÇEMBER ÇİZGİLERİYLE DETAYLI İLLÜSTRASYON)
+    // =========================================================================
     function performRender(data) {
         if (!data) return;
         const { placedItems, contL, contW, contH, optFrontCurve, cogX } = data;
@@ -1565,7 +1704,12 @@
             if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = width; ctx.stroke(); }
         }
 
-        // Araç Gövdesi
+        function drawLine(p1, p2, stroke = 'rgba(0,0,0,0.35)', width = 1) {
+            ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = stroke; ctx.lineWidth = width; ctx.stroke();
+        }
+
+        // Dorse Gövdesi
         drawPoly([project(0,0,0), project(validContL,0,0), project(validContL,validContW,0), project(0,validContW,0)], '#334155');
         drawPoly([project(0,0,0), project(validContL,0,0), project(validContL,0,validContH), project(0,0,validContH)], '#1e293b');
         drawPoly([project(0,0,0), project(0,validContW,0), project(0,validContW,validContH), project(0,0,validContH)], '#0f172a');
@@ -1581,18 +1725,96 @@
 
                 if (b.isPallet) {
                     const baseH = b.palletBaseH || 145;
-                    drawPoly([project(b.x + b.l, b.y, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, baseH), project(b.x + b.l, b.y, baseH)], '#8c6538');
-                    drawPoly([project(b.x, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, baseH), project(b.x, b.y + b.w, baseH)], '#a37542');
+                    // Ahşap Palet Tabanı
+                    drawPoly([project(b.x + b.l, b.y, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, baseH), project(b.x + b.l, b.y, baseH)], '#8c6538', 'rgba(0,0,0,0.4)', 1);
+                    drawPoly([project(b.x, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, baseH), project(b.x, b.y + b.w, baseH)], '#a37542', 'rgba(0,0,0,0.4)', 1);
+
+                    // Palet Üstündeki Yük Bloğu
+                    drawPoly([project(b.x + b.l, b.y, baseH), project(b.x + b.l, b.y + b.w, baseH), project(b.x + b.l, b.y + b.w, z1), project(b.x + b.l, b.y, z1)], b.color.right, 'rgba(0,0,0,0.5)', 1);
+                    drawPoly([project(b.x, b.y + b.w, baseH), project(b.x + b.l, b.y + b.w, baseH), project(b.x + b.l, b.y + b.w, z1), project(b.x, b.y + b.w, z1)], b.color.left, 'rgba(0,0,0,0.5)', 1);
+                    drawPoly([project(b.x, b.y, z1), project(b.x + b.l, b.y, z1), project(b.x + b.l, b.y + b.w, z1), project(b.x, b.y + b.w, z1)], b.color.top, 'rgba(0,0,0,0.5)', 1);
+
+                    // Kat Çizgileri
+                    if (b.palletDesign && b.palletDesign.finalLayers > 1) {
+                        const lyrH = (b.h - baseH) / b.palletDesign.finalLayers;
+                        for (let l = 1; l < b.palletDesign.finalLayers; l++) {
+                            const z = baseH + (l * lyrH);
+                            drawLine(project(b.x + b.l, b.y, z), project(b.x + b.l, b.y + b.w, z), 'rgba(0,0,0,0.4)');
+                            drawLine(project(b.x, b.y + b.w, z), project(b.x + b.l, b.y + b.w, z), 'rgba(0,0,0,0.4)');
+                        }
+                    }
+
+                    // Palet Üstündeki Bireysel Teneke Elipsleri
+                    if (b.palletDesign && b.palletDesign.boxPositions) {
+                        b.palletDesign.boxPositions.forEach(bp => {
+                            if (bp.isRound) {
+                                const r = bp.l / 2;
+                                const centerPt = project(b.x + bp.x + r, b.y + bp.y + r, z1);
+                                const rx = (r * cosA * scale) * 0.82;
+                                const ry = (r * sinA * scale) * 0.82;
+                                ctx.beginPath();
+                                ctx.ellipse(centerPt.x, centerPt.y, rx, ry, 0, 0, 2 * Math.PI);
+                                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                                ctx.fill();
+                                ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+                                ctx.lineWidth = 0.8;
+                                ctx.stroke();
+                            }
+                        });
+                    }
+                } else {
+                    // Dökme / Zemin Yük Bloğu
+                    drawPoly([project(b.x + b.l, b.y, z0), project(b.x + b.l, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z1), project(b.x + b.l, b.y, z1)], b.color.right, 'rgba(0,0,0,0.6)', 1.2);
+                    drawPoly([project(b.x, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z1), project(b.x, b.y + b.w, z1)], b.color.left, 'rgba(0,0,0,0.6)', 1.2);
+                    drawPoly([project(b.x, b.y, z1), project(b.x + b.l, b.y, z1), project(b.x + b.l, b.y + b.w, z1), project(b.x, b.y + b.w, z1)], b.color.top, 'rgba(0,0,0,0.6)', 1.2);
+
+                    // Kat Ayrım Çizgileri
+                    if (b.layers && b.layers > 1) {
+                        for (let l = 1; l < b.layers; l++) {
+                            let z = z0 + (l * b.singleBoxH);
+                            drawLine(project(b.x + b.l, b.y, z), project(b.x + b.l, b.y + b.w, z), 'rgba(0,0,0,0.35)');
+                            drawLine(project(b.x, b.y + b.w, z), project(b.x + b.l, b.y + b.w, z), 'rgba(0,0,0,0.35)');
+                        }
+                    }
+
+                    // Sütun Ayrım Çizgileri
+                    if (b.cols && b.cols > 1) {
+                        for (let c = 1; c < b.cols; c++) {
+                            let y = b.y + c * (b.w / b.cols);
+                            drawLine(project(b.x + b.l, y, z0), project(b.x + b.l, y, z1), 'rgba(0,0,0,0.35)');
+                            drawLine(project(b.x, y, z1), project(b.x + b.l, y, z1), 'rgba(0,0,0,0.4)');
+                        }
+                    }
+
+                    // Yuvarlak Tenekelerin Üst Rimi
+                    if (b.isRound && b.cols) {
+                        for (let c = 0; c < b.cols; c++) {
+                            let centerX = b.x + b.l / 2;
+                            let centerY = b.y + (c + 0.5) * (b.w / b.cols);
+                            let ptCenter = project(centerX, centerY, z1);
+                            let radiusX = (b.l / 2) * cosA * scale * 0.85;
+                            let radiusY = (b.w / b.cols / 2) * sinA * scale * 0.85;
+
+                            ctx.beginPath();
+                            ctx.ellipse(ptCenter.x, ptCenter.y, radiusX, radiusY, 0, 0, 2 * Math.PI);
+                            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                            ctx.fill();
+                            ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+                            ctx.lineWidth = 0.8;
+                            ctx.stroke();
+                        }
+                    }
                 }
-
-                let pRight = [project(b.x + b.l, b.y, z0), project(b.x + b.l, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z1), project(b.x + b.l, b.y, z1)];
-                let pFront = [project(b.x, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z1), project(b.x, b.y + b.w, z1)];
-                let pTop = [project(b.x, b.y, z1), project(b.x + b.l, b.y, z1), project(b.x + b.l, b.y + b.w, z1), project(b.x, b.y + b.w, z1)];
-
-                drawPoly(pRight, b.color.right, 'rgba(0,0,0,0.5)', 1);
-                drawPoly(pFront, b.color.left, 'rgba(0,0,0,0.5)', 1);
-                drawPoly(pTop, b.color.top, 'rgba(0,0,0,0.5)', 1);
             });
+        }
+
+        // Ağırlık Merkezi (CoG) Göstergesi
+        if (placedItems && placedItems.length > 0) {
+            let cogPt = project(cogX, validContW / 2, validContH / 2);
+            ctx.beginPath(); ctx.arc(cogPt.x, cogPt.y, 6, 0, 2*Math.PI);
+            ctx.fillStyle = '#e11d48'; ctx.fill();
+            ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke();
+            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 9px Inter'; ctx.fillText('⌖ CoG', cogPt.x - 12, cogPt.y - 10);
         }
     }
 
