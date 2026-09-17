@@ -251,7 +251,7 @@
                     </div>
                 </div>
 
-                <!-- MIXED SKU PANEL (DRAG AND DROP SÜRÜKLE-BIRAK) -->
+                <!-- MIXED SKU PANEL (REACTIVE DRAG-AND-DROP REORDERING) -->
                 <div id="panel-mixed" class="hidden">
                     <div class="section-header flex justify-between items-center mb-2">
                         <span>Karma Yük Listesi</span>
@@ -265,7 +265,7 @@
                             <option value="sequential">➡️ Sıralı Blok Yükleme (Sırasıyla Dorse Boyunca)</option>
                         </select>
                         <span class="text-[10px] text-slate-600 mt-1 block">
-                            🖱️ <strong>Sürükle & Bırak:</strong> Tutamaktan (⋮⋮) sürükleyip bırakarak dikey katman sıralamasını kolayca değiştirebilirsiniz.
+                            🖱️ <strong>Sürükle & Bırak:</strong> Tutamaktan (⋮⋮) sürükleyip bırakarak dikey katman sıralamasını belirleyin.
                         </span>
                     </div>
 
@@ -354,7 +354,7 @@
                     <span class="text-[10px] text-slate-400 font-semibold mt-1" id="resWeightSub">Ürün + Ambalaj / Dara</span>
                 </div>
                 <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center">
-                    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Taşıma Birimi (İstif)</p>
+                    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1" id="lblMetricLoads">Taşıma Birimi (İstif)</p>
                     <p class="text-xl md:text-2xl font-black text-slate-800 leading-none" id="resLoads">-</p>
                     <span class="text-[10px] text-slate-400 font-semibold mt-1" id="resLoadsSub">Palet / Sıra Dağılımı</span>
                 </div>
@@ -394,7 +394,7 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- MODALLER                                                                  -->
+<!-- MODALLER: DASHBOARD, SKU & PALET YÖNETİMİ                                 -->
 <!-- ========================================================================= -->
 <div id="adminDashboardModal" class="hidden fixed inset-0 bg-slate-900/80 z-40 flex items-center justify-center p-4 no-print">
     <div class="bg-white rounded-2xl shadow-2xl max-w-[1150px] w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-200">
@@ -569,7 +569,7 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- JAVASCRIPT: SUPABASE AUTH, GEOMETRY ENGINE & CLEAN DRAG-DROP              -->
+<!-- JAVASCRIPT: ENGINE, DATA STORES & EVENT LOGIC                             -->
 <!-- ========================================================================= -->
 <script>
     const SUPABASE_URL = 'https://wukjeatpuysvlosbtahf.supabase.co';
@@ -611,7 +611,6 @@
     let skuDatabase = [];
     let standardPalletSizes = [];
 
-    // Reactive Mixed State Array (Crash-free Drag & Drop)
     let mixedItemsState = [
         { skuIdx: 0, count: 300 },
         { skuIdx: 1, count: 200 }
@@ -635,6 +634,12 @@
     let panX = 0, panY = 0, zoomLevel = 1;
     let isDragging = false, startX = 0, startY = 0;
     let lastRenderData = null;
+
+    // Helper: Null-safe text setter (prevents script crashes)
+    function setElText(id, text) {
+        const el = document.getElementById(id);
+        if (el) el.innerText = text;
+    }
 
     // MATH & SOLVER FUNCTIONS
     function generateGrid(rows, cols, cellL, cellW, palletL, palletW, isRotated) {
@@ -662,11 +667,11 @@
             const cols = Math.floor(effW / boxW);
             const rows = Math.floor(effL / boxL);
             const layerBoxes = cols * rows;
-            const volumeBoxes = layerBoxes * physMaxLayers;
-            const feasibleBoxes = Math.min(volumeBoxes, maxBoxesByWeight);
+            const feasibleBoxes = Math.min(layerBoxes * physMaxLayers, maxBoxesByWeight);
 
             return {
                 colsA: cols, rowsA: rows, dimL1: boxL, dimW1: boxW,
+                colsB: 0, rowsB: 0, dimL2: 0, dimW2: 0,
                 layerBoxes: layerBoxes, maxBoxes: feasibleBoxes,
                 physMaxLayers: physMaxLayers, isRound: true
             };
@@ -697,6 +702,17 @@
                 };
             }
         }
+
+        // Normalization: Ensure Strip A is never empty if items were found via Strip B rotation
+        if (bestPlan && bestPlan.colsA === 0 && bestPlan.colsB > 0) {
+            bestPlan.colsA = bestPlan.colsB;
+            bestPlan.rowsA = bestPlan.rowsB;
+            bestPlan.dimL1 = bestPlan.dimL2;
+            bestPlan.dimW1 = bestPlan.dimW2;
+            bestPlan.colsB = 0;
+            bestPlan.rowsB = 0;
+        }
+
         return bestPlan;
     }
 
@@ -716,9 +732,9 @@
 
         if (shape === 'round') {
             const D = Math.max(boxL, boxW);
-            const pitch = D * Math.sqrt(3) / 2; // ~246.82 mm for 285 mm
+            const pitch = D * Math.sqrt(3) / 2; // 246.82 mm for 285 mm
 
-            // Pattern 1: Düz Grid
+            // Pattern 1: Straight Grid
             const colsGrid = Math.floor(palletW / D);
             const rowsGrid = Math.floor(palletL / D);
             const gridBoxes = [];
@@ -731,7 +747,7 @@
             }
             patterns.push({ type: 'Düz Çember (Rim-to-Rim)', count: colsGrid * rowsGrid, layout: gridBoxes, isRound: true });
 
-            // Pattern 2: 4-3-4 Genişlik Petek (11 Adet Formasyonu)
+            // Pattern 2: Width Nesting (4-3-4 -> 11 units/tier)
             if (palletW >= D && pitch > 0) {
                 const numRowsAcrossW = 1 + Math.floor((palletW - D) / pitch);
                 if (numRowsAcrossW >= 2) {
@@ -894,7 +910,7 @@
             landingPage.classList.add('hidden');
             protectedApp.classList.remove('hidden');
             loadUserProfile(user.id);
-            debouncedRunEngine();
+            runEngine();
         } else {
             landingPage.classList.remove('hidden');
             protectedApp.classList.add('hidden');
@@ -965,7 +981,7 @@
                 if (data?.session) {
                     handleAuthChange(data.user);
                 } else {
-                    scsLabel.innerText = "Hesabınız başarıyla oluşturuldu! Şimdi giriş yapabilirsiniz.";
+                    scsLabel.innerText = "Hesabınız oluşturuldu! Giriş yapabilirsiniz.";
                     scsLabel.classList.remove('hidden');
                     switchAuthTab('login');
                 }
@@ -1001,27 +1017,32 @@
         const role = currentUserProfile?.role || 'sales';
         const roleBadge = document.getElementById('userRoleBadge');
         const btnSales = document.getElementById('btnSubmitSales');
-        const dashText = document.getElementById('dashboardBtnText');
 
-        document.getElementById('userEmailLabel').innerText = currentUserProfile?.full_name || currentUser?.email || 'Kullanıcı';
+        setElText('userEmailLabel', currentUserProfile?.full_name || currentUser?.email || 'Kullanıcı');
 
         if (role === 'logistics' || role === 'admin') {
-            roleBadge.innerText = role === 'admin' ? "YÖNETİCİ" : "LOJİSTİK & SAHA";
-            roleBadge.className = "px-1.5 py-0.5 rounded font-black text-[9px] bg-indigo-600 text-white uppercase";
-            dashText.innerText = "📥 Gelen Sevk Talepleri";
-            btnSales.classList.add('hidden');
+            if (roleBadge) {
+                roleBadge.innerText = role === 'admin' ? "YÖNETİCİ" : "LOJİSTİK & SAHA";
+                roleBadge.className = "px-1.5 py-0.5 rounded font-black text-[9px] bg-indigo-600 text-white uppercase";
+            }
+            setElText('dashboardBtnText', "📥 Gelen Sevk Talepleri");
+            if (btnSales) btnSales.classList.add('hidden');
         } else {
-            roleBadge.innerText = "SATIŞ EKİBİ";
-            roleBadge.className = "px-1.5 py-0.5 rounded font-black text-[9px] bg-amber-600 text-white uppercase";
-            dashText.innerText = "📥 Sevk Taleplerim";
-            btnSales.classList.remove('hidden');
-            btnSales.classList.add('flex');
+            if (roleBadge) {
+                roleBadge.innerText = "SATIŞ EKİBİ";
+                roleBadge.className = "px-1.5 py-0.5 rounded font-black text-[9px] bg-amber-600 text-white uppercase";
+            }
+            setElText('dashboardBtnText', "📥 Sevk Taleplerim");
+            if (btnSales) {
+                btnSales.classList.remove('hidden');
+                btnSales.classList.add('flex');
+            }
         }
     }
 
     async function handleLogout() {
         if (supabaseClient) {
-            await supabaseClient.auth.signOut();
+            try { await supabaseClient.auth.signOut(); } catch(e){}
         }
         handleAuthChange(null);
     }
@@ -1045,7 +1066,7 @@
     }
 
     // =========================================================================
-    // 🔀 REAKTİF DRAG-AND-DROP (SIFIR FLICKER / SIFIR ÇÖKME)
+    // 🔀 REAKTİF DRAG-AND-DROP (SIFIR ÇÖKME / NATIVE STATE MUTASYONU)
     // =========================================================================
     let draggedIndex = null;
 
@@ -1080,7 +1101,6 @@
                 </div>
             `;
 
-            // Clean Native HTML5 Drag and Drop (Only Mutates State on Drop)
             row.addEventListener('dragstart', (e) => {
                 draggedIndex = idx;
                 e.dataTransfer.effectAllowed = 'move';
@@ -1142,34 +1162,34 @@
     // 🚚 SIMULATION ENGINE
     // =========================================================================
     function runEngine() {
-        const baseType = document.getElementById('baseType').value;
-        const contL = parseInt(document.getElementById('contL').value) || 13600;
-        const contW = parseInt(document.getElementById('contW').value) || 2420;
-        const contH = parseInt(document.getElementById('contH').value) || 2600;
-        const maxWgt = parseInt(document.getElementById('maxWgt').value) || 25000;
+        const baseType = document.getElementById('baseType')?.value || 'floor';
+        const contL = parseInt(document.getElementById('contL')?.value) || 13600;
+        const contW = parseInt(document.getElementById('contW')?.value) || 2420;
+        const contH = parseInt(document.getElementById('contH')?.value) || 2600;
+        const maxWgt = parseInt(document.getElementById('maxWgt')?.value) || 25000;
 
         let effContL = contL - 10;
         let effContW = contW - 10;
-        const optFrontCurve = (document.getElementById('vehicleType').value === 'TIR') && document.getElementById('optFrontCurve').checked;
+        const optFrontCurve = (document.getElementById('vehicleType')?.value === 'TIR') && document.getElementById('optFrontCurve')?.checked;
         if (optFrontCurve) effContL -= 100;
-        if (document.getElementById('optDoor').checked) effContL -= 80;
+        if (document.getElementById('optDoor')?.checked) effContL -= 80;
 
         let queue = [];
 
         if (currentMode === 'single') {
-            const skuIdx = parseInt(document.getElementById('skuSelect').value) || 0;
+            const skuIdx = parseInt(document.getElementById('skuSelect')?.value) || 0;
             const sku = skuDatabase[skuIdx];
             if (!sku) return;
 
-            let targetBoxes = parseInt(document.getElementById('targetBoxes').value);
+            let targetBoxes = parseInt(document.getElementById('targetBoxes')?.value);
             if (isNaN(targetBoxes) || targetBoxes <= 0) {
                 if (baseType === 'floor') {
                     const plan = findOptimalFloorPlan(effContW, effContL, contH, sku, maxWgt);
                     targetBoxes = plan ? plan.maxBoxes : Math.floor(maxWgt / sku.Wt);
                 } else {
-                    const pIdx = parseInt(document.getElementById('specificBaseSize').value) || 0;
+                    const pIdx = parseInt(document.getElementById('specificBaseSize')?.value) || 0;
                     const pSpec = standardPalletSizes[pIdx] || standardPalletSizes[0];
-                    const strat = document.getElementById('palletStrategy').value;
+                    const strat = document.getElementById('palletStrategy')?.value || 'stable';
                     const pDesign = calculateOptimalPalletDesign({
                         boxL: sku.L, boxW: sku.W, boxH: sku.H, boxWt: sku.Wt, maxLayersBCT: sku.maxLayers,
                         palletL: pSpec.L, palletW: pSpec.W, palletBaseH: pSpec.H, palletTare: pSpec.tare,
@@ -1224,7 +1244,6 @@
         const isMixedFloating = (currentMode === 'mixed' && document.getElementById('mixedStackStrategy')?.value === 'floating');
 
         if (isMixedFloating && baseType === 'floor' && queue.length > 1) {
-            // Drag-and-drop order: [0] is bottom tier, [1] is floating tier directly above
             const baseSkuItem = queue[0];
             const topSkuItem = queue[1];
             const availableL = effContL - currentX;
@@ -1235,7 +1254,7 @@
                 const rowsCount = planBase.rowsA || Math.floor(availableL / baseSkuItem.sku.L);
                 const colsCount = planBase.colsA || Math.floor(effContW / baseSkuItem.sku.W);
                 const widthUsed = colsCount * planBase.dimW1;
-                const startY = (effContW - widthUsed) / 2;
+                const startY = Math.max(0, (effContW - widthUsed) / 2);
                 const baseLayerH = baseLayersAllowed * baseSkuItem.sku.H;
 
                 // Kat 1 (Taban) -> z = 0
@@ -1291,35 +1310,107 @@
                 const plan = findOptimalFloorPlan(effContW, availableL, contH, sku, maxWgt - totalWgt);
                 if (!plan || plan.layerBoxes <= 0) { vehicleFull = true; continue; }
 
-                const baseLayers = Math.min(plan.physMaxLayers, Math.max(1, Math.floor(item.remaining / plan.layerBoxes)));
-                const widthUsed = plan.colsA * plan.dimW1;
-                const startY = (effContW - widthUsed) / 2;
+                const maxBoxesByWeight = Math.floor((maxWgt - totalWgt) / sku.Wt);
+                const boxesForThisTruck = Math.min(item.remaining, maxBoxesByWeight);
+                if (boxesForThisTruck <= 0) { vehicleFull = true; break; }
 
-                for (let r = 0; r < plan.rowsA; r++) {
-                    if (item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
-                    let bCount = Math.min(plan.colsA * baseLayers, item.remaining);
-                    let rX = currentX + (r * plan.dimL1);
-                    let rWgt = bCount * sku.Wt;
+                let baseLayers = Math.max(1, Math.min(plan.physMaxLayers, Math.floor(boxesForThisTruck / plan.layerBoxes)));
+                let remainderBoxes = 0;
+                let higherLayers = baseLayers;
 
-                    placedItems.push({
-                        id: sku.name, x: rX, y: startY, z: 0,
-                        l: plan.dimL1, w: widthUsed, h: baseLayers * sku.H,
-                        boxes: bCount, wgt: rWgt, color: item.color,
-                        cols: plan.colsA, rows: 1, layers: baseLayers,
-                        singleBoxL: plan.dimL1, singleBoxW: plan.dimW1, singleBoxH: sku.H,
-                        isRound: (sku.shape === 'round')
-                    });
-                    totalWgt += rWgt; totalBoxes += bCount; item.remaining -= bCount;
+                if (baseLayers < plan.physMaxLayers && (boxesForThisTruck > baseLayers * plan.layerBoxes)) {
+                    higherLayers = baseLayers + 1;
+                    remainderBoxes = boxesForThisTruck - (baseLayers * plan.layerBoxes);
                 }
+
+                const totalWidthUsed = (plan.colsA * plan.dimW1) + (plan.colsB * plan.dimW2);
+                const startY = Math.max(0, (effContW - totalWidthUsed) / 2);
+
+                // Strip A Packing
+                if (plan.colsA > 0 && plan.rowsA > 0) {
+                    const stripAY = startY;
+                    const widthA = plan.colsA * plan.dimW1;
+                    const higherRowsA = Math.min(plan.rowsA, Math.floor(remainderBoxes / plan.colsA));
+                    const partialInRowA = remainderBoxes % plan.colsA;
+
+                    for (let r = 0; r < plan.rowsA; r++) {
+                        if (item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
+
+                        let rowLayers = baseLayers;
+                        let rowBoxes = plan.colsA * baseLayers;
+
+                        if (r < higherRowsA) {
+                            rowLayers = higherLayers;
+                            rowBoxes = plan.colsA * higherLayers;
+                        } else if (r === higherRowsA && partialInRowA > 0) {
+                            rowLayers = higherLayers;
+                            rowBoxes = (plan.colsA * baseLayers) + partialInRowA;
+                        }
+
+                        rowBoxes = Math.min(rowBoxes, item.remaining);
+                        rowBoxes = Math.min(rowBoxes, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                        if (rowBoxes <= 0) break;
+
+                        const rowX = currentX + (r * plan.dimL1);
+                        const rowWgt = rowBoxes * sku.Wt;
+
+                        placedItems.push({
+                            id: sku.name, x: rowX, y: stripAY, z: 0,
+                            l: plan.dimL1, w: widthA, h: rowLayers * sku.H,
+                            boxes: rowBoxes, wgt: rowWgt, color: item.color,
+                            cols: plan.colsA, rows: 1, layers: rowLayers,
+                            singleBoxL: plan.dimL1, singleBoxW: plan.dimW1, singleBoxH: sku.H,
+                            isRound: (sku.shape === 'round')
+                        });
+
+                        totalWgt += rowWgt;
+                        totalBoxes += rowBoxes;
+                        item.remaining -= rowBoxes;
+                    }
+                }
+
+                // Strip B Packing (if rotated second strip exists)
+                if (plan.colsB > 0 && plan.rowsB > 0) {
+                    const stripBY = startY + (plan.colsA * plan.dimW1);
+                    const widthB = plan.colsB * plan.dimW2;
+
+                    for (let r = 0; r < plan.rowsB; r++) {
+                        if (item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
+
+                        let rowBoxes = Math.min(plan.colsB * baseLayers, item.remaining);
+                        rowBoxes = Math.min(rowBoxes, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                        if (rowBoxes <= 0) break;
+
+                        const rowX = currentX + (r * plan.dimL2);
+                        const rowWgt = rowBoxes * sku.Wt;
+
+                        placedItems.push({
+                            id: sku.name, x: rowX, y: stripBY, z: 0,
+                            l: plan.dimL2, w: widthB, h: baseLayers * sku.H,
+                            boxes: rowBoxes, wgt: rowWgt, color: item.color,
+                            cols: plan.colsB, rows: 1, layers: baseLayers,
+                            singleBoxL: plan.dimL2, singleBoxW: plan.dimW2, singleBoxH: sku.H,
+                            isRound: (sku.shape === 'round')
+                        });
+
+                        totalWgt += rowWgt;
+                        totalBoxes += rowBoxes;
+                        item.remaining -= rowBoxes;
+                    }
+                }
+
                 currentX = placedItems.reduce((max, it) => Math.max(max, it.x + it.l), 0);
             } else {
-                const pIdx = parseInt(document.getElementById('specificBaseSize').value) || 0;
+                const pIdx = parseInt(document.getElementById('specificBaseSize')?.value) || 0;
                 const pSpec = standardPalletSizes[pIdx] || standardPalletSizes[0];
-                const strat = document.getElementById('palletStrategy').value;
+                const strat = document.getElementById('palletStrategy')?.value || 'stable';
 
                 const pDesign = calculateOptimalPalletDesign({
                     boxL: sku.L, boxW: sku.W, boxH: sku.H, boxWt: sku.Wt, maxLayersBCT: sku.maxLayers,
                     palletL: pSpec.L, palletW: pSpec.W, palletBaseH: pSpec.H, palletTare: pSpec.tare,
+                    warehouseRackH: parseInt(document.getElementById('rackHeight')?.value) || 1800,
+                    containerDoorH: parseInt(document.getElementById('containerDoorHeight')?.value) || 2550,
+                    containerCeilingH: contH,
                     shape: sku.shape || 'box', strategy: strat
                 });
 
@@ -1373,44 +1464,46 @@
     // STATS & UI REPORTING
     function updateFleetUI() {
         let pagContainer = document.getElementById('fleetPaginationContainer');
-        if (globalFleet.length > 1) {
-            let pagHtml = `<div class="flex gap-2 mb-2 p-2 bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">`;
-            globalFleet.forEach((v, idx) => {
-                let activeClass = idx === currentVehicleIdx ? 'bg-sky-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200';
-                pagHtml += `<button onclick="currentVehicleIdx = ${idx}; updateFleetUI();" class="px-4 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap ${activeClass}">🚚 Araç ${idx + 1} (${v.totalBoxes} Adet Taşıma)</button>`;
-            });
-            pagHtml += `</div>`;
-            pagContainer.innerHTML = pagHtml;
-        } else {
-            pagContainer.innerHTML = '';
+        if (pagContainer) {
+            if (globalFleet.length > 1) {
+                let pagHtml = `<div class="flex gap-2 mb-2 p-2 bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">`;
+                globalFleet.forEach((v, idx) => {
+                    let activeClass = idx === currentVehicleIdx ? 'bg-sky-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200';
+                    pagHtml += `<button onclick="currentVehicleIdx = ${idx}; updateFleetUI();" class="px-4 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap ${activeClass}">🚚 Araç ${idx + 1} (${v.totalBoxes} Adet Taşıma)</button>`;
+                });
+                pagHtml += `</div>`;
+                pagContainer.innerHTML = pagHtml;
+            } else {
+                pagContainer.innerHTML = '';
+            }
         }
 
         let truck = globalFleet[currentVehicleIdx] || { placedItems: [], totalBoxes: 0, totalWgt: 0, gapL: 0, gapW: 0 };
         const ctx = globalEngineContext;
-        const isPalletMode = (document.getElementById('baseType').value !== 'floor');
+        const isPalletMode = (document.getElementById('baseType')?.value !== 'floor');
 
-        document.getElementById('resTotalBoxes').innerText = `${truck.totalBoxes.toLocaleString()} Adet`;
-        document.getElementById('resTotalBoxesSub').innerText = isPalletMode ? `${truck.placedItems.length} Palet Üzerinde Net Yük` : `Dorse Tabanında Dökme Yük`;
-        document.getElementById('resWeight').innerText = `${truck.totalWgt.toLocaleString(undefined, {maximumFractionDigits:1})} kg`;
+        setElText('resTotalBoxes', `${truck.totalBoxes.toLocaleString()} Adet`);
+        setElText('resTotalBoxesSub', isPalletMode ? `${truck.placedItems.length} Palet Üzerinde Net Yük` : `Dorse Tabanında Dökme Yük`);
+        setElText('resWeight', `${truck.totalWgt.toLocaleString(undefined, {maximumFractionDigits:1})} kg`);
 
         let weightPct = Math.min(100, Math.round((truck.totalWgt / (ctx.maxWgt || 25000)) * 100));
-        document.getElementById('resWeightSub').innerText = `Yasal Sınır: ${(ctx.maxWgt || 25000).toLocaleString()} kg (%${weightPct} Dolu)`;
+        setElText('resWeightSub', `Yasal Sınır: ${(ctx.maxWgt || 25000).toLocaleString()} kg (%${weightPct} Dolu)`);
 
         if (isPalletMode) {
-            document.getElementById('lblMetricLoads').innerText = "Taşınan Palet Sayısı";
-            document.getElementById('resLoads').innerText = `${truck.placedItems.length} Palet`;
+            setElText('lblMetricLoads', "Taşınan Palet Sayısı");
+            setElText('resLoads', `${truck.placedItems.length} Palet`);
             let uPerPal = truck.placedItems[0]?.palletDesign?.totalBoxes || 0;
-            document.getElementById('resLoadsSub').innerText = `Palet Başı: ${uPerPal} Adet`;
+            setElText('resLoadsSub', `Palet Başı: ${uPerPal} Adet`);
         } else {
-            document.getElementById('lblMetricLoads').innerText = "Taşıma Sıra / Blok";
-            document.getElementById('resLoads').innerText = `${truck.placedItems.length} Blok / Sıra`;
-            document.getElementById('resLoadsSub').innerText = currentMode === 'mixed' ? "Karma Katmanlı Yük" : "Dorse Boyunca Sıralı";
+            setElText('lblMetricLoads', "Taşıma Sıra / Blok");
+            setElText('resLoads', `${truck.placedItems.length} Blok / Sıra`);
+            setElText('resLoadsSub', currentMode === 'mixed' ? "Karma Katmanlı Yük" : "Dorse Boyunca Sıralı");
         }
 
         let momentX = 0;
         truck.placedItems.forEach(p => { momentX += (p.x + p.l/2) * p.wgt; });
         let cogX = truck.totalWgt > 0 ? (momentX / truck.totalWgt) : 0;
-        document.getElementById('resStatusSub').innerText = `Dengeli Yük (CoG: ${(cogX/1000).toFixed(1)}m)`;
+        setElText('resStatusSub', `Dengeli Yük (CoG: ${(cogX/1000).toFixed(1)}m)`);
 
         let detailsHtml = '';
         if (isPalletMode && truck.placedItems.length > 0 && truck.placedItems[0].palletDesign) {
@@ -1437,28 +1530,32 @@
             `;
         }
 
-        const useAirbag = document.getElementById('optAirbag').checked;
-        const useLashing = document.getElementById('optLashing').checked;
+        const useAirbag = document.getElementById('optAirbag')?.checked;
+        const useLashing = document.getElementById('optLashing')?.checked;
+        const optListEl = document.getElementById('optimizationDetailsList');
 
-        document.getElementById('optimizationDetailsList').innerHTML = `
-            <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-200 shadow-sm text-xs text-indigo-950 space-y-3">
-                <h4 class="font-black text-sm text-indigo-900 uppercase">👷 SAHA OPERASYON TALİMATI (ARAÇ ${currentVehicleIdx + 1} / ${globalFleet.length})</h4>
-                ${detailsHtml}
-                <div class="pt-2 border-t border-indigo-200">
-                    <ul class="list-disc pl-5 space-y-1 text-slate-700">
-                        <li>${(useAirbag && truck.gapW > 80) ? `🔄 <strong>Yanal Boşluk:</strong> Yanlarda ${Math.floor(truck.gapW)} mm boşluk kalmaktadır. Hava Yastığı / Strafor takoz uygulayın.` : '✅ Yanal alan emniyetli seviyede doludur.'}</li>
-                        <li>${(useLashing && truck.gapL > 250) ? `🚚 <strong>Boyuna Boşluk:</strong> Yük kapıya ${Math.floor(truck.gapL)} mm mesafede bitmektedir. Spanset (Lashing) çekilmelidir.` : '✅ Yük kapıya kadar tam oturmuştur.'}</li>
-                    </ul>
+        if (optListEl) {
+            optListEl.innerHTML = `
+                <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-200 shadow-sm text-xs text-indigo-950 space-y-3">
+                    <h4 class="font-black text-sm text-indigo-900 uppercase">👷 SAHA OPERASYON TALİMATI (ARAÇ ${currentVehicleIdx + 1} / ${globalFleet.length})</h4>
+                    ${detailsHtml}
+                    <div class="pt-2 border-t border-indigo-200">
+                        <ul class="list-disc pl-5 space-y-1 text-slate-700">
+                            <li>${(useAirbag && truck.gapW > 80) ? `🔄 <strong>Yanal Boşluk:</strong> Yanlarda ${Math.floor(truck.gapW)} mm boşluk kalmaktadır. Hava Yastığı / Strafor takoz uygulayın.` : '✅ Yanal alan emniyetli seviyede doludur.'}</li>
+                            <li>${(useLashing && truck.gapL > 250) ? `🚚 <strong>Boyuna Boşluk:</strong> Yük kapıya ${Math.floor(truck.gapL)} mm mesafede bitmektedir. Spanset (Lashing) çekilmelidir.` : '✅ Yük kapıya kadar tam oturmuştur.'}</li>
+                        </ul>
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        }
 
         lastRenderData = { placedItems: truck.placedItems, contL: ctx.contL, contW: ctx.contW, contH: ctx.contH, optFrontCurve: ctx.optFrontCurve, cogX };
         performRender(lastRenderData);
     }
 
-    // 3D ISOMETRIC RENDER WITH ELEVATION
+    // 3D ISOMETRIC RENDER WITH ELEVATION & NULL-SAFETY
     function performRender(data) {
+        if (!data) return;
         const { placedItems, contL, contW, contH, optFrontCurve, cogX } = data;
         const canvas = document.getElementById('contCanvas');
         if (!canvas) return;
@@ -1467,9 +1564,15 @@
 
         const cosA = Math.cos(0.523599);
         const sinA = Math.sin(0.523599);
-        let scale = Math.min((canvas.width - 100) / ((contL + contW) * cosA), (canvas.height - 100) / ((contL + contW) * sinA + contH)) * zoomLevel;
-        let cx = canvas.width / 2 + panX;
-        let cy = canvas.height / 2 + 50 + panY;
+        const validContL = contL || 13600;
+        const validContW = contW || 2420;
+        const validContH = contH || 2600;
+
+        let scale = Math.min((canvas.width - 100) / ((validContL + validContW) * cosA), (canvas.height - 100) / ((validContL + validContW) * sinA + validContH)) * (zoomLevel || 1);
+        if (!isFinite(scale) || scale <= 0) scale = 0.035;
+
+        let cx = canvas.width / 2 + (panX || 0);
+        let cy = canvas.height / 2 + 50 + (panY || 0);
 
         function project(x, y, z) {
             return { x: cx + (x - y) * cosA * scale, y: cy + (x + y) * sinA * scale - (z * scale) };
@@ -1484,28 +1587,34 @@
         }
 
         // Vehicle Base & Walls
-        drawPoly([project(0,0,0), project(contL,0,0), project(contL,contW,0), project(0,contW,0)], '#334155');
-        drawPoly([project(0,0,0), project(contL,0,0), project(contL,0,contH), project(0,0,contH)], '#1e293b');
-        drawPoly([project(0,0,0), project(0,contW,0), project(0,contW,contH), project(0,0,contH)], '#0f172a');
+        drawPoly([project(0,0,0), project(validContL,0,0), project(validContL,validContW,0), project(0,validContW,0)], '#334155');
+        drawPoly([project(0,0,0), project(validContL,0,0), project(validContL,0,validContH), project(0,0,validContH)], '#1e293b');
+        drawPoly([project(0,0,0), project(0,validContW,0), project(0,validContW,validContH), project(0,0,validContH)], '#0f172a');
 
-        placedItems.forEach(b => {
-            const z0 = b.z || 0;
-            const z1 = z0 + b.h;
+        if (optFrontCurve) {
+            drawPoly([project(0,0,0), project(100,0,0), project(100,validContW,0), project(0,validContW,0)], 'rgba(234, 179, 8, 0.4)', '#ca8a04');
+        }
 
-            if (b.isPallet) {
-                const baseH = b.palletBaseH || 145;
-                drawPoly([project(b.x + b.l, b.y, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, baseH), project(b.x + b.l, b.y, baseH)], '#8c6538');
-                drawPoly([project(b.x, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, baseH), project(b.x, b.y + b.w, baseH)], '#a37542');
-            }
+        if (Array.isArray(placedItems)) {
+            placedItems.forEach(b => {
+                const z0 = b.z || 0;
+                const z1 = z0 + b.h;
 
-            let pRight = [project(b.x + b.l, b.y, z0), project(b.x + b.l, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z1), project(b.x + b.l, b.y, z1)];
-            let pFront = [project(b.x, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z1), project(b.x, b.y + b.w, z1)];
-            let pTop = [project(b.x, b.y, z1), project(b.x + b.l, b.y, z1), project(b.x + b.l, b.y + b.w, z1), project(b.x, b.y + b.w, z1)];
+                if (b.isPallet) {
+                    const baseH = b.palletBaseH || 145;
+                    drawPoly([project(b.x + b.l, b.y, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, baseH), project(b.x + b.l, b.y, baseH)], '#8c6538');
+                    drawPoly([project(b.x, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, 0), project(b.x + b.l, b.y + b.w, baseH), project(b.x, b.y + b.w, baseH)], '#a37542');
+                }
 
-            drawPoly(pRight, b.color.right, 'rgba(0,0,0,0.5)', 1);
-            drawPoly(pFront, b.color.left, 'rgba(0,0,0,0.5)', 1);
-            drawPoly(pTop, b.color.top, 'rgba(0,0,0,0.5)', 1);
-        });
+                let pRight = [project(b.x + b.l, b.y, z0), project(b.x + b.l, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z1), project(b.x + b.l, b.y, z1)];
+                let pFront = [project(b.x, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z1), project(b.x, b.y + b.w, z1)];
+                let pTop = [project(b.x, b.y, z1), project(b.x + b.l, b.y, z1), project(b.x + b.l, b.y + b.w, z1), project(b.x, b.y + b.w, z1)];
+
+                drawPoly(pRight, b.color.right, 'rgba(0,0,0,0.5)', 1);
+                drawPoly(pFront, b.color.left, 'rgba(0,0,0,0.5)', 1);
+                drawPoly(pTop, b.color.top, 'rgba(0,0,0,0.5)', 1);
+            });
+        }
     }
 
     function initCanvasInteractions() {
@@ -1546,74 +1655,77 @@
         const idx = parseInt(document.getElementById('skuSelect')?.value) || 0;
         const sku = skuDatabase[idx];
         if (!sku) return;
-        document.getElementById('boxL').value = sku.L;
-        document.getElementById('boxW').value = sku.W;
-        document.getElementById('boxH').value = sku.H;
-        document.getElementById('boxWt').value = sku.Wt;
+        const boxLEl = document.getElementById('boxL'); if (boxLEl) boxLEl.value = sku.L;
+        const boxWEl = document.getElementById('boxW'); if (boxWEl) boxWEl.value = sku.W;
+        const boxHEl = document.getElementById('boxH'); if (boxHEl) boxHEl.value = sku.H;
+        const boxWtEl = document.getElementById('boxWt'); if (boxWtEl) boxWtEl.value = sku.Wt;
     }
 
     function updateVehicleDims() {
-        const v = document.getElementById('vehicleType').value;
+        const v = document.getElementById('vehicleType')?.value || 'TIR';
         let l = 13600, w = 2420, h = 2600, wgt = 25000, doorH = 2550;
         if (v === "40HC") { l=12015; w=2345; h=2690; wgt=27800; doorH = 2585; }
         else if (v === "40DC" || v === "20DC") { l=v === "40DC" ? 12015 : 5890; w=2345; h=2385; wgt=27800; doorH = 2280; }
-        document.getElementById('contL').value = l;
-        document.getElementById('contW').value = w;
-        document.getElementById('contH').value = h;
-        document.getElementById('maxWgt').value = wgt;
-        document.getElementById('containerDoorHeight').value = doorH;
+        const cLEl = document.getElementById('contL'); if (cLEl) cLEl.value = l;
+        const cWEl = document.getElementById('contW'); if (cWEl) cWEl.value = w;
+        const cHEl = document.getElementById('contH'); if (cHEl) cHEl.value = h;
+        const mWEl = document.getElementById('maxWgt'); if (mWEl) mWEl.value = wgt;
+        const dHEl = document.getElementById('containerDoorHeight'); if (dHEl) dHEl.value = doorH;
         syncOrderTitleToPrint();
     }
 
     function autoSyncSingleTargetCapacity() {
-        const sku = skuDatabase[parseInt(document.getElementById('skuSelect').value) || 0];
+        const sku = skuDatabase[parseInt(document.getElementById('skuSelect')?.value) || 0];
         if (!sku) return;
-        const maxWgt = parseInt(document.getElementById('maxWgt').value) || 25000;
-        const effContL = (parseInt(document.getElementById('contL').value) || 13600) - 90;
-        const effContW = (parseInt(document.getElementById('contW').value) || 2420) - 10;
-        const contH = parseInt(document.getElementById('contH').value) || 2600;
+        const maxWgt = parseInt(document.getElementById('maxWgt')?.value) || 25000;
+        const effContL = (parseInt(document.getElementById('contL')?.value) || 13600) - 90;
+        const effContW = (parseInt(document.getElementById('contW')?.value) || 2420) - 10;
+        const contH = parseInt(document.getElementById('contH')?.value) || 2600;
 
         let totalMax = 0;
-        if (document.getElementById('baseType').value === 'floor') {
+        if (document.getElementById('baseType')?.value === 'floor') {
             const plan = findOptimalFloorPlan(effContW, effContL, contH, sku, maxWgt);
             totalMax = plan ? plan.maxBoxes : Math.floor(maxWgt / sku.Wt);
         } else {
-            const pSpec = standardPalletSizes[parseInt(document.getElementById('specificBaseSize').value) || 0] || standardPalletSizes[0];
+            const pSpec = standardPalletSizes[parseInt(document.getElementById('specificBaseSize')?.value) || 0] || standardPalletSizes[0];
             const pDesign = calculateOptimalPalletDesign({
                 boxL: sku.L, boxW: sku.W, boxH: sku.H, boxWt: sku.Wt, maxLayersBCT: sku.maxLayers,
                 palletL: pSpec.L, palletW: pSpec.W, palletBaseH: pSpec.H, palletTare: pSpec.tare,
-                shape: sku.shape || 'box', strategy: document.getElementById('palletStrategy').value
+                shape: sku.shape || 'box', strategy: document.getElementById('palletStrategy')?.value || 'stable'
             });
             const tPals = Math.max(Math.floor(effContW / pSpec.W) * Math.floor(effContL / pSpec.L), Math.floor(effContW / pSpec.L) * Math.floor(effContL / pSpec.W));
             totalMax = Math.min(tPals * pDesign.totalBoxes, Math.floor(maxWgt / sku.Wt));
         }
 
-        if (!isUserDefinedTarget || document.getElementById('targetBoxes').value === '') {
-            document.getElementById('targetBoxes').value = totalMax;
+        const targetEl = document.getElementById('targetBoxes');
+        if (!isUserDefinedTarget || targetEl?.value === '') {
+            if (targetEl) targetEl.value = totalMax;
         }
-        document.getElementById('capacityHintBadge').innerText = `Taşıma: ${totalMax} Adet`;
+        setElText('capacityHintBadge', `Taşıma: ${totalMax} Adet`);
     }
 
     function switchTab(mode) {
         currentMode = mode;
-        document.getElementById('tab-single').className = mode === 'single' ? 'tab-btn active text-sm text-center py-3' : 'tab-btn text-sm text-slate-500 text-center py-3';
-        document.getElementById('tab-mixed').className = mode === 'mixed' ? 'tab-btn active text-sm text-center py-3' : 'tab-btn text-sm text-slate-500 text-center py-3';
-        document.getElementById('panel-single').style.display = mode === 'single' ? 'block' : 'none';
-        document.getElementById('panel-mixed').style.display = mode === 'mixed' ? 'block' : 'none';
+        const tabS = document.getElementById('tab-single'); if (tabS) tabS.className = mode === 'single' ? 'tab-btn active text-sm text-center py-3' : 'tab-btn text-sm text-slate-500 text-center py-3';
+        const tabM = document.getElementById('tab-mixed'); if (tabM) tabM.className = mode === 'mixed' ? 'tab-btn active text-sm text-center py-3' : 'tab-btn text-sm text-slate-500 text-center py-3';
+        const panS = document.getElementById('panel-single'); if (panS) panS.style.display = mode === 'single' ? 'block' : 'none';
+        const panM = document.getElementById('panel-mixed'); if (panM) panM.style.display = mode === 'mixed' ? 'block' : 'none';
         debouncedRunEngine();
     }
 
     function handleBaseChange() {
-        const bt = document.getElementById('baseType').value;
-        document.getElementById('palletDropdownGroup').style.display = (bt === 'floor') ? 'none' : 'block';
-        document.getElementById('loadModeDisplay').value = bt === 'floor' ? 'Maksimum Hacim & Boyuna Dağılım' : 'Paletli İstif (Emniyet Korumalı)';
+        const bt = document.getElementById('baseType')?.value || 'floor';
+        const palGrp = document.getElementById('palletDropdownGroup');
+        if (palGrp) palGrp.style.display = (bt === 'floor') ? 'none' : 'block';
+        const loadModeEl = document.getElementById('loadModeDisplay');
+        if (loadModeEl) loadModeEl.value = bt === 'floor' ? 'Maksimum Hacim & Boyuna Dağılım' : 'Paletli İstif (Emniyet Korumalı)';
         syncOrderTitleToPrint();
     }
 
     function syncOrderTitleToPrint() {
         const titleVal = document.getElementById('orderTitle')?.value.trim() || 'İsimsiz Talep';
-        document.getElementById('printOrderTitleDisplay').innerText = titleVal;
-        document.getElementById('printDateSpan').innerText = new Date().toLocaleDateString('tr-TR');
+        setElText('printOrderTitleDisplay', titleVal);
+        setElText('printDateSpan', new Date().toLocaleDateString('tr-TR'));
     }
 
     function onSkuSelectChanged() {
@@ -1623,18 +1735,18 @@
         debouncedRunEngine();
     }
 
-    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
-    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-    function openDashboard() { document.getElementById('adminDashboardModal').classList.remove('hidden'); }
-    function closeDashboard() { document.getElementById('adminDashboardModal').classList.add('hidden'); }
-    function exitReviewMode() { document.getElementById('activeReviewBar').classList.add('hidden'); }
-    function exitSalesFeedbackMode() { document.getElementById('salesFeedbackBar').classList.add('hidden'); }
+    function openModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('hidden'); }
+    function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.add('hidden'); }
+    function openDashboard() { const el = document.getElementById('adminDashboardModal'); if (el) el.classList.remove('hidden'); }
+    function closeDashboard() { const el = document.getElementById('adminDashboardModal'); if (el) el.classList.add('hidden'); }
+    function exitReviewMode() { const el = document.getElementById('activeReviewBar'); if (el) el.classList.add('hidden'); }
+    function exitSalesFeedbackMode() { const el = document.getElementById('salesFeedbackBar'); if (el) el.classList.add('hidden'); }
 
     function openSkuManager() { renderSkuManagerList(); openModal('skuManagerModal'); }
     function toggleSkuManagerShapeUI() {
-        const shape = document.querySelector('input[name="mngSkuShape"]:checked').value;
-        document.getElementById('mngBoxDimGroup').classList.toggle('hidden', shape === 'round');
-        document.getElementById('mngRoundDimGroup').classList.toggle('hidden', shape !== 'round');
+        const shape = document.querySelector('input[name="mngSkuShape"]:checked')?.value || 'box';
+        document.getElementById('mngBoxDimGroup')?.classList.toggle('hidden', shape === 'round');
+        document.getElementById('mngRoundDimGroup')?.classList.toggle('hidden', shape !== 'round');
     }
     function renderSkuManagerList() {
         const c = document.getElementById('skuManagerList');
@@ -1655,12 +1767,12 @@
         onSkuSelectChanged();
     }
     function saveNewSkuFromManager() {
-        const name = document.getElementById('mngSkuName').value.trim() || 'Yeni SKU';
-        const shape = document.querySelector('input[name="mngSkuShape"]:checked').value;
-        const dia = parseFloat(document.getElementById('mngSkuDia').value) || 285;
-        const L = shape === 'round' ? dia : parseFloat(document.getElementById('mngSkuL').value) || 260;
-        const W = shape === 'round' ? dia : parseFloat(document.getElementById('mngSkuW').value) || 260;
-        skuDatabase.push({ name, L, W, H: parseFloat(document.getElementById('mngSkuH').value) || 330, Wt: parseFloat(document.getElementById('mngSkuWt').value) || 16.5, maxLayers: 6, shape });
+        const name = document.getElementById('mngSkuName')?.value.trim() || 'Yeni SKU';
+        const shape = document.querySelector('input[name="mngSkuShape"]:checked')?.value || 'box';
+        const dia = parseFloat(document.getElementById('mngSkuDia')?.value) || 285;
+        const L = shape === 'round' ? dia : parseFloat(document.getElementById('mngSkuL')?.value) || 260;
+        const W = shape === 'round' ? dia : parseFloat(document.getElementById('mngSkuW')?.value) || 260;
+        skuDatabase.push({ name, L, W, H: parseFloat(document.getElementById('mngSkuH')?.value) || 330, Wt: parseFloat(document.getElementById('mngSkuWt')?.value) || 16.5, maxLayers: 6, shape });
         populateSelects();
         closeModal('skuManagerModal');
         onSkuSelectChanged();
@@ -1687,20 +1799,22 @@
     }
     function saveNewPalletFromManager() {
         standardPalletSizes.push({
-            name: document.getElementById('mngPalName').value.trim() || 'Özel Palet',
-            L: parseFloat(document.getElementById('mngPalL').value) || 1140,
-            W: parseFloat(document.getElementById('mngPalW').value) || 1140,
-            H: parseFloat(document.getElementById('mngPalH').value) || 145,
-            tare: parseFloat(document.getElementById('mngPalTare').value) || 25
+            name: document.getElementById('mngPalName')?.value.trim() || 'Özel Palet',
+            L: parseFloat(document.getElementById('mngPalL')?.value) || 1140,
+            W: parseFloat(document.getElementById('mngPalW')?.value) || 1140,
+            H: parseFloat(document.getElementById('mngPalH')?.value) || 145,
+            tare: parseFloat(document.getElementById('mngPalTare')?.value) || 25
         });
         populatePalletSelect();
         closeModal('palletManagerModal');
         debouncedRunEngine();
     }
     function synthesizeOptimalPallet() {
-        const effContW = (parseInt(document.getElementById('contW').value) || 2420) - 20;
-        const effContL = (parseInt(document.getElementById('contL').value) || 13600) - 100;
-        const sku = skuDatabase[parseInt(document.getElementById('skuSelect').value) || 0];
+        const effContW = (parseInt(document.getElementById('contW')?.value) || 2420) - 20;
+        const effContL = (parseInt(document.getElementById('contL')?.value) || 13600) - 100;
+        const sku = skuDatabase[parseInt(document.getElementById('skuSelect')?.value) || 0];
+        if (!sku) return;
+
         let bestPallet = null, bestScore = 0;
 
         [2, 3].forEach(cols => {
@@ -1724,9 +1838,11 @@
         if (bestPallet) {
             standardPalletSizes.push(bestPallet);
             populatePalletSelect();
-            document.getElementById('specificBaseSize').value = standardPalletSizes.length - 1;
+            const palSel = document.getElementById('specificBaseSize');
+            if (palSel) palSel.value = standardPalletSizes.length - 1;
             closeModal('palletManagerModal');
-            document.getElementById('baseType').value = 'pallet';
+            const baseTypeEl = document.getElementById('baseType');
+            if (baseTypeEl) baseTypeEl.value = 'pallet';
             handleBaseChange();
             debouncedRunEngine();
             alert(`✅ Optimum Palet Sentezlendi: ${bestPallet.L} x ${bestPallet.W} mm`);
@@ -1737,7 +1853,7 @@
         if (!globalFleet || !globalFleet[0] || globalFleet[0].placedItems.length === 0) return alert("Veri yok.");
         let csv = "Arac,Siparis,SKU,Adet,Agirlik(kg)\n";
         globalFleet.forEach((f, i) => {
-            f.placedItems.forEach(it => { csv += `${i+1},"${document.getElementById('orderTitle').value}","${it.id}",${it.boxes},${it.wgt}\n`; });
+            f.placedItems.forEach(it => { csv += `${i+1},"${document.getElementById('orderTitle')?.value || 'Isimsiz'}","${it.id}",${it.boxes},${it.wgt}\n`; });
         });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
