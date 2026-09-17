@@ -23,8 +23,6 @@
         .section-header { font-size: 0.85rem; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.4rem; margin-top: 1.25rem; margin-bottom: 0.75rem; }
         .tab-btn { padding: 0.75rem 1.5rem; font-weight: 600; border-bottom: 3px solid transparent; cursor: pointer; transition: all 0.2s; }
         .tab-btn.active { border-bottom-color: #0284c7; color: #0284c7; background: white; }
-        .drag-handle { cursor: grab; }
-        .drag-handle:active { cursor: grabbing; }
 
         @media print {
             @page { size: A4 landscape; margin: 8mm; }
@@ -38,7 +36,7 @@
 <body class="p-2 md:p-4 min-h-[100dvh] lg:h-[100dvh] flex flex-col justify-between">
 
 <!-- ========================================================================= -->
-<!-- 🔒 GİRİŞ & KAYIT AÇILIŞ SAYFASI (GİRİŞ YAPILANA KADAR GÖRÜNEN TEK EKRAN)    -->
+<!-- 🔒 GİRİŞ & KAYIT AÇILIŞ SAYFASI (AUTH GATE - SADECE HESAP SAHİPLERİ)       -->
 <!-- ========================================================================= -->
 <div id="authLandingPage" class="flex-grow flex items-center justify-center p-4">
     <div class="bg-white p-6 md:p-8 rounded-2xl shadow-2xl max-w-md w-full border-t-8 border-sky-500">
@@ -80,13 +78,13 @@
 
         <button id="authSubmitBtn" onclick="handleAuthSubmit()" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 rounded-xl transition-all shadow-md mt-6 text-sm">Giriş Yap</button>
         
-        <p id="authErrorMsg" class="text-rose-500 text-xs font-bold text-center mt-3 hidden p-2 bg-rose-50 rounded-lg border border-rose-200"></p>
-        <p id="authSuccessMsg" class="text-emerald-600 text-xs font-bold text-center mt-3 hidden p-2 bg-emerald-50 rounded-lg border border-emerald-200"></p>
+        <p id="authErrorMsg" class="text-rose-500 text-xs font-bold text-center mt-3 hidden p-2.5 bg-rose-50 rounded-lg border border-rose-200"></p>
+        <p id="authSuccessMsg" class="text-emerald-600 text-xs font-bold text-center mt-3 hidden p-2.5 bg-emerald-50 rounded-lg border border-emerald-200"></p>
     </div>
 </div>
 
 <!-- ========================================================================= -->
-<!-- 🔓 KORUMALI ÇALIŞMA ALANI & ÜST MENÜ (GİRİŞ YAPILINCA GÖRÜNÜR)              -->
+<!-- 🔓 KORUMALI ÇALIŞMA ALANI & ÜST MENÜ (GİRİŞ YAPILDIĞINDA GÖRÜNÜR)          -->
 <!-- ========================================================================= -->
 <div id="protectedApp" class="hidden flex flex-col flex-grow">
 
@@ -253,7 +251,7 @@
                     </div>
                 </div>
 
-                <!-- MIXED SKU PANEL (REACTIVE DRAG-AND-DROP REORDERING) -->
+                <!-- MIXED SKU PANEL (DRAG AND DROP SÜRÜKLE-BIRAK) -->
                 <div id="panel-mixed" class="hidden">
                     <div class="section-header flex justify-between items-center mb-2">
                         <span>Karma Yük Listesi</span>
@@ -396,7 +394,7 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- MODALLER: DASHBOARD, SKU & PALET YÖNETİMİ                                 -->
+<!-- MODALLER                                                                  -->
 <!-- ========================================================================= -->
 <div id="adminDashboardModal" class="hidden fixed inset-0 bg-slate-900/80 z-40 flex items-center justify-center p-4 no-print">
     <div class="bg-white rounded-2xl shadow-2xl max-w-[1150px] w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-200">
@@ -1226,6 +1224,7 @@
         const isMixedFloating = (currentMode === 'mixed' && document.getElementById('mixedStackStrategy')?.value === 'floating');
 
         if (isMixedFloating && baseType === 'floor' && queue.length > 1) {
+            // Drag-and-drop order: [0] is bottom tier, [1] is floating tier directly above
             const baseSkuItem = queue[0];
             const topSkuItem = queue[1];
             const availableL = effContL - currentX;
@@ -1484,6 +1483,7 @@
             if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = width; ctx.stroke(); }
         }
 
+        // Vehicle Base & Walls
         drawPoly([project(0,0,0), project(contL,0,0), project(contL,contW,0), project(0,contW,0)], '#334155');
         drawPoly([project(0,0,0), project(contL,0,0), project(contL,0,contH), project(0,0,contH)], '#1e293b');
         drawPoly([project(0,0,0), project(0,contW,0), project(0,contW,contH), project(0,0,contH)], '#0f172a');
