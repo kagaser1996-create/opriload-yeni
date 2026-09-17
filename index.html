@@ -38,7 +38,7 @@
 <body class="p-2 md:p-4 min-h-[100dvh] lg:h-[100dvh] flex flex-col justify-between">
 
 <!-- ========================================================================= -->
-<!-- 🔒 GİRİŞ & KAYIT LANDING SAYFASI (GİRİŞ YAPILANA KADAR TEK GÖRÜNEN EKRAN)   -->
+<!-- 🔒 GİRİŞ & KAYIT AÇILIŞ SAYFASI (GİRİŞ YAPILANA KADAR GÖRÜNEN TEK EKRAN)    -->
 <!-- ========================================================================= -->
 <div id="authLandingPage" class="flex-grow flex items-center justify-center p-4">
     <div class="bg-white p-6 md:p-8 rounded-2xl shadow-2xl max-w-md w-full border-t-8 border-sky-500">
@@ -86,7 +86,7 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- 🔓 KORUMALI ÇALIŞMA ALANI (SADECE HESAPLA GİRİŞ YAPILDIĞINDA AÇILIR)        -->
+<!-- 🔓 KORUMALI ÇALIŞMA ALANI & ÜST MENÜ (GİRİŞ YAPILINCA GÖRÜNÜR)              -->
 <!-- ========================================================================= -->
 <div id="protectedApp" class="hidden flex flex-col flex-grow">
 
@@ -146,7 +146,7 @@
         </div>
     </div>
 
-    <!-- SATIŞ GERİ BİLDİRİM BANNERI -->
+    <!-- SATIŞ GERİ BİLDİRİM / DÜZELTME BİLDİRİM BANNERI -->
     <div id="salesFeedbackBar" class="hidden max-w-[1400px] mx-auto w-full mb-3 bg-gradient-to-r from-purple-950 to-slate-900 text-white border-2 border-purple-500 rounded-xl p-3 md:p-4 shadow-xl flex flex-col md:flex-row items-center justify-between gap-3 no-print">
         <div class="flex items-center gap-3">
             <span class="text-2xl" id="salesFeedbackIcon">⚠️</span>
@@ -253,7 +253,7 @@
                     </div>
                 </div>
 
-                <!-- MIXED SKU PANEL (DRAG AND DROP REORDERING) -->
+                <!-- MIXED SKU PANEL (REACTIVE DRAG-AND-DROP REORDERING) -->
                 <div id="panel-mixed" class="hidden">
                     <div class="section-header flex justify-between items-center mb-2">
                         <span>Karma Yük Listesi</span>
@@ -267,7 +267,7 @@
                             <option value="sequential">➡️ Sıralı Blok Yükleme (Sırasıyla Dorse Boyunca)</option>
                         </select>
                         <span class="text-[10px] text-slate-600 mt-1 block">
-                            🖱️ <strong>Sürükle & Bırak:</strong> Satırları tutamaktan sürükleyerek dikey katman sırasını belirleyebilirsiniz.
+                            🖱️ <strong>Sürükle & Bırak:</strong> Tutamaktan (⋮⋮) sürükleyip bırakarak dikey katman sıralamasını kolayca değiştirebilirsiniz.
                         </span>
                     </div>
 
@@ -396,7 +396,7 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- MODALLER                                                                  -->
+<!-- MODALLER: DASHBOARD, SKU & PALET YÖNETİMİ                                 -->
 <!-- ========================================================================= -->
 <div id="adminDashboardModal" class="hidden fixed inset-0 bg-slate-900/80 z-40 flex items-center justify-center p-4 no-print">
     <div class="bg-white rounded-2xl shadow-2xl max-w-[1150px] w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-200">
@@ -571,7 +571,7 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- JAVASCRIPT: MOTOR & DRAG-AND-DROP                                        -->
+<!-- JAVASCRIPT: SUPABASE AUTH, GEOMETRY ENGINE & CLEAN DRAG-DROP              -->
 <!-- ========================================================================= -->
 <script>
     const SUPABASE_URL = 'https://wukjeatpuysvlosbtahf.supabase.co';
@@ -613,12 +613,17 @@
     let skuDatabase = [];
     let standardPalletSizes = [];
 
+    // Reactive Mixed State Array (Crash-free Drag & Drop)
+    let mixedItemsState = [
+        { skuIdx: 0, count: 300 },
+        { skuIdx: 1, count: 200 }
+    ];
+
     const colorMap = [
         { base: '#0284c7', top: '#38bdf8', right: '#0369a1', left: '#075985' },
         { base: '#16a34a', top: '#4ade80', right: '#15803d', left: '#166534' },
         { base: '#d97706', top: '#fbbf24', right: '#b45309', left: '#92400e' },
         { base: '#9333ea', top: '#c084fc', right: '#7e22ce', left: '#6b21a8' },
-        { base: '#db2777', top: '#f472b6', right: '#be185d', left: '#9d174d' },
         { base: '#ea580c', top: '#fb923c', right: '#c2410c', left: '#9a3412' }
     ];
 
@@ -631,7 +636,6 @@
 
     let panX = 0, panY = 0, zoomLevel = 1;
     let isDragging = false, startX = 0, startY = 0;
-    let initialPinchDist = null;
     let lastRenderData = null;
 
     // MATH & SOLVER FUNCTIONS
@@ -822,14 +826,19 @@
         };
     }
 
-    // INITIALIZATION & AUTH PIPELINE
+    // INITIALIZATION
     function initApp() {
         if (window.supabase) {
             try {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-                supabaseClient.auth.getSession().then(({ data: { session } }) => {
-                    handleAuthChange(session?.user || null);
-                });
+                supabaseClient.auth.getSession()
+                    .then(({ data: { session } }) => {
+                        handleAuthChange(session?.user || null);
+                    })
+                    .catch(() => {
+                        handleAuthChange(null);
+                    });
+
                 supabaseClient.auth.onAuthStateChange((_event, session) => {
                     handleAuthChange(session?.user || null);
                 });
@@ -850,16 +859,16 @@
             standardPalletSizes = [...defaultPalletSizes];
         }
 
+        if (!Array.isArray(skuDatabase) || skuDatabase.length === 0) skuDatabase = [...defaultSkuDatabase];
+        if (!Array.isArray(standardPalletSizes) || standardPalletSizes.length === 0) standardPalletSizes = [...defaultPalletSizes];
+
         populateSelects();
         populatePalletSelect();
         const skuSel = document.getElementById('skuSelect');
         if (skuSel) skuSel.value = "0";
         populateSKU();
 
-        // 2 Initial mixed rows
-        addMixedRowWithCount(0, 300);
-        addMixedRowWithCount(1, 200);
-
+        renderMixedList();
         updateVehicleDims();
         handleBaseChange();
         initCanvasInteractions();
@@ -958,7 +967,7 @@
                 if (data?.session) {
                     handleAuthChange(data.user);
                 } else {
-                    scsLabel.innerText = "Hesabınız başarıyla oluşturuldu! Giriş yapabilirsiniz.";
+                    scsLabel.innerText = "Hesabınız başarıyla oluşturuldu! Şimdi giriş yapabilirsiniz.";
                     scsLabel.classList.remove('hidden');
                     switchAuthTab('login');
                 }
@@ -1038,95 +1047,97 @@
     }
 
     // =========================================================================
-    // 🔀 DRAG AND DROP REORDERING İLE YÜZEN KATMANLAR
+    // 🔀 REAKTİF DRAG-AND-DROP (SIFIR FLICKER / SIFIR ÇÖKME)
     // =========================================================================
-    let draggedRowElement = null;
+    let draggedIndex = null;
 
-    function addMixedRowWithCount(prefillIdx, prefillCount) {
+    function renderMixedList() {
         const list = document.getElementById('mixedList');
         if (!list) return;
+        list.innerHTML = '';
 
-        const div = document.createElement('div');
-        div.className = "mixed-row p-2.5 bg-white border border-slate-200 rounded-xl shadow-xs flex flex-col gap-2 transition cursor-default";
-        div.draggable = true;
+        mixedItemsState.forEach((item, idx) => {
+            const row = document.createElement('div');
+            row.className = "mixed-row p-2.5 bg-white border border-slate-200 rounded-xl shadow-xs flex flex-col gap-2 transition hover:border-sky-400 select-none cursor-default";
+            row.draggable = true;
+            row.dataset.index = idx;
 
-        let options = skuDatabase.map((s, i) => `<option value="${i}" ${i === prefillIdx ? 'selected' : ''}>${s.shape === 'round' ? '⚪' : '⏹'} ${s.name}</option>`).join('');
+            let options = skuDatabase.map((s, i) => `<option value="${i}" ${i === item.skuIdx ? 'selected' : ''}>${s.shape === 'round' ? '⚪' : '⏹'} ${s.name}</option>`).join('');
 
-        div.innerHTML = `
-            <div class="flex items-center justify-between gap-2 border-b pb-1.5">
-                <div class="flex items-center gap-2">
-                    <span class="drag-handle text-slate-400 hover:text-slate-700 font-bold px-1 text-sm cursor-grab select-none" title="Sürükleyip Sırayı Değiştirin">⋮⋮</span>
-                    <span class="row-tier-badge bg-sky-100 text-sky-800 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tight">Kat 1 (Taban)</span>
+            const badgeText = idx === 0 ? "Kat 1 (Taban / En Ağır)" : `Kat ${idx + 1} (Yüzen Katman)`;
+            const badgeClass = idx === 0 ? "bg-indigo-100 text-indigo-900 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tight" : "bg-sky-100 text-sky-800 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tight";
+
+            row.innerHTML = `
+                <div class="flex items-center justify-between gap-2 border-b pb-1.5">
+                    <div class="flex items-center gap-2">
+                        <span class="drag-handle text-slate-400 hover:text-slate-800 font-bold px-1.5 py-0.5 text-base cursor-grab select-none active:cursor-grabbing" title="Sürükleyip Sırayı Değiştirin">⋮⋮</span>
+                        <span class="${badgeClass}">${badgeText}</span>
+                    </div>
+                    <button onclick="removeMixedRow(${idx})" class="text-rose-500 hover:text-rose-700 font-bold px-2 py-0.5 text-xs" title="Satırı Sil">✕</button>
                 </div>
-                <button onclick="removeMixedRow(this)" class="text-rose-500 hover:text-rose-700 font-bold px-2 py-0.5 text-xs" title="Satırı Sil">✕</button>
-            </div>
 
-            <div class="flex gap-2 items-center">
-                <select class="w-[60%] p-2 border rounded-lg text-xs mixed-sku font-semibold bg-slate-50" onchange="debouncedRunEngine()">${options}</select>
-                <input type="number" class="w-[40%] p-2 border rounded-lg text-xs mixed-val font-bold text-sky-700 bg-slate-50" placeholder="Adet" value="${prefillCount}" oninput="debouncedRunEngine()">
-            </div>
-        `;
+                <div class="flex gap-2 items-center">
+                    <select class="w-[60%] p-2 border rounded-lg text-xs mixed-sku font-semibold bg-slate-50" onchange="onMixedSkuChange(${idx}, this.value)">${options}</select>
+                    <input type="number" class="w-[40%] p-2 border rounded-lg text-xs mixed-val font-bold text-sky-700 bg-slate-50" placeholder="Adet" value="${item.count}" oninput="onMixedCountChange(${idx}, this.value)">
+                </div>
+            `;
 
-        attachDragEvents(div);
-        list.appendChild(div);
-        updateMixedRowBadges();
+            // Clean Native HTML5 Drag and Drop (Only Mutates State on Drop)
+            row.addEventListener('dragstart', (e) => {
+                draggedIndex = idx;
+                e.dataTransfer.effectAllowed = 'move';
+                row.classList.add('opacity-40', 'bg-sky-50', 'border-sky-500');
+            });
+
+            row.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            });
+
+            row.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const targetIndex = parseInt(row.dataset.index);
+                if (draggedIndex !== null && draggedIndex !== targetIndex) {
+                    const movedItem = mixedItemsState.splice(draggedIndex, 1)[0];
+                    mixedItemsState.splice(targetIndex, 0, movedItem);
+                    renderMixedList();
+                    debouncedRunEngine();
+                }
+            });
+
+            row.addEventListener('dragend', () => {
+                draggedIndex = null;
+                row.classList.remove('opacity-40', 'bg-sky-50', 'border-sky-500');
+            });
+
+            list.appendChild(row);
+        });
     }
 
     function addNewMixedRow() {
-        addMixedRowWithCount(0, 100);
+        mixedItemsState.push({ skuIdx: 0, count: 100 });
+        renderMixedList();
         debouncedRunEngine();
     }
 
-    function removeMixedRow(btn) {
-        if (document.querySelectorAll('.mixed-row').length > 1) {
-            btn.closest('.mixed-row').remove();
-            updateMixedRowBadges();
+    function removeMixedRow(idx) {
+        if (mixedItemsState.length > 1) {
+            mixedItemsState.splice(idx, 1);
+            renderMixedList();
             debouncedRunEngine();
         } else {
             alert("En az bir karma yük satırı bulunmalıdır.");
         }
     }
 
-    function updateMixedRowBadges() {
-        const rows = document.querySelectorAll('.mixed-row');
-        rows.forEach((r, idx) => {
-            const badge = r.querySelector('.row-tier-badge');
-            if (badge) {
-                if (idx === 0) {
-                    badge.innerText = "Kat 1 (Taban / En Ağır)";
-                    badge.className = "row-tier-badge bg-indigo-100 text-indigo-900 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tight";
-                } else {
-                    badge.innerText = `Kat ${idx + 1} (Yüzen Katman)`;
-                    badge.className = "row-tier-badge bg-sky-100 text-sky-800 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tight";
-                }
-            }
-        });
+    function onMixedSkuChange(idx, val) {
+        mixedItemsState[idx].skuIdx = parseInt(val) || 0;
+        debouncedRunEngine();
     }
 
-    function attachDragEvents(row) {
-        row.addEventListener('dragstart', function(e) {
-            draggedRowElement = row;
-            row.classList.add('opacity-40', 'border-sky-500', 'bg-sky-50');
-            e.dataTransfer.effectAllowed = 'move';
-        });
-
-        row.addEventListener('dragend', function() {
-            row.classList.remove('opacity-40', 'border-sky-500', 'bg-sky-50');
-            draggedRowElement = null;
-            updateMixedRowBadges();
-            debouncedRunEngine();
-        });
-
-        row.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            if (draggedRowElement && draggedRowElement !== row) {
-                const rect = row.getBoundingClientRect();
-                const isAfter = (e.clientY - rect.top) / (rect.bottom - rect.top) > 0.5;
-                const list = document.getElementById('mixedList');
-                list.insertBefore(draggedRowElement, isAfter && row.nextSibling || row);
-            }
-        });
+    function onMixedCountChange(idx, val) {
+        mixedItemsState[idx].count = parseInt(val) || 0;
+        debouncedRunEngine();
     }
 
     // =========================================================================
@@ -1172,15 +1183,12 @@
             }
             queue.push({ sku, target: targetBoxes, color: colorMap[0] });
         } else {
-            // Mixed mode respects drag-and-drop DOM order
-            document.querySelectorAll('.mixed-row').forEach((r, idx) => {
-                const skuIdx = parseInt(r.querySelector('.mixed-sku').value) || 0;
-                const sku = skuDatabase[skuIdx];
-                let target = parseInt(r.querySelector('.mixed-val').value) || 0;
-
-                if (target > 0) {
+            mixedItemsState.forEach((item, idx) => {
+                const sku = skuDatabase[item.skuIdx];
+                if (sku && item.count > 0) {
                     queue.push({
-                        sku, target,
+                        sku,
+                        target: item.count,
                         color: colorMap[idx % colorMap.length]
                     });
                 }
@@ -1218,7 +1226,6 @@
         const isMixedFloating = (currentMode === 'mixed' && document.getElementById('mixedStackStrategy')?.value === 'floating');
 
         if (isMixedFloating && baseType === 'floor' && queue.length > 1) {
-            // Drag-and-drop order: [0] is bottom tier, [1] is floating tier directly above
             const baseSkuItem = queue[0];
             const topSkuItem = queue[1];
             const availableL = effContL - currentX;
@@ -1232,7 +1239,7 @@
                 const startY = (effContW - widthUsed) / 2;
                 const baseLayerH = baseLayersAllowed * baseSkuItem.sku.H;
 
-                // Tier 1 (Base at z = 0)
+                // Kat 1 (Taban) -> z = 0
                 for (let r = 0; r < rowsCount; r++) {
                     if (baseSkuItem.remaining <= 0 || totalWgt + baseSkuItem.sku.Wt > maxWgt) break;
                     let bCount = Math.min(colsCount * baseLayersAllowed, baseSkuItem.remaining);
@@ -1250,7 +1257,7 @@
                     totalWgt += rWgt; totalBoxes += bCount; baseSkuItem.remaining -= bCount;
                 }
 
-                // Tier 2 (Floating at z = baseLayerH)
+                // Kat 2 (Yüzen Katman) -> z = baseLayerH
                 const remainingH = contH - baseLayerH - 50;
                 const topLayers = Math.max(1, Math.min(topSkuItem.sku.maxLayers, Math.floor(remainingH / topSkuItem.sku.H)));
                 const topLayerH = topLayers * topSkuItem.sku.H;
