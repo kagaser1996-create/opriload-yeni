@@ -159,6 +159,25 @@
         </div>
     </div>
 
+    <!-- PRINTABLE FORM HEADER -->
+    <div class="hidden print-only mb-4 border-b-2 border-slate-900 pb-3">
+        <div class="flex justify-between items-end mb-2">
+            <div>
+                <h1 class="text-xl font-black tracking-tight">Elita OptiLoad</h1>
+                <p class="text-xs text-slate-600 font-bold uppercase tracking-wider">Saha Yükleme & Güvenlik Formu</p>
+            </div>
+            <div class="text-right text-xs text-slate-700">
+                <strong>Tarih:</strong> <span id="printDateSpan"></span>
+            </div>
+        </div>
+        <div class="grid grid-cols-2 gap-y-2 gap-x-4 text-xs bg-slate-50 p-3 border border-slate-300 rounded">
+            <div><strong>Sipariş / Talep Adı:</strong> <span id="printOrderTitleDisplay" class="font-black text-indigo-800 ml-1">İsimsiz Talep</span></div>
+            <div><strong>Araç & Yük Modu:</strong> <span id="printVehicleSummaryDisplay" class="font-semibold text-slate-700 ml-1">TIR (Zemin)</span></div>
+            <div><strong>Şoför Adı Soyadı:</strong> <span class="inline-block w-40 border-b border-slate-400"></span></div>
+            <div><strong>Araç Plakası / Konteyner No:</strong> <span class="inline-block w-40 border-b border-slate-400"></span></div>
+        </div>
+    </div>
+
     <!-- WORKSPACE BODY: 2 SÜTUN -->
     <div class="flex-grow flex flex-col lg:flex-row max-w-[1400px] mx-auto w-full gap-4 print-full-width lg:overflow-hidden">
         
@@ -179,7 +198,7 @@
                 <div class="section-header mt-0">Araç & Güvenlik Sınırları</div>
                 <div class="input-group mb-3">
                     <label>Araç Tipi</label>
-                    <select id="vehicleType" onchange="updateVehicleDims(); autoSyncSingleTargetCapacity(); debouncedRunEngine();">
+                    <select id="vehicleType" onchange="onVehicleChange()">
                         <option value="TIR" selected>TIR (13600 x 2420 x 2600 mm)</option>
                         <option value="40HC">40 Foot High Cube (12015 x 2345 x 2690 mm)</option>
                         <option value="40DC">40 Foot Standart (12015 x 2345 x 2385 mm)</option>
@@ -193,8 +212,11 @@
                         <input type="number" id="maxWgt" value="25000" max="27800" class="bg-slate-50 text-rose-700 font-bold" oninput="if(this.value > 27800) this.value = 27800; autoSyncSingleTargetCapacity();" onchange="debouncedRunEngine()">
                     </div>
                     <div class="input-group">
-                        <label>Yükleme Modu</label>
-                        <input type="text" id="loadModeDisplay" value="Maksimum Hacim & Boyuna Dağılım" readonly class="!bg-emerald-50 !text-emerald-800 font-bold border-emerald-200 text-[10px] text-center">
+                        <label>Yükleme Stratejisi</label>
+                        <select id="loadDistributionStrategy" class="bg-emerald-50 text-emerald-900 border-emerald-300 font-bold text-xs" onchange="debouncedRunEngine()">
+                            <option value="spread" selected>Boyuna Yayılım (Sıfır Boşluk)</option>
+                            <option value="ceiling">Tavana Kadar (Yükseklik Öncelikli)</option>
+                        </select>
                     </div>
                 </div>
 
@@ -215,7 +237,7 @@
                             <span id="capacityHintBadge" class="text-[9px] bg-fuchsia-200 text-fuchsia-900 px-1.5 py-0.5 rounded font-bold">Maksimum Kapasite</span>
                         </label>
                         <input type="number" id="targetBoxes" value="" placeholder="Otomatik Araç Kapasitesi" class="bg-white border-fuchsia-300 font-bold text-fuchsia-900" oninput="isUserDefinedTarget = (this.value !== ''); debouncedRunEngine();">
-                        <span class="text-[10px] text-fuchsia-700 mt-1 block">Boş bıraktığınızda 1 aracın yasal ve fiziksel kapasitesi otomatik hesaplanır.</span>
+                        <span class="text-[10px] text-fuchsia-700 mt-1 block">Boş bıraktığınızda seçili aracın yasal ve fiziksel kapasitesi otomatik hesaplanır.</span>
                     </div>
 
                     <div class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
@@ -292,20 +314,20 @@
                     </div>
                 </div>
 
-                <!-- GÜVENLİK -->
+                <!-- GÜVENLİK & FİZİKSEL PAY KONTROLLERİ -->
                 <div class="section-header">Güvenlik & Dinamik Engeller</div>
                 <div class="p-3 bg-indigo-50 border border-indigo-200 rounded-lg space-y-2">
                     <label id="optFrontCurveLabel" class="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
-                        <input type="checkbox" id="optFrontCurve" checked class="w-4 h-4 text-indigo-600" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"> Ön Bombe Kör Noktası (-100mm)
+                        <input type="checkbox" id="optFrontCurve" checked class="w-4 h-4 text-indigo-600" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"> Ön Bombe Kör Noktası (-100mm Boy)
                     </label>
                     <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
-                        <input type="checkbox" id="optDoor" checked class="w-4 h-4 text-indigo-600" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"> Kapı Kapanma Payı (-80mm)
+                        <input type="checkbox" id="optDoor" checked class="w-4 h-4 text-indigo-600" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"> Kapı Kapanma Payı (-80mm Boy)
                     </label>
                     <label class="flex items-center gap-2 text-xs font-semibold text-sky-700 cursor-pointer">
-                        <input type="checkbox" id="optAirbag" checked class="w-4 h-4 text-sky-500" onchange="debouncedRunEngine()"> Hava Yastığı (Airbag) Kullan
+                        <input type="checkbox" id="optAirbag" class="w-4 h-4 text-sky-500" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"> Hava Yastığı Payı (-80mm En)
                     </label>
                     <label class="flex items-center gap-2 text-xs font-semibold text-orange-700 cursor-pointer">
-                        <input type="checkbox" id="optLashing" checked class="w-4 h-4 text-orange-500" onchange="debouncedRunEngine()"> Spanset (Lashing) Kullan
+                        <input type="checkbox" id="optLashing" class="w-4 h-4 text-orange-500" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"> Spanset (Lashing) Alanı (-150mm Boy)
                     </label>
                 </div>
             </div>
@@ -519,6 +541,16 @@
                         <input type="number" id="mngPalW" value="1140" class="w-full p-2 border rounded bg-white font-bold">
                     </div>
                 </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Taban Kalınlığı (mm)</label>
+                        <input type="number" id="mngPalH" value="145" class="w-full p-2 border rounded bg-white font-bold">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Dara Ağırlık (kg)</label>
+                        <input type="number" id="mngPalTare" value="25" class="w-full p-2 border rounded bg-white font-bold">
+                    </div>
+                </div>
                 <button onclick="saveNewPalletFromManager()" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded text-xs transition shadow-sm">+ Paleti Kaydet</button>
             </div>
             <div class="space-y-1">
@@ -536,7 +568,7 @@
     const SUPABASE_URL = 'https://wukjeatpuysvlosbtahf.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1a2plYXRwdXlzdmxvc2J0YWhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1MTk4NjMsImV4cCI6MjEwNDA5NTg2M30.-HitB_MtlNXIYvd1qqgydWmr0UxpnSP4Q29EMugF8P8';
 
-    // 1. ARAÇ BOYUTLARININ TEK VE DEĞİŞMEZ MERKEZİ (SINGLE SOURCE OF TRUTH)
+    // 1. ARAÇ BOYUTLARININ DEĞİŞMEZ MERKEZİ
     const VEHICLE_SPECS = {
         'TIR':  { name: 'TIR', L: 13600, W: 2420, H: 2600, maxWgt: 25000, doorH: 2550, isContainer: false },
         '40HC': { name: '40 Foot High Cube', L: 12015, W: 2345, H: 2690, maxWgt: 27800, doorH: 2585, isContainer: true },
@@ -551,7 +583,7 @@
     let currentSimulationId = null;
     let currentExaminedOrder = null;
 
-    // 2. GÜNCEL KULLANICI TABLOSU: En (W) x Boy (L) x Yükseklik (H)
+    // 2. GÜNCEL KULLANICI TABLOSU
     const defaultSkuDatabase = [
         { name: "kızartmalık (285×285×330)", W: 285, L: 285, H: 330, Wt: 16.50, maxLayers: 6, shape: "round" },
         { name: "1,5LX6 KULPLU", W: 230, L: 272, H: 307, Wt: 9.13, maxLayers: 7, shape: "box" },
@@ -588,8 +620,8 @@
     let standardPalletSizes = [];
 
     let mixedItemsState = [
-        { skuIdx: 13, count: 500 }, // 0,85LX12 YENİ VK BÜKLÜM
-        { skuIdx: 1,  count: 300 }  // 1,5LX6 KULPLU
+        { skuIdx: 13, count: 500 },
+        { skuIdx: 1,  count: 300 }
     ];
 
     const colorMap = [
@@ -617,7 +649,7 @@
     }
 
     // =========================================================================
-    // 📐 GEOMETRİK HESAPLAMA MOTORU (DÖKME & PALET ÇÖZÜCÜ)
+    // 📐 GEOMETRİK ÇÖZÜCÜ MOTOR
     // =========================================================================
     function generateGrid(rows, cols, cellL, cellW, palletL, palletW, isRotated) {
         const boxes = [];
@@ -632,12 +664,11 @@
     }
 
     function findOptimalFloorPlan(effW, effL, contH, doorH, sku, maxWgt, isContainer) {
-        const boxW = sku.W; // En
-        const boxL = sku.L; // Boy
-        const boxH = sku.H; // Yükseklik
+        const boxW = sku.W;
+        const boxL = sku.L;
+        const boxH = sku.H;
         const boxWt = sku.Wt;
 
-        // Konteynerlerde yük kapıdan girmek zorunda olduğundan tavan kapı yüksekliğiyle sınırlanır
         const maxStackH = isContainer ? Math.min(contH - 20, doorH - 20) : (contH - 20);
         const physMaxLayers = Math.max(1, Math.min(sku.maxLayers || 8, Math.floor(maxStackH / boxH)));
         const maxBoxesByWeight = Math.floor(maxWgt / boxWt);
@@ -655,12 +686,10 @@
             };
         }
 
-        // Seçenek 1: En enine, Boy boyuna (Doğal yön)
         const cols1 = Math.floor(effW / boxW);
         const rows1 = Math.floor(effL / boxL);
         const count1 = cols1 * rows1;
 
-        // Seçenek 2: Boy enine, En boyuna (90° çevrilmiş)
         const cols2 = Math.floor(effW / boxL);
         const rows2 = Math.floor(effL / boxW);
         const count2 = cols2 * rows2;
@@ -698,9 +727,8 @@
 
         if (shape === 'round') {
             const D = Math.max(boxL, boxW);
-            const pitch = D * Math.sqrt(3) / 2; // ~246.82 mm for 285 mm
+            const pitch = D * Math.sqrt(3) / 2;
 
-            // Pattern 1: Düz Grid
             const colsGrid = Math.floor(palletW / D);
             const rowsGrid = Math.floor(palletL / D);
             const gridBoxes = [];
@@ -713,7 +741,6 @@
             }
             patterns.push({ type: 'Düz Çember (Rim-to-Rim)', count: colsGrid * rowsGrid, layout: gridBoxes, isRound: true });
 
-            // Pattern 2: 4-3-4 Genişlik Petek (11 Adet)
             if (palletW >= D && pitch > 0) {
                 const numRowsAcrossW = 1 + Math.floor((palletW - D) / pitch);
                 if (numRowsAcrossW >= 2) {
@@ -807,7 +834,7 @@
     }
 
     // =========================================================================
-    // 🚀 UYGULAMA BAŞLATICI & KULLANICI DOĞRULAMA
+    // 🚀 BAŞLATICI & GİRİŞ YÖNETİMİ
     // =========================================================================
     function initApp() {
         if (window.supabase) {
@@ -831,19 +858,18 @@
             handleAuthChange(null);
         }
 
-        // Veritabanı önbelleğini yeni tabloya geçir (v5 ile zorunlu güncelleme)
         try {
-            const dbVersion = localStorage.getItem('optiload_db_v5');
+            const dbVersion = localStorage.getItem('optiload_db_v6');
             if (!dbVersion) {
                 skuDatabase = [...defaultSkuDatabase];
                 standardPalletSizes = [...defaultPalletSizes];
-                localStorage.setItem('optiload_skus_v5', JSON.stringify(skuDatabase));
-                localStorage.setItem('optiload_pallets_v5', JSON.stringify(standardPalletSizes));
-                localStorage.setItem('optiload_db_v5', 'true');
+                localStorage.setItem('optiload_skus_v6', JSON.stringify(skuDatabase));
+                localStorage.setItem('optiload_pallets_v6', JSON.stringify(standardPalletSizes));
+                localStorage.setItem('optiload_db_v6', 'true');
             } else {
-                const savedSkus = localStorage.getItem('optiload_skus_v5');
+                const savedSkus = localStorage.getItem('optiload_skus_v6');
                 skuDatabase = savedSkus ? JSON.parse(savedSkus) : [...defaultSkuDatabase];
-                const savedPallets = localStorage.getItem('optiload_pallets_v5');
+                const savedPallets = localStorage.getItem('optiload_pallets_v6');
                 standardPalletSizes = savedPallets ? JSON.parse(savedPallets) : [...defaultPalletSizes];
             }
         } catch(e) {
@@ -854,7 +880,6 @@
         populateSelects();
         populatePalletSelect();
         
-        // 0,85LX12 YENİ VK BÜKLÜM'ü varsayılan seç
         const skuSel = document.getElementById('skuSelect');
         if (skuSel) skuSel.value = "13"; 
         populateSKU();
@@ -1043,7 +1068,7 @@
     }
 
     // =========================================================================
-    // 🔀 REAKTİF DRAG-AND-DROP: AYRIK BLOK SIRALAMASI
+    // 🔀 REAKTİF DRAG-AND-DROP: HOMOJEN BLOK SIRALAMASI
     // =========================================================================
     let draggedIndex = null;
 
@@ -1061,8 +1086,8 @@
             let options = skuDatabase.map((s, i) => `<option value="${i}" ${i === item.skuIdx ? 'selected' : ''}>${s.shape === 'round' ? '⚪' : '⏹'} ${s.name} (${s.W}x${s.L}x${s.H})</option>`).join('');
 
             const badgeText = idx === 0 
-                ? "1. Blok (Ön Kısım / Aynaya Yakın)" 
-                : (idx === mixedItemsState.length - 1 ? `${idx + 1}. Blok (Kapı Tarafı)` : `${idx + 1}. Blok (Orta Kısım)`);
+                ? "1. Blok (Ön Bölüm / Aynaya Dayalı)" 
+                : (idx === mixedItemsState.length - 1 ? `${idx + 1}. Blok (Kapı Tarafı)` : `${idx + 1}. Blok (Orta Bölüm)`);
             const badgeClass = idx === 0 
                 ? "bg-indigo-100 text-indigo-900 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tight" 
                 : "bg-sky-100 text-sky-800 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tight";
@@ -1140,14 +1165,23 @@
     }
 
     // =========================================================================
-    // 🚚 SIMULATION ENGINE (KESİN SINIR VE HOMOJEN BLOKLAR)
+    // 🚚 SIMULATION ENGINE (BOYUNA YAYILIM & SIFIR ARKA BOŞLUK ÇÖZÜCÜ)
     // =========================================================================
+    function onVehicleChange() {
+        isUserDefinedTarget = false;
+        const targetEl = document.getElementById('targetBoxes');
+        if (targetEl) targetEl.value = '';
+        updateVehicleDims();
+        autoSyncSingleTargetCapacity();
+        debouncedRunEngine();
+    }
+
     function runEngine() {
         const vType = document.getElementById('vehicleType')?.value || 'TIR';
         const vSpec = VEHICLE_SPECS[vType] || VEHICLE_SPECS['TIR'];
         const baseType = document.getElementById('baseType')?.value || 'floor';
+        const loadStrategy = document.getElementById('loadDistributionStrategy')?.value || 'spread';
 
-        // Kesin araç boyutları
         const contL = vSpec.L;
         const contW = vSpec.W;
         const contH = vSpec.H;
@@ -1156,9 +1190,13 @@
 
         let effContL = contL - 10;
         let effContW = contW - 10;
+
+        // FİZİKSEL KISITLAR (Sayıları doğrudan azaltır)
         const optFrontCurve = (vType === 'TIR') && document.getElementById('optFrontCurve')?.checked;
         if (optFrontCurve) effContL -= 100;
         if (document.getElementById('optDoor')?.checked) effContL -= 80;
+        if (document.getElementById('optAirbag')?.checked) effContW -= 80;   // 80mm yan boşluk ayrılır
+        if (document.getElementById('optLashing')?.checked) effContL -= 150; // 150mm kapı kilit boşluğu ayrılır
 
         let queue = [];
 
@@ -1209,7 +1247,7 @@
 
         while (remainingQueue.some(q => q.remaining > 0) && safetyTruck < 25) {
             safetyTruck++;
-            let truckResult = packSingleVehicle(remainingQueue, effContL, effContW, contH, doorH, maxWgt, baseType, optFrontCurve, vSpec.isContainer);
+            let truckResult = packSingleVehicle(remainingQueue, effContL, effContW, contH, doorH, maxWgt, baseType, optFrontCurve, vSpec.isContainer, loadStrategy);
             if (truckResult.placedItems.length === 0) break;
             globalFleet.push(truckResult);
         }
@@ -1224,7 +1262,7 @@
         syncOrderTitleToPrint();
     }
 
-    function packSingleVehicle(queue, effContL, effContW, contH, doorH, maxWgt, baseType, optFrontCurve, isContainer) {
+    function packSingleVehicle(queue, effContL, effContW, contH, doorH, maxWgt, baseType, optFrontCurve, isContainer, loadStrategy) {
         let placedItems = [];
         let totalWgt = 0;
         let totalBoxes = 0;
@@ -1246,46 +1284,121 @@
                 const boxesForThisTruck = Math.min(item.remaining, maxBoxesByWeight);
                 if (boxesForThisTruck <= 0) { vehicleFull = true; break; }
 
-                // Gerekli sıra sayısını hesapla
-                const totalFullRows = Math.floor(boxesForThisTruck / (plan.cols * plan.physMaxLayers));
-                const remainderBoxes = boxesForThisTruck % (plan.cols * plan.physMaxLayers);
-                const rowsToPlace = Math.min(plan.rows, totalFullRows + (remainderBoxes > 0 ? 1 : 0));
-
                 const widthUsed = plan.cols * plan.dimW;
                 const startY = Math.max(0, (effContW - widthUsed) / 2);
 
-                for (let r = 0; r < rowsToPlace; r++) {
-                    if (item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
+                if (loadStrategy === 'spread') {
+                    // =========================================================
+                    // 🌟 BOYUNA YAYILIM: YÜKÜ DORSE TABANINA YAYAR, ARKAYI BOŞ BIRAKMAZ
+                    // =========================================================
+                    const totalPositionsOnFloor = plan.cols * plan.rows;
+                    let baseLayers = Math.floor(boxesForThisTruck / totalPositionsOnFloor);
+                    let remainderBoxes = boxesForThisTruck % totalPositionsOnFloor;
 
-                    let rowLayers = plan.physMaxLayers;
-                    let rowBoxes = plan.cols * plan.physMaxLayers;
+                    if (baseLayers >= 1) {
+                        // Tüm sıralar dorse kapısına kadar dolu!
+                        let higherRows = Math.min(plan.rows, Math.floor(remainderBoxes / plan.cols));
+                        let partialInRow = remainderBoxes % plan.cols;
 
-                    // Son sırada kalan koli varsa katı düşür
-                    if (r === totalFullRows && remainderBoxes > 0) {
-                        rowLayers = Math.max(1, Math.ceil(remainderBoxes / plan.cols));
-                        rowBoxes = remainderBoxes;
+                        for (let r = 0; r < plan.rows; r++) {
+                            if (item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
+
+                            let rowLayers = baseLayers;
+                            let rowBoxes = plan.cols * baseLayers;
+
+                            if (r < higherRows) {
+                                rowLayers = baseLayers + 1;
+                                rowBoxes = plan.cols * (baseLayers + 1);
+                            } else if (r === higherRows && partialInRow > 0) {
+                                rowLayers = baseLayers + 1;
+                                rowBoxes = (plan.cols * baseLayers) + partialInRow;
+                            }
+
+                            rowBoxes = Math.min(rowBoxes, item.remaining);
+                            rowBoxes = Math.min(rowBoxes, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                            if (rowBoxes <= 0) break;
+
+                            const rowX = currentX + (r * plan.dimL);
+                            const rowWgt = rowBoxes * sku.Wt;
+
+                            placedItems.push({
+                                id: sku.name, x: rowX, y: startY, z: 0,
+                                l: plan.dimL, w: widthUsed, h: rowLayers * sku.H,
+                                boxes: rowBoxes, wgt: rowWgt, color: item.color,
+                                cols: plan.cols, rows: 1, layers: rowLayers,
+                                singleBoxL: plan.dimL, singleBoxW: plan.dimW, singleBoxH: sku.H,
+                                isRound: (sku.shape === 'round'),
+                                blockName: item.blockName || `${sku.name} Bloğu`
+                            });
+
+                            totalWgt += rowWgt;
+                            totalBoxes += rowBoxes;
+                            item.remaining -= rowBoxes;
+                        }
+                    } else {
+                        // Koli adedi 1 tam taban katından azsa, tabana yayılır
+                        const rowsToPlace = Math.min(plan.rows, Math.ceil(boxesForThisTruck / plan.cols));
+                        for (let r = 0; r < rowsToPlace; r++) {
+                            if (item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
+                            let rowBoxes = Math.min(plan.cols, item.remaining);
+                            const rowX = currentX + (r * plan.dimL);
+                            const rowWgt = rowBoxes * sku.Wt;
+
+                            placedItems.push({
+                                id: sku.name, x: rowX, y: startY, z: 0,
+                                l: plan.dimL, w: widthUsed, h: sku.H,
+                                boxes: rowBoxes, wgt: rowWgt, color: item.color,
+                                cols: plan.cols, rows: 1, layers: 1,
+                                singleBoxL: plan.dimL, singleBoxW: plan.dimW, singleBoxH: sku.H,
+                                isRound: (sku.shape === 'round'),
+                                blockName: item.blockName || `${sku.name} Bloğu`
+                            });
+
+                            totalWgt += rowWgt;
+                            totalBoxes += rowBoxes;
+                            item.remaining -= rowBoxes;
+                        }
                     }
+                } else {
+                    // =========================================================
+                    // TAVANA KADAR İSTİF (Yükseklik Öncelikli Blok İstif)
+                    // =========================================================
+                    const totalFullRows = Math.floor(boxesForThisTruck / (plan.cols * plan.physMaxLayers));
+                    const remainderBoxes = boxesForThisTruck % (plan.cols * plan.physMaxLayers);
+                    const rowsToPlace = Math.min(plan.rows, totalFullRows + (remainderBoxes > 0 ? 1 : 0));
 
-                    rowBoxes = Math.min(rowBoxes, item.remaining);
-                    rowBoxes = Math.min(rowBoxes, Math.floor((maxWgt - totalWgt) / sku.Wt));
-                    if (rowBoxes <= 0) break;
+                    for (let r = 0; r < rowsToPlace; r++) {
+                        if (item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
 
-                    const rowX = currentX + (r * plan.dimL);
-                    const rowWgt = rowBoxes * sku.Wt;
+                        let rowLayers = plan.physMaxLayers;
+                        let rowBoxes = plan.cols * plan.physMaxLayers;
 
-                    placedItems.push({
-                        id: sku.name, x: rowX, y: startY, z: 0,
-                        l: plan.dimL, w: widthUsed, h: rowLayers * sku.H,
-                        boxes: rowBoxes, wgt: rowWgt, color: item.color,
-                        cols: plan.cols, rows: 1, layers: rowLayers,
-                        singleBoxL: plan.dimL, singleBoxW: plan.dimW, singleBoxH: sku.H,
-                        isRound: (sku.shape === 'round'),
-                        blockName: item.blockName || `${sku.name} Bloğu`
-                    });
+                        if (r === totalFullRows && remainderBoxes > 0) {
+                            rowLayers = Math.max(1, Math.ceil(remainderBoxes / plan.cols));
+                            rowBoxes = remainderBoxes;
+                        }
 
-                    totalWgt += rowWgt;
-                    totalBoxes += rowBoxes;
-                    item.remaining -= rowBoxes;
+                        rowBoxes = Math.min(rowBoxes, item.remaining);
+                        rowBoxes = Math.min(rowBoxes, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                        if (rowBoxes <= 0) break;
+
+                        const rowX = currentX + (r * plan.dimL);
+                        const rowWgt = rowBoxes * sku.Wt;
+
+                        placedItems.push({
+                            id: sku.name, x: rowX, y: startY, z: 0,
+                            l: plan.dimL, w: widthUsed, h: rowLayers * sku.H,
+                            boxes: rowBoxes, wgt: rowWgt, color: item.color,
+                            cols: plan.cols, rows: 1, layers: rowLayers,
+                            singleBoxL: plan.dimL, singleBoxW: plan.dimW, singleBoxH: sku.H,
+                            isRound: (sku.shape === 'round'),
+                            blockName: item.blockName || `${sku.name} Bloğu`
+                        });
+
+                        totalWgt += rowWgt;
+                        totalBoxes += rowBoxes;
+                        item.remaining -= rowBoxes;
+                    }
                 }
 
                 currentX = placedItems.reduce((max, it) => Math.max(max, it.x + it.l), 0);
@@ -1352,7 +1465,7 @@
     }
 
     // =========================================================================
-    // 📊 METRİKLER, 2D ÇİZİMLER VE DETAYLI RAPORLAMA
+    // 📊 METRİKLER & GÖRSEL RAPORLAMA
     // =========================================================================
     function updateFleetUI() {
         let pagContainer = document.getElementById('fleetPaginationContainer');
@@ -1397,7 +1510,6 @@
         let cogX = truck.totalWgt > 0 ? (momentX / truck.totalWgt) : 0;
         setElText('resStatusSub', `Dengeli Yük (CoG: ${(cogX/1000).toFixed(1)}m)`);
 
-        // DETAYLI YAZILI TALİMATLAR
         let detailsHtml = '';
 
         if (!isPalletMode) {
@@ -1434,15 +1546,15 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-[11px] text-slate-700">
                             <div class="bg-white p-2 rounded border border-slate-200">
                                 <strong class="text-indigo-900 block font-bold mb-0.5">📐 Enine Yerleşim:</strong>
-                                ${g.cols} Koli yan yana (${widthCoverage} mm genişlik kaplama). Yan boşluk emniyet sınırları içindedir.
+                                ${g.cols} Koli yan yana (${widthCoverage} mm). Yan boşluklar dengelenmiştir.
                             </div>
                             <div class="bg-white p-2 rounded border border-slate-200">
                                 <strong class="text-indigo-900 block font-bold mb-0.5">📏 Boyuna Dağılım:</strong>
-                                ${g.totalRows} Sıra arka arkaya (${lengthCoverage} mm dorse uzunluğu kaplama).
+                                ${g.totalRows} Sıra kesintisiz yayılım (${lengthCoverage} mm). Kapıya kadar tam yanaşmıştır.
                             </div>
                             <div class="bg-white p-2 rounded border border-slate-200">
-                                <strong class="text-indigo-900 block font-bold mb-0.5">⬆️ Kat İstifi:</strong>
-                                ${layerBreakdownText}. Konteyner kapı eşiği ve tavan yüksekliği aşılmamıştır.
+                                <strong class="text-indigo-900 block font-bold mb-0.5">⬆️ Kat Dağılımı:</strong>
+                                ${layerBreakdownText}. Yük tabana yayılarak arka kapak devrilme riski sıfırlanmıştır.
                             </div>
                         </div>
                     </div>
@@ -1453,10 +1565,10 @@
                 <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-xs space-y-3">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-2 gap-2">
                         <div>
-                            <strong class="text-slate-800 text-sm block">🚚 DORSE TABANI DÖKME YERLEŞİM PLANI</strong>
-                            <span class="text-[11px] text-slate-500">Ürünlerin dorse içine fiziksel yerleşimi ve kademelendirme bilgisi</span>
+                            <strong class="text-slate-800 text-sm block">🚚 DORSE TABANI BOYUNA YAYILIM PLANI</strong>
+                            <span class="text-[11px] text-slate-500">Yük tavana yığılmadan tüm dorse tabanına eşit yayılmış, arka boşluk kapatılmıştır.</span>
                         </div>
-                        <span class="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded font-bold">✓ Homojen Blok Düzeni</span>
+                        <span class="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded font-bold">✓ Sıfır Arka Boşluk</span>
                     </div>
                     <div class="space-y-2.5">
                         ${blocksExplanation}
@@ -1537,15 +1649,14 @@
                     ${detailsHtml}
                     <div class="pt-2 border-t border-indigo-200">
                         <ul class="list-disc pl-5 space-y-1 text-slate-700">
-                            <li>${(useAirbag && truck.gapW > 80) ? `🔄 <strong>Yanal Boşluk:</strong> Yanlarda ${Math.floor(truck.gapW)} mm boşluk kalmaktadır. Hava Yastığı (Airbag) / Strafor takoz uygulayın.` : '✅ Yanal alan emniyetli seviyede doludur.'}</li>
-                            <li>${(useLashing && truck.gapL > 250) ? `🚚 <strong>Boyuna Boşluk:</strong> Yük kapıya ${Math.floor(truck.gapL)} mm mesafede bitmektedir. Spanset (Lashing) çekilmelidir.` : '✅ Yük kapıya kadar tam oturmuştur.'}</li>
+                            <li>${(useAirbag) ? `🔄 <strong>Hava Yastığı Koruması:</strong> Yan duvarlarda ayrılan 80 mm boşluğa Dunnage Airbag takviyesi yapılmalıdır.` : (truck.gapW > 80 ? `🔄 <strong>Yanal Boşluk:</strong> Yanlarda ${Math.floor(truck.gapW)} mm boşluk kalmaktadır. Hava Yastığı önerilir.` : '✅ Yanal alan form-fit doludur.')}</li>
+                            <li>${(useLashing) ? `🚚 <strong>Spanset Kilitleme:</strong> Kapı önündeki 150 mm lashing payına çapraz spanset kayışları çekilmelidir.` : (truck.gapL > 250 ? `🚚 <strong>Boyuna Boşluk:</strong> Yük kapıya ${Math.floor(truck.gapL)} mm mesafededir.` : '✅ Yük kapıya kadar tam oturmuştur.')}</li>
                         </ul>
                     </div>
                 </div>
             `;
         }
 
-        // 2D Palet Şemasını Çiz
         if (isPalletMode && truck.placedItems.length > 0 && truck.placedItems[0].palletDesign) {
             setTimeout(() => {
                 const cvs = document.getElementById('pallet2DCanvas');
@@ -1602,7 +1713,7 @@
     }
 
     // =========================================================================
-    // 🎨 3D İZOMETRİK ÇİZİM MOTORU (KAT VE ÇEMBER ÇİZGİLERİ)
+    // 🎨 3D İZOMETRİK ÇİZİM MOTORU (DETAYLI KAT VE ÇEMBER ÇİZGİLERİ)
     // =========================================================================
     function performRender(data) {
         if (!data) return;
@@ -1757,7 +1868,7 @@
     function resetView() { panX = 0; panY = 0; zoomLevel = 1; if (lastRenderData) performRender(lastRenderData); }
 
     // =========================================================================
-    // FORM, MODAL & SEÇİM YÖNETİMİ
+    // FORM VE SEÇİM YÖNETİCİSİ
     // =========================================================================
     function populateSelects() {
         const select = document.getElementById('skuSelect');
@@ -1781,9 +1892,9 @@
         const idx = parseInt(document.getElementById('skuSelect')?.value) || 0;
         const sku = skuDatabase[idx];
         if (!sku) return;
-        const boxLEl = document.getElementById('boxL'); if (boxLEl) boxLEl.value = sku.L; // Boy
-        const boxWEl = document.getElementById('boxW'); if (boxWEl) boxWEl.value = sku.W; // En
-        const boxHEl = document.getElementById('boxH'); if (boxHEl) boxHEl.value = sku.H; // Yükseklik
+        const boxLEl = document.getElementById('boxL'); if (boxLEl) boxLEl.value = sku.L;
+        const boxWEl = document.getElementById('boxW'); if (boxWEl) boxWEl.value = sku.W;
+        const boxHEl = document.getElementById('boxH'); if (boxHEl) boxHEl.value = sku.H;
         const boxWtEl = document.getElementById('boxWt'); if (boxWtEl) boxWtEl.value = sku.Wt;
 
         if (sku.shape === 'round') {
@@ -1818,8 +1929,14 @@
         if (!sku) return;
 
         const maxWgt = parseInt(document.getElementById('maxWgt')?.value) || vSpec.maxWgt;
-        const effContL = vSpec.L - 90;
-        const effContW = vSpec.W - 10;
+        let effContL = vSpec.L - 10;
+        let effContW = vSpec.W - 10;
+
+        if (vType === 'TIR' && document.getElementById('optFrontCurve')?.checked) effContL -= 100;
+        if (document.getElementById('optDoor')?.checked) effContL -= 80;
+        if (document.getElementById('optAirbag')?.checked) effContW -= 80;
+        if (document.getElementById('optLashing')?.checked) effContL -= 150;
+
         const contH = vSpec.H;
         const doorH = vSpec.doorH;
 
@@ -1860,8 +1977,6 @@
         const bt = document.getElementById('baseType')?.value || 'floor';
         const palGrp = document.getElementById('palletDropdownGroup');
         if (palGrp) palGrp.style.display = (bt === 'floor') ? 'none' : 'block';
-        const loadModeEl = document.getElementById('loadModeDisplay');
-        if (loadModeEl) loadModeEl.value = bt === 'floor' ? 'Maksimum Hacim & Boyuna Dağılım' : 'Paletli İstif (Emniyet Korumalı)';
         syncOrderTitleToPrint();
     }
 
@@ -1872,8 +1987,10 @@
     }
 
     function onSkuSelectChanged() {
-        populateSKU();
         isUserDefinedTarget = false;
+        const targetEl = document.getElementById('targetBoxes');
+        if (targetEl) targetEl.value = '';
+        populateSKU();
         autoSyncSingleTargetCapacity();
         debouncedRunEngine();
     }
@@ -1905,7 +2022,7 @@
     function deleteSku(idx) {
         if (skuDatabase.length <= 1) return alert("En az 1 SKU kalmalıdır.");
         skuDatabase.splice(idx, 1);
-        localStorage.setItem('optiload_skus_v5', JSON.stringify(skuDatabase));
+        localStorage.setItem('optiload_skus_v6', JSON.stringify(skuDatabase));
         populateSelects();
         renderSkuManagerList();
         onSkuSelectChanged();
@@ -1914,14 +2031,14 @@
         const name = document.getElementById('mngSkuName')?.value.trim() || 'Yeni SKU';
         const shape = document.querySelector('input[name="mngSkuShape"]:checked')?.value || 'box';
         const dia = parseFloat(document.getElementById('mngSkuDia')?.value) || 285;
-        const W = shape === 'round' ? dia : parseFloat(document.getElementById('mngSkuW')?.value) || 260; // En
-        const L = shape === 'round' ? dia : parseFloat(document.getElementById('mngSkuL')?.value) || 260; // Boy
-        const H = parseFloat(document.getElementById('mngSkuH')?.value) || 330; // Yükseklik
+        const W = shape === 'round' ? dia : parseFloat(document.getElementById('mngSkuW')?.value) || 260;
+        const L = shape === 'round' ? dia : parseFloat(document.getElementById('mngSkuL')?.value) || 260;
+        const H = parseFloat(document.getElementById('mngSkuH')?.value) || 330;
         const Wt = parseFloat(document.getElementById('mngSkuWt')?.value) || 16.5;
         const maxLayers = parseInt(document.getElementById('mngSkuMaxLayers')?.value) || 6;
 
         skuDatabase.push({ name, W, L, H, Wt, maxLayers, shape });
-        localStorage.setItem('optiload_skus_v5', JSON.stringify(skuDatabase));
+        localStorage.setItem('optiload_skus_v6', JSON.stringify(skuDatabase));
         populateSelects();
         closeModal('skuManagerModal');
         onSkuSelectChanged();
@@ -1942,7 +2059,7 @@
     function deletePallet(idx) {
         if (standardPalletSizes.length <= 1) return alert("En az 1 palet kalmalıdır.");
         standardPalletSizes.splice(idx, 1);
-        localStorage.setItem('optiload_pallets_v5', JSON.stringify(standardPalletSizes));
+        localStorage.setItem('optiload_pallets_v6', JSON.stringify(standardPalletSizes));
         populatePalletSelect();
         renderPalletManagerList();
         debouncedRunEngine();
@@ -1955,7 +2072,7 @@
             H: parseFloat(document.getElementById('mngPalH')?.value) || 145,
             tare: parseFloat(document.getElementById('mngPalTare')?.value) || 25
         });
-        localStorage.setItem('optiload_pallets_v5', JSON.stringify(standardPalletSizes));
+        localStorage.setItem('optiload_pallets_v6', JSON.stringify(standardPalletSizes));
         populatePalletSelect();
         closeModal('palletManagerModal');
         debouncedRunEngine();
@@ -1990,7 +2107,7 @@
 
         if (bestPallet) {
             standardPalletSizes.push(bestPallet);
-            localStorage.setItem('optiload_pallets_v5', JSON.stringify(standardPalletSizes));
+            localStorage.setItem('optiload_pallets_v6', JSON.stringify(standardPalletSizes));
             populatePalletSelect();
             const palSel = document.getElementById('specificBaseSize');
             if (palSel) palSel.value = standardPalletSizes.length - 1;
