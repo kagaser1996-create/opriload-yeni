@@ -37,7 +37,7 @@
 </head>
 <body class="p-2 md:p-4 min-h-[100dvh] lg:h-[100dvh] flex flex-col justify-between">
 
-<!-- 🔒 GİRİŞ & KAYIT AÇILIŞ SAYFASI (AUTH GATE - SADECE HESAP SAHİPLERİ) -->
+<!-- 🔒 GİRİŞ & KAYIT AÇILIŞ SAYFASI (AUTH GATE) -->
 <div id="authLandingPage" class="flex-grow flex items-center justify-center p-4">
     <div class="bg-white p-6 md:p-8 rounded-2xl shadow-2xl max-w-md w-full border-t-8 border-sky-500">
         <div class="flex items-center gap-3 mb-2 justify-center">
@@ -159,6 +159,25 @@
         </div>
     </div>
 
+    <!-- PRINTABLE FORM HEADER -->
+    <div class="hidden print-only mb-4 border-b-2 border-slate-900 pb-3">
+        <div class="flex justify-between items-end mb-2">
+            <div>
+                <h1 class="text-xl font-black tracking-tight">Elita OptiLoad</h1>
+                <p class="text-xs text-slate-600 font-bold uppercase tracking-wider">Saha Yükleme & Güvenlik Formu</p>
+            </div>
+            <div class="text-right text-xs text-slate-700">
+                <strong>Tarih:</strong> <span id="printDateSpan"></span>
+            </div>
+        </div>
+        <div class="grid grid-cols-2 gap-y-2 gap-x-4 text-xs bg-slate-50 p-3 border border-slate-300 rounded">
+            <div><strong>Sipariş / Talep Adı:</strong> <span id="printOrderTitleDisplay" class="font-black text-indigo-800 ml-1">İsimsiz Talep</span></div>
+            <div><strong>Araç & Yük Modu:</strong> <span id="printVehicleSummaryDisplay" class="font-semibold text-slate-700 ml-1">TIR (Zemin)</span></div>
+            <div><strong>Şoför Adı Soyadı:</strong> <span class="inline-block w-40 border-b border-slate-400"></span></div>
+            <div><strong>Araç Plakası / Konteyner No:</strong> <span class="inline-block w-40 border-b border-slate-400"></span></div>
+        </div>
+    </div>
+
     <!-- WORKSPACE BODY: 2 SÜTUN -->
     <div class="flex-grow flex flex-col lg:flex-row max-w-[1400px] mx-auto w-full gap-4 print-full-width lg:overflow-hidden">
         
@@ -193,11 +212,8 @@
                         <input type="number" id="maxWgt" value="25000" max="27800" class="bg-slate-50 text-rose-700 font-bold" oninput="if(this.value > 27800) this.value = 27800; autoSyncSingleTargetCapacity();" onchange="debouncedRunEngine()">
                     </div>
                     <div class="input-group">
-                        <label>Yükleme Stratejisi</label>
-                        <select id="loadDistributionStrategy" class="bg-emerald-50 text-emerald-900 border-emerald-300 font-bold text-xs" onchange="debouncedRunEngine()">
-                            <option value="spread" selected>Boyuna Yayılım (Sıfır Boşluk)</option>
-                            <option value="ceiling">Tavana Kadar (Yükseklik Öncelikli)</option>
-                        </select>
+                        <label>Yükleme Modu</label>
+                        <input type="text" id="loadModeDisplay" value="Boyuna Yayılım (Sıfır Boşluk)" readonly class="!bg-emerald-50 !text-emerald-800 font-bold border-emerald-200 text-[10px] text-center">
                     </div>
                 </div>
 
@@ -239,7 +255,7 @@
                     <div class="p-2.5 bg-indigo-50 border border-indigo-200 rounded-lg mb-3">
                         <strong class="text-xs text-indigo-950 uppercase font-black block mb-0.5">📦 Bağımsız Blok Düzeni (Homojen İstif)</strong>
                         <p class="text-[11px] text-slate-600 leading-relaxed">
-                            Her SKU dorse tabanında kendine ait ayrı bir kompartıman/blok halinde sıralanır. Farklı SKU'lar üst üste binmez (ezilme sıfırlanır).
+                            Her SKU dorse tabanında kendine ait ayrı bir blok halinde sıralanır. Farklı SKU'lar üst üste binmez.
                         </p>
                         <span class="text-[10px] text-indigo-700 font-bold block mt-1">
                             🖱️ Tutamaktan (⋮⋮) sürükleyip bırakarak yükleme sırasını (Ön ➔ Arka) belirleyebilirsiniz.
@@ -295,7 +311,7 @@
                     </div>
                 </div>
 
-                <!-- GÜVENLİK & FİZİKSEL PAY KONTROLLERİ -->
+                <!-- GÜVENLİK & FİZİKSEL KISITLAR -->
                 <div class="section-header">Güvenlik & Dinamik Engeller</div>
                 <div class="p-3 bg-indigo-50 border border-indigo-200 rounded-lg space-y-2">
                     <label id="optFrontCurveLabel" class="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
@@ -349,7 +365,7 @@
             <div class="bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col flex-grow min-h-[350px] md:min-h-[480px] relative">
                 <div class="bg-slate-50 border-b border-slate-200 px-4 py-3 rounded-t-xl flex justify-between items-center z-10 relative">
                     <span class="text-sm font-bold text-slate-700">3D İZOMETRİK TAŞIMA & YÜKLEME SİMÜLASYONU</span>
-                    <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200" id="badgeSimSubtitle">Dinamik Çözücü Aktif</span>
+                    <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200" id="badgeSimSubtitle">Boyuna Yayılım Aktif (Sıfır Boşluk)</span>
                 </div>
                 
                 <div class="flex-grow flex items-center justify-center p-2 md:p-4 bg-slate-800 relative rounded-b-xl overflow-hidden min-h-[320px] md:min-h-[450px]">
@@ -370,9 +386,7 @@
     </div>
 </div>
 
-<!-- ========================================================================= -->
-<!-- MODALLER                                                                  -->
-<!-- ========================================================================= -->
+<!-- MODALLER (DASHBOARD, SKU & PALET) -->
 <div id="adminDashboardModal" class="hidden fixed inset-0 bg-slate-900/80 z-40 flex items-center justify-center p-4 no-print">
     <div class="bg-white rounded-2xl shadow-2xl max-w-[1150px] w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-200">
         <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
@@ -522,16 +536,6 @@
                         <input type="number" id="mngPalW" value="1140" class="w-full p-2 border rounded bg-white font-bold">
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Taban Kalınlığı (mm)</label>
-                        <input type="number" id="mngPalH" value="145" class="w-full p-2 border rounded bg-white font-bold">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Dara Ağırlık (kg)</label>
-                        <input type="number" id="mngPalTare" value="25" class="w-full p-2 border rounded bg-white font-bold">
-                    </div>
-                </div>
                 <button onclick="saveNewPalletFromManager()" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded text-xs transition shadow-sm">+ Paleti Kaydet</button>
             </div>
             <div class="space-y-1">
@@ -542,9 +546,6 @@
     </div>
 </div>
 
-<!-- ========================================================================= -->
-<!-- JAVASCRIPT: ENGINE & HESAPLAMA MOTORU                                     -->
-<!-- ========================================================================= -->
 <script>
     const SUPABASE_URL = 'https://wukjeatpuysvlosbtahf.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1a2plYXRwdXlzdmxvc2J0YWhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1MTk4NjMsImV4cCI6MjEwNDA5NTg2M30.-HitB_MtlNXIYvd1qqgydWmr0UxpnSP4Q29EMugF8P8';
@@ -840,17 +841,17 @@
         }
 
         try {
-            const dbVersion = localStorage.getItem('optiload_db_v7');
+            const dbVersion = localStorage.getItem('optiload_db_v8');
             if (!dbVersion) {
                 skuDatabase = [...defaultSkuDatabase];
                 standardPalletSizes = [...defaultPalletSizes];
-                localStorage.setItem('optiload_skus_v7', JSON.stringify(skuDatabase));
-                localStorage.setItem('optiload_pallets_v7', JSON.stringify(standardPalletSizes));
-                localStorage.setItem('optiload_db_v7', 'true');
+                localStorage.setItem('optiload_skus_v8', JSON.stringify(skuDatabase));
+                localStorage.setItem('optiload_pallets_v8', JSON.stringify(standardPalletSizes));
+                localStorage.setItem('optiload_db_v8', 'true');
             } else {
-                const savedSkus = localStorage.getItem('optiload_skus_v7');
+                const savedSkus = localStorage.getItem('optiload_skus_v8');
                 skuDatabase = savedSkus ? JSON.parse(savedSkus) : [...defaultSkuDatabase];
-                const savedPallets = localStorage.getItem('optiload_pallets_v7');
+                const savedPallets = localStorage.getItem('optiload_pallets_v8');
                 standardPalletSizes = savedPallets ? JSON.parse(savedPallets) : [...defaultPalletSizes];
             }
         } catch(e) {
@@ -1146,7 +1147,7 @@
     }
 
     // =========================================================================
-    // 🚚 SIMULATION ENGINE
+    // 🚚 SIMULATION ENGINE (BOYUNA YAYILIM & SIFIR ARKA BOŞLUK - KESİN ÇÖZÜM)
     // =========================================================================
     function onVehicleChange() {
         isUserDefinedTarget = false;
@@ -1161,7 +1162,6 @@
         const vType = document.getElementById('vehicleType')?.value || 'TIR';
         const vSpec = VEHICLE_SPECS[vType] || VEHICLE_SPECS['TIR'];
         const baseType = document.getElementById('baseType')?.value || 'floor';
-        const loadStrategy = document.getElementById('loadDistributionStrategy')?.value || 'spread';
 
         const contL = vSpec.L;
         const contW = vSpec.W;
@@ -1172,6 +1172,7 @@
         let effContL = contL - 10;
         let effContW = contW - 10;
 
+        // FİZİKSEL KISITLAR
         const optFrontCurve = (vType === 'TIR') && document.getElementById('optFrontCurve')?.checked;
         if (optFrontCurve) effContL -= 100;
         if (document.getElementById('optDoor')?.checked) effContL -= 80;
@@ -1227,7 +1228,7 @@
 
         while (remainingQueue.some(q => q.remaining > 0) && safetyTruck < 25) {
             safetyTruck++;
-            let truckResult = packSingleVehicle(remainingQueue, effContL, effContW, contH, doorH, maxWgt, baseType, optFrontCurve, vSpec.isContainer, loadStrategy);
+            let truckResult = packSingleVehicle(remainingQueue, effContL, effContW, contH, doorH, maxWgt, baseType, optFrontCurve, vSpec.isContainer);
             if (truckResult.placedItems.length === 0) break;
             globalFleet.push(truckResult);
         }
@@ -1242,7 +1243,7 @@
         syncOrderTitleToPrint();
     }
 
-    function packSingleVehicle(queue, effContL, effContW, contH, doorH, maxWgt, baseType, optFrontCurve, isContainer, loadStrategy) {
+    function packSingleVehicle(queue, effContL, effContW, contH, doorH, maxWgt, baseType, optFrontCurve, isContainer) {
         let placedItems = [];
         let totalWgt = 0;
         let totalBoxes = 0;
@@ -1267,89 +1268,29 @@
                 const widthUsed = plan.cols * plan.dimW;
                 const startY = Math.max(0, (effContW - widthUsed) / 2);
 
-                if (loadStrategy === 'spread') {
-                    // BOYUNA YAYILIM: YÜKÜ TÜM TABANA YAYAR (ARKA BOŞ KALMAZ)
-                    const totalPositionsOnFloor = plan.cols * plan.rows;
-                    let baseLayers = Math.floor(boxesForThisTruck / totalPositionsOnFloor);
-                    let remainderBoxes = boxesForThisTruck % totalFloorPositionsOnFloor;
+                // =============================================================
+                // 🌟 BOYUNA YAYILIM: TABANIN TÜMÜNE YAYAR, ARKAYI ASLA BOŞ BIRAKMAZ
+                // =============================================================
+                const totalPositionsOnFloor = plan.cols * plan.rows;
+                let baseLayers = Math.floor(boxesForThisTruck / totalPositionsOnFloor);
+                let remainderBoxes = boxesForThisTruck % totalPositionsOnFloor; // DÜZELTİLDİ: SIFIR ÇÖKME
 
-                    if (baseLayers >= 1) {
-                        const higherRows = Math.min(plan.rows, Math.floor(remainderBoxes / plan.cols));
-                        const partialInRow = remainderBoxes % plan.cols;
+                if (baseLayers >= 1) {
+                    let higherRows = Math.min(plan.rows, Math.floor(remainderBoxes / plan.cols));
+                    let partialInRow = remainderBoxes % plan.cols;
 
-                        for (let r = 0; r < plan.rows; r++) {
-                            if (item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
-
-                            let rowLayers = baseLayers;
-                            let rowBoxes = plan.cols * baseLayers;
-
-                            if (r < higherRows) {
-                                rowLayers = baseLayers + 1;
-                                rowBoxes = plan.cols * (baseLayers + 1);
-                            } else if (r === higherRows && partialInRow > 0) {
-                                rowLayers = baseLayers + 1;
-                                rowBoxes = (plan.cols * baseLayers) + partialInRow;
-                            }
-
-                            rowBoxes = Math.min(rowBoxes, item.remaining);
-                            rowBoxes = Math.min(rowBoxes, Math.floor((maxWgt - totalWgt) / sku.Wt));
-                            if (rowBoxes <= 0) break;
-
-                            const rowX = currentX + (r * plan.dimL);
-                            const rowWgt = rowBoxes * sku.Wt;
-
-                            placedItems.push({
-                                id: sku.name, x: rowX, y: startY, z: 0,
-                                l: plan.dimL, w: widthUsed, h: rowLayers * sku.H,
-                                boxes: rowBoxes, wgt: rowWgt, color: item.color,
-                                cols: plan.cols, rows: 1, layers: rowLayers,
-                                singleBoxL: plan.dimL, singleBoxW: plan.dimW, singleBoxH: sku.H,
-                                isRound: (sku.shape === 'round'),
-                                blockName: item.blockName || `${sku.name} Bloğu`
-                            });
-
-                            totalWgt += rowWgt;
-                            totalBoxes += rowBoxes;
-                            item.remaining -= rowBoxes;
-                        }
-                    } else {
-                        const rowsToPlace = Math.min(plan.rows, Math.ceil(boxesForThisTruck / plan.cols));
-                        for (let r = 0; r < rowsToPlace; r++) {
-                            if (item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
-                            let rowBoxes = Math.min(plan.cols, item.remaining);
-                            const rowX = currentX + (r * plan.dimL);
-                            const rowWgt = rowBoxes * sku.Wt;
-
-                            placedItems.push({
-                                id: sku.name, x: rowX, y: startY, z: 0,
-                                l: plan.dimL, w: widthUsed, h: sku.H,
-                                boxes: rowBoxes, wgt: rowWgt, color: item.color,
-                                cols: plan.cols, rows: 1, layers: 1,
-                                singleBoxL: plan.dimL, singleBoxW: plan.dimW, singleBoxH: sku.H,
-                                isRound: (sku.shape === 'round'),
-                                blockName: item.blockName || `${sku.name} Bloğu`
-                            });
-
-                            totalWgt += rowWgt;
-                            totalBoxes += rowBoxes;
-                            item.remaining -= rowBoxes;
-                        }
-                    }
-                } else {
-                    // TAVANA KADAR BLOK İSTİF
-                    const totalFullRows = Math.floor(boxesForThisTruck / (plan.cols * plan.physMaxLayers));
-                    const remainderBoxes = boxesForThisTruck % (plan.cols * plan.physMaxLayers);
-                    const rowsToPlace = Math.min(plan.rows, totalFullRows + (remainderBoxes > 0 ? 1 : 0));
-
-                    for (let r = 0; r < rowsToPlace; r++) {
+                    for (let r = 0; r < plan.rows; r++) {
                         if (item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
 
-                        let rowLayers = plan.physMaxLayers;
-                        let rowBoxes = plan.cols * plan.physMaxLayers;
+                        let rowLayers = baseLayers;
+                        let rowBoxes = plan.cols * baseLayers;
 
-                        if (r === totalFullRows && remainderBoxes > 0) {
-                            rowLayers = Math.max(1, Math.ceil(remainderBoxes / plan.cols));
-                            rowBoxes = remainderBoxes;
+                        if (r < higherRows) {
+                            rowLayers = baseLayers + 1;
+                            rowBoxes = plan.cols * (baseLayers + 1);
+                        } else if (r === higherRows && partialInRow > 0) {
+                            rowLayers = baseLayers + 1;
+                            rowBoxes = (plan.cols * baseLayers) + partialInRow;
                         }
 
                         rowBoxes = Math.min(rowBoxes, item.remaining);
@@ -1373,11 +1314,33 @@
                         totalBoxes += rowBoxes;
                         item.remaining -= rowBoxes;
                     }
+                } else {
+                    const rowsToPlace = Math.min(plan.rows, Math.ceil(boxesForThisTruck / plan.cols));
+                    for (let r = 0; r < rowsToPlace; r++) {
+                        if (item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
+                        let rowBoxes = Math.min(plan.cols, item.remaining);
+                        const rowX = currentX + (r * plan.dimL);
+                        const rowWgt = rowBoxes * sku.Wt;
+
+                        placedItems.push({
+                            id: sku.name, x: rowX, y: startY, z: 0,
+                            l: plan.dimL, w: widthUsed, h: sku.H,
+                            boxes: rowBoxes, wgt: rowWgt, color: item.color,
+                            cols: plan.cols, rows: 1, layers: 1,
+                            singleBoxL: plan.dimL, singleBoxW: plan.dimW, singleBoxH: sku.H,
+                            isRound: (sku.shape === 'round'),
+                            blockName: item.blockName || `${sku.name} Bloğu`
+                        });
+
+                        totalWgt += rowWgt;
+                        totalBoxes += rowBoxes;
+                        item.remaining -= rowBoxes;
+                    }
                 }
 
                 currentX = placedItems.reduce((max, it) => Math.max(max, it.x + it.l), 0);
             } else {
-                // Paletli Mod
+                // Paletli Taşıma
                 const pIdx = parseInt(document.getElementById('specificBaseSize')?.value) || 0;
                 const pSpec = standardPalletSizes[pIdx] || standardPalletSizes[0];
                 const strat = document.getElementById('palletStrategy')?.value || 'stable';
@@ -1995,7 +1958,7 @@
     function deleteSku(idx) {
         if (skuDatabase.length <= 1) return alert("En az 1 SKU kalmalıdır.");
         skuDatabase.splice(idx, 1);
-        localStorage.setItem('optiload_skus_v7', JSON.stringify(skuDatabase));
+        localStorage.setItem('optiload_skus_v8', JSON.stringify(skuDatabase));
         populateSelects();
         renderSkuManagerList();
         onSkuSelectChanged();
@@ -2011,7 +1974,7 @@
         const maxLayers = parseInt(document.getElementById('mngSkuMaxLayers')?.value) || 6;
 
         skuDatabase.push({ name, W, L, H, Wt, maxLayers, shape });
-        localStorage.setItem('optiload_skus_v7', JSON.stringify(skuDatabase));
+        localStorage.setItem('optiload_skus_v8', JSON.stringify(skuDatabase));
         populateSelects();
         closeModal('skuManagerModal');
         onSkuSelectChanged();
@@ -2032,7 +1995,7 @@
     function deletePallet(idx) {
         if (standardPalletSizes.length <= 1) return alert("En az 1 palet kalmalıdır.");
         standardPalletSizes.splice(idx, 1);
-        localStorage.setItem('optiload_pallets_v7', JSON.stringify(standardPalletSizes));
+        localStorage.setItem('optiload_pallets_v8', JSON.stringify(standardPalletSizes));
         populatePalletSelect();
         renderPalletManagerList();
         debouncedRunEngine();
@@ -2045,7 +2008,7 @@
             H: parseFloat(document.getElementById('mngPalH')?.value) || 145,
             tare: parseFloat(document.getElementById('mngPalTare')?.value) || 25
         });
-        localStorage.setItem('optiload_pallets_v7', JSON.stringify(standardPalletSizes));
+        localStorage.setItem('optiload_pallets_v8', JSON.stringify(standardPalletSizes));
         populatePalletSelect();
         closeModal('palletManagerModal');
         debouncedRunEngine();
@@ -2080,7 +2043,7 @@
 
         if (bestPallet) {
             standardPalletSizes.push(bestPallet);
-            localStorage.setItem('optiload_pallets_v7', JSON.stringify(standardPalletSizes));
+            localStorage.setItem('optiload_pallets_v8', JSON.stringify(standardPalletSizes));
             populatePalletSelect();
             const palSel = document.getElementById('specificBaseSize');
             if (palSel) palSel.value = standardPalletSizes.length - 1;
