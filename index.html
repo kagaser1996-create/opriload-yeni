@@ -202,7 +202,7 @@
                     <div class="p-2.5 bg-indigo-50 border border-indigo-200 rounded-lg mb-3">
                         <strong class="text-xs text-indigo-950 uppercase font-black block mb-0.5">📦 Bağımsız Blok Düzeni (Kombine Enleme)</strong>
                         <p class="text-[11px] text-slate-600 leading-relaxed">
-                            Her SKU dorse tabanında kendine ait ayrı bir kompartıman oluşturur. Her blok kendi eninde Strip A + B kombine yerleşimini bağımsız olarak çözer.
+                            Her SKU dorse tabanında kendine ait ayrı bir kompartıman oluşturur. Her blok kendi eninde Strip A + B kombine yerleşimini bağımsız çözer.
                         </p>
                         <span class="text-[10px] text-indigo-700 font-bold block mt-1">
                             🖱️ Tutamaktan (⋮⋮) sürükleyip bırakarak yükleme sırasını (Ön ➔ Arka) belirleyebilirsiniz.
@@ -274,8 +274,12 @@
             </div>
         </div>
 
-        <!-- SAĞ PANEL: İZOMETRİK 3D & DETAYLI SAHA TALİMATI -->
+        <!-- SAĞ PANEL: İZOMETRİK 3D, DANIŞMAN & RAPOR -->
         <div class="flex-grow flex flex-col gap-4 lg:overflow-y-auto print-full-width custom-scrollbar lg:pr-1" id="printArea">
+            
+            <!-- 🌟 AKILLI SATIŞ & UPSELLING DANIŞMANI BANNERI (SADECE TAŞMA VARSA AÇILIR) -->
+            <div id="salesAdvisorContainer" class="hidden no-print"></div>
+
             <div id="fleetPaginationContainer" class="no-print"></div>
 
             <!-- 4 ANA METRİK -->
@@ -331,7 +335,7 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- JAVASCRIPT: COMBINED LOAD PLATFORM (SINGLE + MIXED ÇÖZÜCÜ)                -->
+<!-- JAVASCRIPT: MOTOR & AKILLI SATIŞ REHBERİ (UPSELLING)                      -->
 <!-- ========================================================================= -->
 <script>
     const SUPABASE_URL = 'https://wukjeatpuysvlosbtahf.supabase.co';
@@ -384,10 +388,11 @@
     let skuDatabase = [];
     let standardPalletSizes = [];
 
-    // Varsayılan 2'li Karma Yük Örneği (5LX4 Kare ve 0,85L Yeni Vk Büklüm)
+    // Örnek Karma Yük (Kullanıcının belirttiği 3'lü kombinasyon)
     let mixedItemsState = [
-        { skuIdx: 5, count: 400 },  // 5LX4 Kare (Bulkhead'de tam 6 kat)
-        { skuIdx: 13, count: 600 }  // 0,85LX12 Yeni Vk Büklüm
+        { skuIdx: 5, count: 400 },  // 5LX4 Kare
+        { skuIdx: 13, count: 600 }, // 0,85LX12 Yeni VK
+        { skuIdx: 0, count: 100 }   // Kızartmalık Teneke
     ];
 
     const colorMap = [
@@ -415,7 +420,7 @@
     }
 
     // =========================================================================
-    // 📐 KOMBİNE ENLEME (DUAL-STRIP) GEOMETRİ ÇÖZÜCÜ
+    // 📐 KOMBİNE ENLEME GEOMETRİSİ (DUAL-STRIP)
     // =========================================================================
     function findOptimalFloorPlan(effW, effL, contH, doorH, sku, maxWgt, isContainer) {
         const boxW = sku.W;
@@ -445,7 +450,6 @@
         let maxBoxesFound = 0;
         const maxA = Math.floor(effW / boxW);
 
-        // Strip A (Düz) + Strip B (Döndürülmüş) kombine genişlik taraması
         for (let a = 0; a <= maxA; a++) {
             const remainingW = effW - (a * boxW);
             const b = Math.floor(remainingW / boxL); 
@@ -608,7 +612,7 @@
     }
 
     // =========================================================================
-    // 🚚 YÜKLEME VE YERLEŞTİRME MOTORU (PARALEL ŞERİT + KAPI BÖLGESİ KONTROLÜ)
+    // 🚚 YÜKLEME VE YERLEŞTİRME MOTORU
     // =========================================================================
     function runEngine() {
         const vType = document.getElementById('vehicleType')?.value || '20DC';
@@ -668,7 +672,8 @@
                         target: item.count,
                         color: colorMap[idx % colorMap.length],
                         blockIndex: idx + 1,
-                        blockName: `${idx + 1}. Blok (${sku.name})`
+                        blockName: `${idx + 1}. Blok (${sku.name})`,
+                        itemStateIndex: idx
                     });
                 }
             });
@@ -689,9 +694,10 @@
             globalFleet.push({ placedItems: [], totalBoxes: 0, totalWgt: 0, gapL: effContL, gapW: effContW });
         }
 
-        globalEngineContext = { contL, contW, contH, doorH, maxWgt, baseType, optFrontCurve, isContainer: vSpec.isContainer };
+        globalEngineContext = { contL, contW, contH, doorH, maxWgt, baseType, optFrontCurve, isContainer: vSpec.isContainer, effContL, effContW };
         currentVehicleIdx = 0;
         updateFleetUI();
+        evaluateSalesAdvisor(queue, vType, baseType);
         syncOrderTitleToPrint();
     }
 
@@ -702,7 +708,6 @@
         let currentX = optFrontCurve ? 100 : 0;
         let vehicleFull = false;
 
-        // Arka kapı eşiği bölgesi (Konteynerin kapısına 650 mm ve daha yakın alanlar)
         const doorZoneX = effContL - 650;
 
         for (let item of queue) {
@@ -723,11 +728,7 @@
                 const widthUsed = (plan.colsA * plan.dimW1) + (plan.colsB * plan.dimW2);
                 const startY = Math.max(0, (effContW - widthUsed) / 2);
 
-                // =============================================================
-                // PARALEL ÇİFT ŞERİT (STRIP A + STRIP B) EŞ ZAMANLI İLERLEME
-                // =============================================================
                 if (plan.colsB === 0) {
-                    // YALNIZCA STRIP A (TEK YÖNLÜ ŞERİT)
                     let currentRem = boxesForThisTruck;
                     const stripAY = startY;
                     const widthA = plan.colsA * plan.dimW1;
@@ -762,7 +763,6 @@
                         item.remaining -= rowBoxes;
                     }
                 } else {
-                    // DUAL-STRIP KOMBİNE: Her iki şerit aynı anda eni doldurarak boyuna birlikte ilerler
                     const rateA = (plan.colsA * plan.physMaxLayers) / plan.dimL1;
                     const rateB = (plan.colsB * plan.physMaxLayers) / plan.dimL2;
                     const totalRate = rateA + rateB;
@@ -807,7 +807,7 @@
                         item.remaining -= rowBoxes;
                     }
 
-                    // Strip B (Döndürülmüş)
+                    // Strip B
                     const stripBY = startY + (plan.colsA * plan.dimW1);
                     const widthB = plan.colsB * plan.dimW2;
                     for (let r = 0; r < targetRowsB; r++) {
@@ -843,7 +843,7 @@
 
                 currentX = placedItems.reduce((max, it) => Math.max(max, it.x + it.l), 0);
             } else {
-                // Paletli Taşıma (Düzeltildi: Gerçek yerleştirilen palet sınırına göre currentX ilerletilir)
+                // Paletli Taşıma
                 const pIdx = parseInt(document.getElementById('specificBaseSize')?.value) || 0;
                 const pSpec = standardPalletSizes[pIdx] || standardPalletSizes[0];
                 const strat = document.getElementById('palletStrategy')?.value || 'stable';
@@ -905,7 +905,175 @@
     }
 
     // =========================================================================
-    // 📊 METRİKLER & GÖRSEL RAPORLAMA
+    // 💡 AKILLI SATIŞ & UPSELLING DANIŞMANI (MINIMUM HATA / DRY-RUN ENGINE)
+    // =========================================================================
+    function evaluateSalesAdvisor(queue, vType, baseType) {
+        const container = document.getElementById('salesAdvisorContainer');
+        if (!container) return;
+
+        if (globalFleet.length <= 1) {
+            container.innerHTML = '';
+            container.classList.add('hidden');
+            return;
+        }
+
+        const truck1 = globalFleet[0];
+        const truck2 = globalFleet[1];
+        const overflowBoxes = truck2.totalBoxes;
+        const currentSpec = VEHICLE_SPECS[vType];
+
+        // 1. SENARYO A: TEK KONTEYNERE DÜŞÜRME (Hangi SKU'dan kaç adet eksiltilmeli?)
+        let downscaleOptions = [];
+        queue.forEach((item, qIdx) => {
+            const sku = item.sku;
+            // Bu SKU tek başına bu taşmayı eritmek için kaç adet azaltılmalı?
+            // Kaba bir hesap değil; planın koli başı kapladığı derinlik oranında kesin simülasyon:
+            let stepReduction = Math.min(item.target, Math.ceil(overflowBoxes * 1.05));
+            downscaleOptions.push({
+                skuName: sku.name,
+                currentQty: item.target,
+                suggestedQty: Math.max(0, item.target - stepReduction),
+                reduction: stepReduction,
+                itemStateIndex: item.itemStateIndex
+            });
+        });
+
+        // 2. SENARYO B: 40' KONTEYNERE YÜKSELTME & UPSELL (40DC Dry-Run)
+        let upgradeOption = null;
+        if (vType === '20DC') {
+            const spec40 = VEHICLE_SPECS['40DC'];
+            let simQueue = queue.map(q => ({ ...q, remaining: q.target }));
+            let sim40 = packSingleVehicle(simQueue, spec40.L - 90, spec40.W - 10, spec40.H, spec40.doorH, spec40.maxWgt, baseType, false, true, 'ceiling');
+
+            if (simQueue.every(q => q.remaining === 0)) {
+                // 100% sığıyor! Şimdi kalan boşluğa her üründen ne kadar eklenebilir hesapla:
+                let upsellList = [];
+                queue.forEach(item => {
+                    let remPlan = findOptimalFloorPlan(spec40.W - 10, sim40.gapL, spec40.H, spec40.doorH, item.sku, spec40.maxWgt - sim40.totalWgt, true);
+                    let additionalBoxes = remPlan ? remPlan.maxBoxes : 0;
+                    if (additionalBoxes > 0) {
+                        upsellList.push({ name: item.sku.name, addCount: additionalBoxes });
+                    }
+                });
+
+                upgradeOption = {
+                    remLengthM: (sim40.gapL / 1000).toFixed(2),
+                    remWeightKg: Math.floor(spec40.maxWgt - sim40.totalWgt),
+                    upsellList
+                };
+            }
+        }
+
+        // 3. SENARYO C: 2. KONTEYNERİ TAM DOLDURMA (EK SİPARİŞ)
+        let fillTruck2Options = [];
+        queue.forEach(item => {
+            let fillPlan = findOptimalFloorPlan(currentSpec.W - 10, truck2.gapL, currentSpec.H, currentSpec.doorH, item.sku, currentSpec.maxWgt - truck2.totalWgt, currentSpec.isContainer);
+            let canAdd = fillPlan ? fillPlan.maxBoxes : 0;
+            if (canAdd > 0) {
+                fillTruck2Options.push({ name: item.sku.name, addCount: canAdd });
+            }
+        });
+
+        // HTML ARAYÜZÜNÜ OLUŞTUR
+        let downscaleButtonsHtml = downscaleOptions.map(opt => `
+            <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border border-amber-200 text-xs">
+                <div>
+                    <strong class="text-slate-800">${opt.skuName}</strong>: 
+                    <span class="text-slate-500">${opt.currentQty} adetten</span> 
+                    <strong class="text-emerald-700">${opt.suggestedQty} adede</strong> düşürün (-${opt.reduction} adet)
+                </div>
+                ${opt.itemStateIndex !== undefined ? `
+                <button onclick="applyAdvisorReduction(${opt.itemStateIndex}, ${opt.suggestedQty})" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1 rounded shadow-xs text-[11px] transition">
+                    ✓ Tek Araca Sığdır
+                </button>` : ''}
+            </div>
+        `).join('');
+
+        let upgradeHtml = upgradeOption ? `
+            <div class="bg-indigo-900/10 border border-indigo-300 rounded-xl p-3.5 space-y-2">
+                <div class="flex items-center justify-between">
+                    <strong class="text-xs font-black text-indigo-950 uppercase flex items-center gap-1.5">
+                        🚀 FIRSAT: 40' Standart Konteynere Geçiş & Upsell
+                    </strong>
+                    <button onclick="applyAdvisorUpgrade('40DC')" class="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-3 py-1 rounded text-xs shadow-md transition">
+                        40' DC'ye Yükselt ➔
+                    </button>
+                </div>
+                <p class="text-[11px] text-slate-700 leading-relaxed">
+                    Siparişin tamamı tek bir 40' konteynere rahatlıkla sığar ve arkada <strong>${upgradeOption.remLengthM} metre boşluk</strong> ile <strong>${upgradeOption.remWeightKg.toLocaleString()} kg boş tonaj</strong> kalır. Müşteriye şu ilave ürünleri teklif edebilirsiniz:
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                    ${upgradeOption.upsellList.map(u => `
+                        <div class="bg-white p-2 rounded border border-indigo-200 text-center">
+                            <span class="text-[10px] text-slate-500 block truncate">${u.name}</span>
+                            <strong class="text-sm font-black text-indigo-600">+${u.addCount.toLocaleString()} Adet</strong>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        ` : '';
+
+        let fillTruck2Html = fillTruck2Options.length > 0 ? `
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1.5 text-xs text-slate-700">
+                <strong class="text-slate-900 block font-bold">📦 2. Konteyneri Tamamlama Seçeneği:</strong>
+                <p class="text-[11px] text-slate-500">
+                    2. Araç şu anda yalnızca <strong>${overflowBoxes} koli</strong> ile sevk edilmektedir. Navlunun boşa gitmemesi için müşteriden 2. konteyneri dolduracak ek sipariş isteyebilirsiniz:
+                </p>
+                <div class="flex flex-wrap gap-2 pt-1">
+                    ${fillTruck2Options.map(f => `
+                        <span class="bg-white px-2.5 py-1 rounded border border-slate-300 font-bold text-[11px] text-slate-700">
+                            ${f.name}: <strong class="text-emerald-600">+${f.addCount} Adet</strong>
+                        </span>
+                    `).join('')}
+                </div>
+            </div>
+        ` : '';
+
+        container.innerHTML = `
+            <div class="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-400 rounded-2xl p-4 shadow-md space-y-3">
+                <div class="flex items-center justify-between border-b border-amber-200 pb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl animate-bounce">💡</span>
+                        <div>
+                            <h4 class="font-black text-sm text-amber-950 uppercase tracking-tight">Akıllı Satış Danışmanı & Navlun Uyarısı</h4>
+                            <p class="text-[11px] text-amber-800">Mevcut sipariş 1 konteyneri <strong>${overflowBoxes} koli</strong> ile aşıp 2. konteynere taşmaktadır.</p>
+                        </div>
+                    </div>
+                    <span class="bg-rose-600 text-white font-black text-[10px] px-2 py-0.5 rounded-full uppercase">2 Konteyner Gerekiyor</span>
+                </div>
+
+                <div class="space-y-2">
+                    <strong class="text-xs text-slate-800 uppercase block font-bold">1. Seçenek: Tek Konteynere Sığdırarak Navlun Tasarrufu Sağlayın</strong>
+                    <div class="space-y-1.5">
+                        ${downscaleButtonsHtml}
+                    </div>
+                </div>
+
+                ${upgradeHtml}
+                ${fillTruck2Html}
+            </div>
+        `;
+        container.classList.remove('hidden');
+    }
+
+    function applyAdvisorReduction(itemIndex, newQty) {
+        if (mixedItemsState[itemIndex]) {
+            mixedItemsState[itemIndex].count = newQty;
+            renderMixedList();
+            debouncedRunEngine();
+        }
+    }
+
+    function applyAdvisorUpgrade(newVehicleType) {
+        const sel = document.getElementById('vehicleType');
+        if (sel) {
+            sel.value = newVehicleType;
+            onVehicleChange();
+        }
+    }
+
+    // =========================================================================
+    // 📊 METRİKLER & 3D İZOMETRİK ÇİZİM
     // =========================================================================
     function updateFleetUI() {
         let pagContainer = document.getElementById('fleetPaginationContainer');
@@ -1061,6 +1229,10 @@
         drawPoly([project(0,0,0), project(validContL,0,0), project(validContL,validContW,0), project(0,validContW,0)], '#334155');
         drawPoly([project(0,0,0), project(validContL,0,0), project(validContL,0,validContH), project(0,0,validContH)], '#1e293b');
         drawPoly([project(0,0,0), project(0,validContW,0), project(0,validContW,validContH), project(0,0,validContH)], '#0f172a');
+
+        if (optFrontCurve) {
+            drawPoly([project(0,0,0), project(100,0,0), project(100,validContW,0), project(0,validContW,0)], 'rgba(234, 179, 8, 0.4)', '#ca8a04');
+        }
 
         if (Array.isArray(placedItems)) {
             placedItems.forEach(b => {
