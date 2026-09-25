@@ -898,16 +898,15 @@
             return;
         }
 
-        const truck1 = globalFleet[0];
-        const truck2 = globalFleet[1];
-        const overflowBoxes = truck2.totalBoxes;
+        const N = globalFleet.length;
+        const lastTruck = globalFleet[N - 1];
+        const overflowBoxes = lastTruck.totalBoxes;
         const currentSpec = VEHICLE_SPECS[vType];
 
-        // 1. SEÇENEK: Tek Konteynere Sığdırma (Taşan SKU'yu Azalt)
-        // Genellikle kuyrukta son yerleşen veya taşan SKU azaltılır
+        // 1. SEÇENEK: Son Aracı İptal Et & Siparişi N-1 Araca Sığdır
         let candidateItem = queue[queue.length - 1];
         for (let q = queue.length - 1; q >= 0; q--) {
-            if (truck2.placedItems.some(pi => pi.id === queue[q].sku.name)) {
+            if (lastTruck.placedItems.some(pi => pi.id === queue[q].sku.name)) {
                 candidateItem = queue[q];
                 break;
             }
@@ -924,8 +923,8 @@
         else if (vType === '40DC') { nextVeh = '40HC'; nextVehName = "40' High Cube"; }
         else if (vType === '40HC') { nextVeh = 'TIR'; nextVehName = "Standart TIR (13.60m)"; }
 
-        // 3. SEÇENEK: 2. Konteyneri Tamamen Doldurma Miktarı
-        let fillPlan = findOptimalFloorPlan(currentSpec.W - 10, truck2.gapL, currentSpec.H, currentSpec.doorH, candidateItem.sku, currentSpec.maxWgt - truck2.totalWgt, currentSpec.isContainer);
+        // 3. SEÇENEK: Son Konteyneri Tamamen Doldurma Miktarı
+        let fillPlan = findOptimalFloorPlan(currentSpec.W - 10, lastTruck.gapL, currentSpec.H, currentSpec.doorH, candidateItem.sku, currentSpec.maxWgt - lastTruck.totalWgt, currentSpec.isContainer);
         let neededToFillTruck2 = fillPlan ? fillPlan.maxBoxes : 400;
 
         container.innerHTML = `
@@ -938,7 +937,7 @@
                             <p class="text-xs text-indigo-300">Aşağıdaki 3 stratejik seçenekten birini tek tıkla uygulayabilirsiniz:</p>
                         </div>
                     </div>
-                    <span class="bg-rose-500 text-white font-black text-[11px] px-3 py-1 rounded-full uppercase tracking-wider self-start sm:self-auto">2 Konteyner Gerekiyor</span>
+                    <span class="bg-rose-500 text-white font-black text-[11px] px-3 py-1 rounded-full uppercase tracking-wider self-start sm:self-auto">${N} Konteyner Gerekiyor</span>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -948,7 +947,7 @@
                             <span class="bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded text-[10px] uppercase">Seçenek 1: Navlun Tasarrufu</span>
                             <strong class="text-white text-xs block font-black">Tek Konteynere Sığdır</strong>
                             <p class="text-[11px] text-slate-300 leading-relaxed">
-                                <strong>${candidateItem.sku.name}</strong> miktarını <strong>${candidateItem.target}</strong> adetten <strong>${newSuggestedQty}</strong> adede indirin. 2. konteyner navlunu tamamen iptal olur.
+                                <strong>${candidateItem.sku.name}</strong> miktarını <strong>${candidateItem.target}</strong> adetten <strong>${newSuggestedQty}</strong> adede indirin. Son konteyner navlunu tamamen iptal olur.
                             </p>
                         </div>
                         <button onclick="applyAdvisorFitOne(${targetStateIdx}, ${newSuggestedQty})" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2 rounded-lg text-xs transition shadow-md">
@@ -974,13 +973,13 @@
                     <div class="bg-slate-800/90 border border-slate-700 hover:border-emerald-400 p-3.5 rounded-xl flex flex-col justify-between transition-all group">
                         <div class="space-y-1.5 mb-3">
                             <span class="bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded text-[10px] uppercase">Seçenek 3: Ciro Artırma (Upsell)</span>
-                            <strong class="text-white text-xs block font-black">2. Konteyneri Tamamen Doldur</strong>
+                            <strong class="text-white text-xs block font-black">Son Konteyneri Tamamen Doldur</strong>
                             <p class="text-[11px] text-slate-300 leading-relaxed">
-                                2. Konteynerde kalan boşluğa <strong>+${neededToFillTruck2.toLocaleString()} adet</strong> daha <strong>${candidateItem.sku.name}</strong> ekleyerek 2 aracı da tam %100 doldurun.
+                                Son Konteynerde kalan boşluğa <strong>+${neededToFillTruck2.toLocaleString()} adet</strong> daha <strong>${candidateItem.sku.name}</strong> ekleyerek aracı tam %100 doldurun.
                             </p>
                         </div>
                         <button onclick="applyAdvisorFillSecond(${targetStateIdx}, ${neededToFillTruck2})" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-2 rounded-lg text-xs transition shadow-md">
-                            📦 2. Konteyneri Doldur (+${neededToFillTruck2} Adet Ekle)
+                            📦 Konteyneri Doldur (+${neededToFillTruck2} Adet Ekle)
                         </button>
                     </div>
                 </div>
@@ -1020,512 +1019,6 @@
         debouncedRunEngine();
     }
 
-    // =========================================================================
-    // 📊 METRİKLER & 3D İZOMETRİK ÇİZİM
-    // =========================================================================
-    function updateFleetUI() {
-        let pagContainer = document.getElementById('fleetPaginationContainer');
-        if (pagContainer) {
-            if (globalFleet.length > 1) {
-                let pagHtml = `<div class="flex gap-2 mb-2 p-2 bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">`;
-                globalFleet.forEach((v, idx) => {
-                    let activeClass = idx === currentVehicleIdx ? 'bg-sky-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200';
-                    pagHtml += `<button onclick="currentVehicleIdx = ${idx}; updateFleetUI();" class="px-4 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap ${activeClass}">🚚 Araç ${idx + 1} (${v.totalBoxes} Adet Taşıma)</button>`;
-                });
-                pagHtml += `</div>`;
-                pagContainer.innerHTML = pagHtml;
-            } else {
-                pagContainer.innerHTML = '';
-            }
-        }
-
-        let truck = globalFleet[currentVehicleIdx] || { placedItems: [], totalBoxes: 0, totalWgt: 0, gapL: 0, gapW: 0 };
-        const ctx = globalEngineContext;
-        const isPalletMode = (document.getElementById('baseType')?.value !== 'floor');
-
-        setElText('resTotalBoxes', `${truck.totalBoxes.toLocaleString()} Adet`);
-        setElText('resTotalBoxesSub', isPalletMode ? `${truck.placedItems.length} Palet Üzerinde Net Yük` : `Dorse Tabanında Dökme Yük`);
-        setElText('resWeight', `${truck.totalWgt.toLocaleString(undefined, {maximumFractionDigits:1})} kg`);
-
-        let weightPct = Math.min(100, Math.round((truck.totalWgt / (ctx.maxWgt || 27800)) * 100));
-        setElText('resWeightSub', `Yasal Sınır: ${(ctx.maxWgt || 27800).toLocaleString()} kg (%${weightPct} Dolu)`);
-
-        if (isPalletMode) {
-            setElText('lblMetricLoads', "Taşınan Palet Sayısı");
-            setElText('resLoads', `${truck.placedItems.length} Palet`);
-            let uPerPal = truck.placedItems[0]?.palletDesign?.totalBoxes || 0;
-            setElText('resLoadsSub', `Palet Başı: ${uPerPal} Adet`);
-        } else {
-            setElText('lblMetricLoads', "Taşıma Sıra / Blok");
-            setElText('resLoads', `${truck.placedItems.length} Sıra / Blok`);
-            setElText('resLoadsSub', currentMode === 'mixed' ? "Ayrık Homojen Bloklar" : "Dorse Boyunca Sıralı");
-        }
-
-        let momentX = 0;
-        truck.placedItems.forEach(p => { momentX += (p.x + p.l/2) * p.wgt; });
-        let cogX = truck.totalWgt > 0 ? (momentX / truck.totalWgt) : 0;
-        setElText('resStatusSub', `Dengeli Yük (CoG: ${(cogX/1000).toFixed(1)}m)`);
-
-        let detailsHtml = '';
-
-        if (!isPalletMode) {
-            let groupedItems = {};
-            truck.placedItems.forEach(item => {
-                if (!groupedItems[item.id]) {
-                    groupedItems[item.id] = {
-                        name: item.id, totalBoxes: 0, totalRows: 0, cols: item.cols,
-                        singleBoxL: item.singleBoxL, singleBoxW: item.singleBoxW, singleBoxH: item.singleBoxH,
-                        color: item.color, isRound: item.isRound, totalWeight: 0, layerCounts: {}
-                    };
-                }
-                groupedItems[item.id].totalBoxes += item.boxes;
-                groupedItems[item.id].totalRows += (item.rows || 1);
-                groupedItems[item.id].totalWeight += item.wgt;
-                groupedItems[item.id].layerCounts[item.layers] = (groupedItems[item.id].layerCounts[item.layers] || 0) + 1;
-            });
-
-            let groupList = Object.values(groupedItems);
-            let blocksExplanation = groupList.map((g, bIdx) => {
-                let layerBreakdownText = Object.entries(g.layerCounts)
-                    .sort((a,b) => b[0] - a[0])
-                    .map(([lyr, rws]) => `<strong>${rws} Sıra ${lyr} Kat</strong>`).join(' ve ');
-
-                return `
-                    <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-slate-800 space-y-2">
-                        <div class="flex items-center justify-between border-b pb-2">
-                            <strong class="text-xs font-black text-slate-900">${bIdx + 1}. Blok: ${g.isRound ? '⚪ ' : '⏹ '}${g.name}</strong>
-                            <span class="text-emerald-700 bg-emerald-100 font-bold px-2.5 py-0.5 rounded text-xs">${g.totalBoxes.toLocaleString()} Adet &bull; ${g.totalWeight.toLocaleString(undefined, {maximumFractionDigits:1})} kg</span>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-[11px] text-slate-700">
-                            <div class="bg-white p-2 rounded border border-slate-200">
-                                <strong class="text-indigo-900 block font-bold mb-0.5">📐 Yerleşim Düzeni:</strong>
-                                Kombine (Strip A + B) yerleşim ile konteyner eni maksimum CBM ile doldurulmuştur.
-                            </div>
-                            <div class="bg-white p-2 rounded border border-slate-200">
-                                <strong class="text-indigo-900 block font-bold mb-0.5">🚪 Tavan & Kapı Kademesi:</strong>
-                                İç sıralarda tam tavan istifi; arka kapıdaki sıralarda kapı kirişi kademelendirmesi aktif.
-                            </div>
-                            <div class="bg-white p-2 rounded border border-slate-200">
-                                <strong class="text-indigo-900 block font-bold mb-0.5">⬆️ Kat Dağılımı:</strong>
-                                ${layerBreakdownText}.
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            detailsHtml = `
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-xs space-y-3">
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-2 gap-2">
-                        <div>
-                            <strong class="text-slate-800 text-sm block">🚚 DORSE TABANI DÖKME YERLEŞİM TALİMATI</strong>
-                            <span class="text-[11px] text-slate-500">Kombine genişlik çözücü ve kapı önü kademelendirme</span>
-                        </div>
-                        <span class="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded font-bold">✓ Maksimum CBM Optimizasyonu</span>
-                    </div>
-                    <div class="space-y-2.5">
-                        ${blocksExplanation}
-                    </div>
-                </div>
-            `;
-        }
-
-        const optListEl = document.getElementById('optimizationDetailsList');
-        if (optListEl) optListEl.innerHTML = detailsHtml;
-
-        lastRenderData = { placedItems: truck.placedItems, contL: ctx.contL, contW: ctx.contW, contH: ctx.contH, optFrontCurve: ctx.optFrontCurve, cogX };
-        performRender(lastRenderData);
-    }
-
-    function performRender(data) {
-        if (!data) return;
-        const { placedItems, contL, contW, contH, optFrontCurve, cogX } = data;
-        const canvas = document.getElementById('contCanvas');
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        const cosA = Math.cos(0.523599);
-        const sinA = Math.sin(0.523599);
-        const validContL = contL || 5890;
-        const validContW = contW || 2345;
-        const validContH = contH || 2385;
-
-        let scale = Math.min((canvas.width - 100) / ((validContL + validContW) * cosA), (canvas.height - 100) / ((validContL + validContW) * sinA + validContH)) * (zoomLevel || 1);
-        if (!isFinite(scale) || scale <= 0) scale = 0.035;
-
-        let cx = canvas.width / 2 + (panX || 0);
-        let cy = canvas.height / 2 + 50 + (panY || 0);
-
-        function project(x, y, z) {
-            return { x: cx + (x - y) * cosA * scale, y: cy + (x + y) * sinA * scale - (z * scale) };
-        }
-
-        function drawPoly(pts, fill, stroke = 'rgba(0,0,0,0.2)', width = 1) {
-            ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
-            for(let i=1; i<pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-            ctx.closePath();
-            if (fill) { ctx.fillStyle = fill; ctx.fill(); }
-            if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = width; ctx.stroke(); }
-        }
-
-        function drawLine(p1, p2, stroke = 'rgba(0,0,0,0.35)', width = 1) {
-            ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
-            ctx.strokeStyle = stroke; ctx.lineWidth = width; ctx.stroke();
-        }
-
-        drawPoly([project(0,0,0), project(validContL,0,0), project(validContL,validContW,0), project(0,validContW,0)], '#334155');
-        drawPoly([project(0,0,0), project(validContL,0,0), project(validContL,0,validContH), project(0,0,validContH)], '#1e293b');
-        drawPoly([project(0,0,0), project(0,validContW,0), project(0,validContW,validContH), project(0,0,validContH)], '#0f172a');
-
-        if (optFrontCurve) {
-            drawPoly([project(0,0,0), project(100,0,0), project(100,validContW,0), project(0,validContW,0)], 'rgba(234, 179, 8, 0.4)', '#ca8a04');
-        }
-
-        if (Array.isArray(placedItems)) {
-            placedItems.forEach(b => {
-                const z0 = b.z || 0;
-                const z1 = z0 + b.h;
-
-                drawPoly([project(b.x + b.l, b.y, z0), project(b.x + b.l, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z1), project(b.x + b.l, b.y, z1)], b.color.right, 'rgba(0,0,0,0.6)', 1.2);
-                drawPoly([project(b.x, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z1), project(b.x, b.y + b.w, z1)], b.color.left, 'rgba(0,0,0,0.6)', 1.2);
-                drawPoly([project(b.x, b.y, z1), project(b.x + b.l, b.y, z1), project(b.x + b.l, b.y + b.w, z1), project(b.x, b.y + b.w, z1)], b.color.top, 'rgba(0,0,0,0.6)', 1.2);
-
-                if (b.layers && b.layers > 1) {
-                    for (let l = 1; l < b.layers; l++) {
-                        let z = z0 + (l * b.singleBoxH);
-                        drawLine(project(b.x + b.l, b.y, z), project(b.x + b.l, b.y + b.w, z), 'rgba(0,0,0,0.35)');
-                        drawLine(project(b.x, b.y + b.w, z), project(b.x + b.l, b.y + b.w, z), 'rgba(0,0,0,0.35)');
-                    }
-                }
-
-                if (b.cols && b.cols > 1) {
-                    for (let c = 1; c < b.cols; c++) {
-                        let y = b.y + c * (b.w / b.cols);
-                        drawLine(project(b.x + b.l, y, z0), project(b.x + b.l, y, z1), 'rgba(0,0,0,0.35)');
-                        drawLine(project(b.x, y, z1), project(b.x + b.l, y, z1), 'rgba(0,0,0,0.4)');
-                    }
-                }
-            });
-        }
-
-        if (placedItems && placedItems.length > 0) {
-            let cogPt = project(cogX, validContW / 2, validContH / 2);
-            ctx.beginPath(); ctx.arc(cogPt.x, cogPt.y, 6, 0, 2*Math.PI);
-            ctx.fillStyle = '#e11d48'; ctx.fill();
-            ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke();
-            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 9px Inter'; ctx.fillText('⌖ CoG', cogPt.x - 12, cogPt.y - 10);
-        }
-    }
-
-    function initCanvasInteractions() {
-        const canvas = document.getElementById('contCanvas');
-        if (!canvas) return;
-        canvas.addEventListener('mousedown', (e) => { isDragging = true; startX = e.clientX - panX; startY = e.clientY - panY; });
-        window.addEventListener('mousemove', (e) => { if (isDragging) { panX = e.clientX - startX; panY = e.clientY - startY; if (lastRenderData) performRender(lastRenderData); } });
-        window.addEventListener('mouseup', () => { isDragging = false; });
-        canvas.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            zoomLevel = Math.max(0.4, Math.min(6, zoomLevel * (e.deltaY < 0 ? 1.1 : 0.9)));
-            if (lastRenderData) performRender(lastRenderData);
-        }, { passive: false });
-    }
-
-    function resetView() { panX = 0; panY = 0; zoomLevel = 1; if (lastRenderData) performRender(lastRenderData); }
-
-    function populateSelects() {
-        const select = document.getElementById('skuSelect');
-        if (!select) return;
-        select.innerHTML = "";
-        skuDatabase.forEach((sku, idx) => {
-            select.options.add(new Option(`${sku.shape === 'round' ? '⚪' : '⏹'} ${sku.name} (${sku.W}x${sku.L}x${sku.H})`, idx));
-        });
-    }
-
-    function populatePalletSelect() {
-        const select = document.getElementById('specificBaseSize');
-        if (!select) return;
-        select.innerHTML = "";
-        standardPalletSizes.forEach((p, idx) => {
-            select.options.add(new Option(`${p.name} (${p.L}x${p.W}x${p.H} mm)`, idx));
-        });
-    }
-
-    function populateSKU() {
-        const idx = parseInt(document.getElementById('skuSelect')?.value) || 0;
-        const sku = skuDatabase[idx];
-        if (!sku) return;
-        const boxLEl = document.getElementById('boxL'); if (boxLEl) boxLEl.value = sku.L;
-        const boxWEl = document.getElementById('boxW'); if (boxWEl) boxWEl.value = sku.W;
-        const boxHEl = document.getElementById('boxH'); if (boxHEl) boxHEl.value = sku.H;
-        const boxWtEl = document.getElementById('boxWt'); if (boxWtEl) boxWtEl.value = sku.Wt;
-
-        setElText('lblBoxW', sku.shape === 'round' ? 'Çap (D)' : 'En (E - mm)');
-        setElText('lblBoxL', sku.shape === 'round' ? 'Çap (D)' : 'Boy (B - mm)');
-    }
-
-    function updateVehicleDims() {
-        const vType = document.getElementById('vehicleType')?.value || '20DC';
-        const vSpec = VEHICLE_SPECS[vType] || VEHICLE_SPECS['20DC'];
-        
-        const mWEl = document.getElementById('maxWgt'); if (mWEl) mWEl.value = vSpec.maxWgt;
-        const dHEl = document.getElementById('containerDoorHeight'); if (dHEl) dHEl.value = vSpec.doorH;
-        
-        const curveLabel = document.getElementById('optFrontCurveLabel');
-        if (curveLabel) curveLabel.style.display = (vType === "TIR") ? 'flex' : 'none';
-        if (vType !== "TIR") {
-            const optCurve = document.getElementById('optFrontCurve');
-            if (optCurve) optCurve.checked = false;
-        }
-        syncOrderTitleToPrint();
-    }
-
-    function autoSyncSingleTargetCapacity() {
-        const vType = document.getElementById('vehicleType')?.value || '20DC';
-        const vSpec = VEHICLE_SPECS[vType] || VEHICLE_SPECS['20DC'];
-        const sku = skuDatabase[parseInt(document.getElementById('skuSelect')?.value) || 0];
-        if (!sku) return;
-
-        const maxWgt = parseInt(document.getElementById('maxWgt')?.value) || vSpec.maxWgt;
-        let effContL = vSpec.L - 10;
-        let effContW = vSpec.W - 10;
-
-        if (vType === 'TIR' && document.getElementById('optFrontCurve')?.checked) effContL -= 100;
-        if (document.getElementById('optDoor')?.checked) effContL -= 80;
-        if (document.getElementById('optAirbag')?.checked) effContW -= 80;
-        if (document.getElementById('optLashing')?.checked) effContL -= 150;
-
-        const contH = vSpec.H;
-        const doorH = vSpec.doorH;
-
-        let totalMax = 0;
-        if (document.getElementById('baseType')?.value === 'floor') {
-            const plan = findOptimalFloorPlan(effContW, effContL, contH, doorH, sku, maxWgt, vSpec.isContainer);
-            totalMax = plan ? plan.maxBoxes : Math.floor(maxWgt / sku.Wt);
-        } else {
-            const pSpec = standardPalletSizes[parseInt(document.getElementById('specificBaseSize')?.value) || 0] || standardPalletSizes[0];
-            const pDesign = calculateOptimalPalletDesign({
-                boxL: sku.L, boxW: sku.W, boxH: sku.H, boxWt: sku.Wt, maxLayersBCT: sku.maxLayers,
-                palletL: pSpec.L, palletW: pSpec.W, palletBaseH: pSpec.H, palletTare: pSpec.tare,
-                warehouseRackH: parseInt(document.getElementById('rackHeight')?.value) || 1800,
-                containerDoorH: doorH, containerCeilingH: contH,
-                shape: sku.shape || 'box', strategy: document.getElementById('palletStrategy')?.value || 'stable'
-            });
-            const tPals = Math.max(Math.floor(effContW / pSpec.W) * Math.floor(effContL / pSpec.L), Math.floor(effContW / pSpec.L) * Math.floor(effContL / pSpec.W));
-            totalMax = Math.min(tPals * pDesign.totalBoxes, Math.floor(maxWgt / sku.Wt));
-        }
-
-        const targetEl = document.getElementById('targetBoxes');
-        if (!isUserDefinedTarget || targetEl?.value === '') {
-            if (targetEl) targetEl.value = totalMax;
-        }
-        setElText('capacityHintBadge', `Kapasite: ${totalMax} Adet`);
-    }
-
-    function switchTab(mode) {
-        currentMode = mode;
-        const tabS = document.getElementById('tab-single'); if (tabS) tabS.className = mode === 'single' ? 'tab-btn active text-sm text-center py-3' : 'tab-btn text-sm text-slate-500 text-center py-3';
-        const tabM = document.getElementById('tab-mixed'); if (tabM) tabM.className = mode === 'mixed' ? 'tab-btn active text-sm text-center py-3' : 'tab-btn text-sm text-slate-500 text-center py-3';
-        const panS = document.getElementById('panel-single'); if (panS) panS.style.display = mode === 'single' ? 'block' : 'none';
-        const panM = document.getElementById('panel-mixed'); if (panM) panM.style.display = mode === 'mixed' ? 'block' : 'none';
-        debouncedRunEngine();
-    }
-
-    function handleBaseChange() {
-        const bt = document.getElementById('baseType')?.value || 'floor';
-        const palGrp = document.getElementById('palletDropdownGroup');
-        if (palGrp) palGrp.style.display = (bt === 'floor') ? 'none' : 'block';
-        syncOrderTitleToPrint();
-    }
-
-    function syncOrderTitleToPrint() {
-        const titleVal = document.getElementById('orderTitle')?.value.trim() || 'İsimsiz Talep';
-        setElText('printOrderTitleDisplay', titleVal);
-        setElText('printDateSpan', new Date().toLocaleDateString('tr-TR'));
-    }
-
-    function onVehicleChange() {
-        isUserDefinedTarget = false;
-        const targetEl = document.getElementById('targetBoxes');
-        if (targetEl) targetEl.value = '';
-        updateVehicleDims();
-        autoSyncSingleTargetCapacity();
-        debouncedRunEngine();
-    }
-
-    function onSkuSelectChanged() {
-        isUserDefinedTarget = false;
-        const targetEl = document.getElementById('targetBoxes');
-        if (targetEl) targetEl.value = '';
-        populateSKU();
-        autoSyncSingleTargetCapacity();
-        debouncedRunEngine();
-    }
-
-    // =========================================================================
-    // 🔀 REAKTİF DRAG-AND-DROP: BLOK SIRALAMASI
-    // =========================================================================
-    let draggedIndex = null;
-
-    function renderMixedList() {
-        const list = document.getElementById('mixedList');
-        if (!list) return;
-        list.innerHTML = '';
-
-        mixedItemsState.forEach((item, idx) => {
-            const row = document.createElement('div');
-            row.className = "mixed-row p-2.5 bg-white border border-slate-200 rounded-xl shadow-xs flex flex-col gap-2 transition hover:border-sky-400 select-none cursor-default";
-            row.draggable = true;
-            row.dataset.index = idx;
-
-            let options = skuDatabase.map((s, i) => `<option value="${i}" ${i === item.skuIdx ? 'selected' : ''}>${s.shape === 'round' ? '⚪' : '⏹'} ${s.name} (${s.W}x${s.L}x${s.H})</option>`).join('');
-
-            const badgeText = idx === 0 
-                ? "1. Blok (Ön Bölüm / Aynaya Dayalı)" 
-                : (idx === mixedItemsState.length - 1 ? `${idx + 1}. Blok (Kapı Tarafı)` : `${idx + 1}. Blok (Orta Bölüm)`);
-            const badgeClass = idx === 0 
-                ? "bg-indigo-100 text-indigo-900 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tight" 
-                : "bg-sky-100 text-sky-800 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tight";
-
-            row.innerHTML = `
-                <div class="flex items-center justify-between gap-2 border-b pb-1.5">
-                    <div class="flex items-center gap-2">
-                        <span class="drag-handle text-slate-400 hover:text-slate-800 font-bold px-1.5 py-0.5 text-base cursor-grab select-none active:cursor-grabbing" title="Sürükleyip Sırayı Değiştirin">⋮⋮</span>
-                        <span class="${badgeClass}">${badgeText}</span>
-                    </div>
-                    <button onclick="removeMixedRow(${idx})" class="text-rose-500 hover:text-rose-700 font-bold px-2 py-0.5 text-xs" title="Satırı Sil">✕</button>
-                </div>
-
-                <div class="flex gap-2 items-center">
-                    <select class="w-[60%] p-2 border rounded-lg text-xs mixed-sku font-semibold bg-slate-50" onchange="onMixedSkuChange(${idx}, this.value)">${options}</select>
-                    <input type="number" class="w-[40%] p-2 border rounded-lg text-xs mixed-val font-bold text-sky-700 bg-slate-50" placeholder="Adet" value="${item.count}" oninput="onMixedCountChange(${idx}, this.value)">
-                </div>
-            `;
-
-            row.addEventListener('dragstart', (e) => {
-                draggedIndex = idx;
-                e.dataTransfer.effectAllowed = 'move';
-                row.classList.add('opacity-40', 'bg-sky-50', 'border-sky-500');
-            });
-
-            row.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-            });
-
-            row.addEventListener('drop', (e) => {
-                e.preventDefault();
-                const targetIndex = parseInt(row.dataset.index);
-                if (draggedIndex !== null && draggedIndex !== targetIndex) {
-                    const movedItem = mixedItemsState.splice(draggedIndex, 1)[0];
-                    mixedItemsState.splice(targetIndex, 0, movedItem);
-                    renderMixedList();
-                    debouncedRunEngine();
-                }
-            });
-
-            row.addEventListener('dragend', () => {
-                draggedIndex = null;
-                row.classList.remove('opacity-40', 'bg-sky-50', 'border-sky-500');
-            });
-
-            list.appendChild(row);
-        });
-    }
-
-    function addNewMixedRow() {
-        mixedItemsState.push({ skuIdx: 0, count: 100 });
-        renderMixedList();
-        debouncedRunEngine();
-    }
-
-    function removeMixedRow(idx) {
-        if (mixedItemsState.length > 1) {
-            mixedItemsState.splice(idx, 1);
-            renderMixedList();
-            debouncedRunEngine();
-        } else {
-            alert("En az bir karma yük satırı bulunmalıdır.");
-        }
-    }
-
-    function onMixedSkuChange(idx, val) {
-        mixedItemsState[idx].skuIdx = parseInt(val) || 0;
-        debouncedRunEngine();
-    }
-
-    function onMixedCountChange(idx, val) {
-        mixedItemsState[idx].count = Math.max(0, parseInt(val) || 0);
-        debouncedRunEngine();
-    }
-
-    // MODALLER
-    function openModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('hidden'); }
-    function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.add('hidden'); }
-    function openDashboard() { const el = document.getElementById('adminDashboardModal'); if (el) el.classList.remove('hidden'); }
-    function closeDashboard() { const el = document.getElementById('adminDashboardModal'); if (el) el.classList.add('hidden'); }
-
-    function openSkuManager() { renderSkuManagerList(); openModal('skuManagerModal'); }
-    function toggleSkuManagerShapeUI() {
-        const shape = document.querySelector('input[name="mngSkuShape"]:checked')?.value || 'box';
-        document.getElementById('mngBoxDimGroup')?.classList.toggle('hidden', shape === 'round');
-        document.getElementById('mngRoundDimGroup')?.classList.toggle('hidden', shape !== 'round');
-    }
-    function renderSkuManagerList() {
-        const c = document.getElementById('skuManagerList');
-        if (!c) return;
-        c.innerHTML = '';
-        skuDatabase.forEach((sku, idx) => {
-            const item = document.createElement('div');
-            item.className = "flex items-center justify-between p-2 hover:bg-slate-50 rounded text-xs";
-            item.innerHTML = `<div><strong class="text-slate-800">${sku.shape === 'round' ? '⚪' : '⏹'} ${sku.name}</strong><span class="text-slate-400 block text-[10px]">En: ${sku.W} x Boy: ${sku.L} x Yük: ${sku.H} mm</span></div><button onclick="deleteSku(${idx})" class="text-rose-500 font-bold px-2 py-1">Sil</button>`;
-            c.appendChild(item);
-        });
-    }
-    function deleteSku(idx) {
-        if (skuDatabase.length <= 1) return alert("En az 1 SKU kalmalıdır.");
-        skuDatabase.splice(idx, 1);
-        populateSelects();
-        renderSkuManagerList();
-        renderMixedList();
-        onSkuSelectChanged();
-    }
-    function saveNewSkuFromManager() {
-        const name = document.getElementById('mngSkuName')?.value.trim() || 'Yeni SKU';
-        const shape = document.querySelector('input[name="mngSkuShape"]:checked')?.value || 'box';
-        const dia = parseFloat(document.getElementById('mngSkuDia')?.value) || 285;
-        const W = shape === 'round' ? dia : parseFloat(document.getElementById('mngSkuW')?.value) || 260;
-        const L = shape === 'round' ? dia : parseFloat(document.getElementById('mngSkuL')?.value) || 260;
-        const H = parseFloat(document.getElementById('mngSkuH')?.value) || 330;
-        const Wt = parseFloat(document.getElementById('mngSkuWt')?.value) || 16.5;
-        const maxLayers = parseInt(document.getElementById('mngSkuMaxLayers')?.value) || 6;
-
-        skuDatabase.push({ name, W, L, H, Wt, maxLayers, shape });
-        populateSelects();
-        renderMixedList();
-        closeModal('skuManagerModal');
-        onSkuSelectChanged();
-    }
-
-    function exportCSV() {
-        if (!globalFleet || !globalFleet[0] || globalFleet[0].placedItems.length === 0) return alert("Veri yok.");
-        let csv = "Arac,Siparis,SKU,Adet,Agirlik(kg)\n";
-        globalFleet.forEach((f, i) => {
-            f.placedItems.forEach(it => { csv += `${i+1},"${document.getElementById('orderTitle')?.value || 'Isimsiz'}","${it.id}",${it.boxes},${it.wgt}\n`; });
-        });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-        a.download = `Elita_Yukleme_Plani.csv`;
-        a.click();
-    }
-
-    function exportPDF() {
-        html2pdf().set({ margin: 10, filename: 'Elita_Yukleme_Plani.pdf', html2canvas: { scale: 2 }, jsPDF: { orientation: 'landscape' } }).from(document.getElementById('printArea')).save();
-    }
-
-    // =========================================================================
-    // 🌟 SİSTEMİ BAŞLATAN TEK `initApp` FONKSİYONU (DÖNGÜ VE KİLİTLENME ENGELLENDİ)
-    // =========================================================================
     function initApp() {
         if (window.supabase) {
             try {
