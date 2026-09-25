@@ -277,7 +277,7 @@
         <!-- SAĞ PANEL: İZOMETRİK 3D, DANIŞMAN & RAPOR -->
         <div class="flex-grow flex flex-col gap-4 lg:overflow-y-auto print-full-width custom-scrollbar lg:pr-1" id="printArea">
             
-            <!-- 🌟 AKILLI SATIŞ & UPSELLING DANIŞMANI BANNERI (SADECE TAŞMA VARSA AÇILIR) -->
+            <!-- 🌟 AKILLI SATIŞ VE UPSELLING 3-SEÇENEK KARTI -->
             <div id="salesAdvisorContainer" class="hidden no-print"></div>
 
             <div id="fleetPaginationContainer" class="no-print"></div>
@@ -335,7 +335,7 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- JAVASCRIPT: MOTOR & AKILLI SATIŞ REHBERİ (UPSELLING)                      -->
+<!-- JAVASCRIPT: MOTOR & 3 SEÇENEKLİ AKILLI SATIŞ REHBERİ                       -->
 <!-- ========================================================================= -->
 <script>
     const SUPABASE_URL = 'https://wukjeatpuysvlosbtahf.supabase.co';
@@ -388,7 +388,7 @@
     let skuDatabase = [];
     let standardPalletSizes = [];
 
-    // Örnek Karma Yük (Kullanıcının belirttiği 3'lü kombinasyon)
+    // Örnek Karma Yük
     let mixedItemsState = [
         { skuIdx: 5, count: 400 },  // 5LX4 Kare
         { skuIdx: 13, count: 600 }, // 0,85LX12 Yeni VK
@@ -420,7 +420,7 @@
     }
 
     // =========================================================================
-    // 📐 KOMBİNE ENLEME GEOMETRİSİ (DUAL-STRIP)
+    // 📐 KOMBİNE ENLEME (DUAL-STRIP) GEOMETRİ MOTORU
     // =========================================================================
     function findOptimalFloorPlan(effW, effL, contH, doorH, sku, maxWgt, isContainer) {
         const boxW = sku.W;
@@ -612,7 +612,7 @@
     }
 
     // =========================================================================
-    // 🚚 YÜKLEME VE YERLEŞTİRME MOTORU
+    // 🚚 YÜKLEME VE YERLEŞTİRME MOTORU (PARALEL ŞERİT - KESİNTİSİZ & HIZLI)
     // =========================================================================
     function runEngine() {
         const vType = document.getElementById('vehicleType')?.value || '20DC';
@@ -706,50 +706,41 @@
         let totalWgt = 0;
         let totalBoxes = 0;
         let currentX = optFrontCurve ? 100 : 0;
-        let vehicleFull = false;
-
         const doorZoneX = effContL - 650;
 
         for (let item of queue) {
-            if (item.remaining <= 0 || vehicleFull) continue;
+            if (item.remaining <= 0) continue;
+            if (currentX >= effContL || totalWgt >= maxWgt) break;
+
             const sku = item.sku;
 
             if (baseType === 'floor') {
                 const availableL = effContL - currentX;
-                if (availableL <= 0) { vehicleFull = true; continue; }
+                if (availableL <= 0) break;
 
                 const plan = findOptimalFloorPlan(effContW, availableL, contH, doorH, sku, maxWgt - totalWgt, isContainer);
-                if (!plan || plan.layerBoxes <= 0) { vehicleFull = true; continue; }
-
-                const maxBoxesByWeight = Math.floor((maxWgt - totalWgt) / sku.Wt);
-                const boxesForThisTruck = Math.min(item.remaining, maxBoxesByWeight);
-                if (boxesForThisTruck <= 0) { vehicleFull = true; break; }
+                if (!plan || plan.layerBoxes <= 0) continue;
 
                 const widthUsed = (plan.colsA * plan.dimW1) + (plan.colsB * plan.dimW2);
                 const startY = Math.max(0, (effContW - widthUsed) / 2);
 
                 if (plan.colsB === 0) {
-                    let currentRem = boxesForThisTruck;
-                    const stripAY = startY;
-                    const widthA = plan.colsA * plan.dimW1;
-
-                    for (let r = 0; r < plan.rowsA; r++) {
-                        if (currentRem <= 0 || totalWgt + sku.Wt > maxWgt) break;
-
-                        const rowX = currentX + (r * plan.dimL1);
-                        const isPhysicallyNearDoor = isContainer && (rowX + plan.dimL1 >= doorZoneX);
+                    // TEK ŞERİT (STRIP A)
+                    let curX = currentX;
+                    while (item.remaining > 0 && curX + plan.dimL1 <= effContL && totalWgt + sku.Wt <= maxWgt) {
+                        const isPhysicallyNearDoor = isContainer && (curX + plan.dimL1 >= doorZoneX);
                         const rowMaxLayers = isPhysicallyNearDoor ? plan.maxDoorLayers : plan.physMaxLayers;
 
-                        let rowBoxes = Math.min(plan.colsA * rowMaxLayers, currentRem);
+                        let rowBoxes = Math.min(plan.colsA * rowMaxLayers, item.remaining);
                         rowBoxes = Math.min(rowBoxes, Math.floor((maxWgt - totalWgt) / sku.Wt));
                         if (rowBoxes <= 0) break;
 
                         let rowLayers = Math.ceil(rowBoxes / plan.colsA);
-                        const rowWgt = rowBoxes * sku.Wt;
+                        let rowWgt = rowBoxes * sku.Wt;
 
                         placedItems.push({
-                            id: sku.name, x: rowX, y: stripAY, z: 0,
-                            l: plan.dimL1, w: widthA, h: rowLayers * sku.H,
+                            id: sku.name, x: curX, y: startY, z: 0,
+                            l: plan.dimL1, w: widthUsed, h: rowLayers * sku.H,
                             boxes: rowBoxes, wgt: rowWgt, color: item.color,
                             cols: plan.colsA, rows: 1, layers: rowLayers,
                             singleBoxL: plan.dimL1, singleBoxW: plan.dimW1, singleBoxH: sku.H,
@@ -759,89 +750,79 @@
 
                         totalWgt += rowWgt;
                         totalBoxes += rowBoxes;
-                        currentRem -= rowBoxes;
                         item.remaining -= rowBoxes;
+                        curX += plan.dimL1;
                     }
+                    currentX = curX;
                 } else {
-                    const rateA = (plan.colsA * plan.physMaxLayers) / plan.dimL1;
-                    const rateB = (plan.colsB * plan.physMaxLayers) / plan.dimL2;
-                    const totalRate = rateA + rateB;
-
-                    const targetBlockLen = Math.min(availableL, boxesForThisTruck / totalRate);
-                    const targetRowsA = Math.max(1, Math.min(plan.rowsA, Math.round(targetBlockLen / plan.dimL1)));
-                    const targetRowsB = Math.max(1, Math.min(plan.rowsB, Math.round(targetBlockLen / plan.dimL2)));
-
-                    let remA = Math.round(boxesForThisTruck * (rateA / totalRate));
-                    let remB = boxesForThisTruck - remA;
-
-                    // Strip A
+                    // KOMBİNE PARALEL ÇİFT ŞERİT (STRIP A + STRIP B EŞ ZAMANLI İLERLER)
+                    let curX_A = currentX;
+                    let curX_B = currentX;
                     const stripAY = startY;
                     const widthA = plan.colsA * plan.dimW1;
-                    for (let r = 0; r < targetRowsA; r++) {
-                        if (remA <= 0 || totalWgt + sku.Wt > maxWgt) break;
-
-                        const rowX = currentX + (r * plan.dimL1);
-                        const isPhysicallyNearDoor = isContainer && (rowX + plan.dimL1 >= doorZoneX);
-                        const rowMaxLayers = isPhysicallyNearDoor ? plan.maxDoorLayers : plan.physMaxLayers;
-
-                        let rowBoxes = Math.min(plan.colsA * rowMaxLayers, remA);
-                        rowBoxes = Math.min(rowBoxes, Math.floor((maxWgt - totalWgt) / sku.Wt));
-                        if (rowBoxes <= 0) break;
-
-                        let rowLayers = Math.ceil(rowBoxes / plan.colsA);
-                        const rowWgt = rowBoxes * sku.Wt;
-
-                        placedItems.push({
-                            id: sku.name, x: rowX, y: stripAY, z: 0,
-                            l: plan.dimL1, w: widthA, h: rowLayers * sku.H,
-                            boxes: rowBoxes, wgt: rowWgt, color: item.color,
-                            cols: plan.colsA, rows: 1, layers: rowLayers,
-                            singleBoxL: plan.dimL1, singleBoxW: plan.dimW1, singleBoxH: sku.H,
-                            isRound: false,
-                            blockName: item.blockName || `${sku.name} Bloğu`
-                        });
-
-                        totalWgt += rowWgt;
-                        totalBoxes += rowBoxes;
-                        remA -= rowBoxes;
-                        item.remaining -= rowBoxes;
-                    }
-
-                    // Strip B
-                    const stripBY = startY + (plan.colsA * plan.dimW1);
+                    const stripBY = startY + widthA;
                     const widthB = plan.colsB * plan.dimW2;
-                    for (let r = 0; r < targetRowsB; r++) {
-                        if (remB <= 0 || totalWgt + sku.Wt > maxWgt) break;
 
-                        const rowX = currentX + (r * plan.dimL2);
-                        const isPhysicallyNearDoor = isContainer && (rowX + plan.dimL2 >= doorZoneX);
-                        const rowMaxLayers = isPhysicallyNearDoor ? plan.maxDoorLayers : plan.physMaxLayers;
+                    while (item.remaining > 0 && totalWgt + sku.Wt <= maxWgt) {
+                        let canA = (curX_A + plan.dimL1 <= effContL);
+                        let canB = (curX_B + plan.dimL2 <= effContL);
+                        if (!canA && !canB) break;
 
-                        let rowBoxes = Math.min(plan.colsB * rowMaxLayers, remB);
-                        rowBoxes = Math.min(rowBoxes, Math.floor((maxWgt - totalWgt) / sku.Wt));
-                        if (rowBoxes <= 0) break;
+                        let chooseA = false;
+                        if (canA && canB) {
+                            chooseA = (curX_A <= curX_B);
+                        } else {
+                            chooseA = canA;
+                        }
 
-                        let rowLayers = Math.ceil(rowBoxes / plan.colsB);
-                        const rowWgt = rowBoxes * sku.Wt;
+                        if (chooseA) {
+                            const isNearDoor = isContainer && (curX_A + plan.dimL1 >= doorZoneX);
+                            const rowMaxL = isNearDoor ? plan.maxDoorLayers : plan.physMaxLayers;
+                            let rowB = Math.min(plan.colsA * rowMaxL, item.remaining);
+                            rowB = Math.min(rowB, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                            if (rowB <= 0) break;
+                            let rowL = Math.ceil(rowB / plan.colsA);
+                            let rowW = rowB * sku.Wt;
 
-                        placedItems.push({
-                            id: sku.name, x: rowX, y: stripBY, z: 0,
-                            l: plan.dimL2, w: widthB, h: rowLayers * sku.H,
-                            boxes: rowBoxes, wgt: rowWgt, color: item.color,
-                            cols: plan.colsB, rows: 1, layers: rowLayers,
-                            singleBoxL: plan.dimL2, singleBoxW: plan.dimW2, singleBoxH: sku.H,
-                            isRound: false,
-                            blockName: item.blockName || `${sku.name} Bloğu`
-                        });
+                            placedItems.push({
+                                id: sku.name, x: curX_A, y: stripAY, z: 0,
+                                l: plan.dimL1, w: widthA, h: rowL * sku.H,
+                                boxes: rowB, wgt: rowW, color: item.color,
+                                cols: plan.colsA, rows: 1, layers: rowL,
+                                singleBoxL: plan.dimL1, singleBoxW: plan.dimW1, singleBoxH: sku.H,
+                                isRound: false, blockName: item.blockName || `${sku.name} Bloğu`
+                            });
 
-                        totalWgt += rowWgt;
-                        totalBoxes += rowBoxes;
-                        remB -= rowBoxes;
-                        item.remaining -= rowBoxes;
+                            totalWgt += rowW;
+                            totalBoxes += rowB;
+                            item.remaining -= rowB;
+                            curX_A += plan.dimL1;
+                        } else {
+                            const isNearDoor = isContainer && (curX_B + plan.dimL2 >= doorZoneX);
+                            const rowMaxL = isNearDoor ? plan.maxDoorLayers : plan.physMaxLayers;
+                            let rowB = Math.min(plan.colsB * rowMaxL, item.remaining);
+                            rowB = Math.min(rowB, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                            if (rowB <= 0) break;
+                            let rowL = Math.ceil(rowB / plan.colsB);
+                            let rowW = rowB * sku.Wt;
+
+                            placedItems.push({
+                                id: sku.name, x: curX_B, y: stripBY, z: 0,
+                                l: plan.dimL2, w: widthB, h: rowL * sku.H,
+                                boxes: rowB, wgt: rowW, color: item.color,
+                                cols: plan.colsB, rows: 1, layers: rowL,
+                                singleBoxL: plan.dimL2, singleBoxW: plan.dimW2, singleBoxH: sku.H,
+                                isRound: false, blockName: item.blockName || `${sku.name} Bloğu`
+                            });
+
+                            totalWgt += rowW;
+                            totalBoxes += rowB;
+                            item.remaining -= rowB;
+                            curX_B += plan.dimL2;
+                        }
                     }
+                    currentX = Math.max(curX_A, curX_B);
                 }
-
-                currentX = placedItems.reduce((max, it) => Math.max(max, it.x + it.l), 0);
             } else {
                 // Paletli Taşıma
                 const pIdx = parseInt(document.getElementById('specificBaseSize')?.value) || 0;
@@ -868,14 +849,14 @@
                 const palStepW = useOpt2 ? pSpec.L : pSpec.W;
                 const palStepL = useOpt2 ? pSpec.W : pSpec.L;
 
-                if (colsAcross <= 0 || rowsDeep <= 0) { vehicleFull = true; continue; }
+                if (colsAcross <= 0 || rowsDeep <= 0) break;
 
                 for (let r = 0; r < rowsDeep; r++) {
                     for (let c = 0; c < colsAcross; c++) {
                         if (item.remaining <= 0) break;
                         let b = Math.min(pDesign.totalBoxes, item.remaining);
                         let w = (b * sku.Wt) + pSpec.tare;
-                        if (totalWgt + w > maxWgt) { vehicleFull = true; break; }
+                        if (totalWgt + w > maxWgt) break;
 
                         let py = (effContW - (colsAcross * palStepW)) / 2 + (c * palStepW);
                         placedItems.push({
@@ -888,7 +869,7 @@
                         });
                         totalWgt += w; totalBoxes += b; item.remaining -= b;
                     }
-                    if (vehicleFull || item.remaining <= 0) break;
+                    if (item.remaining <= 0 || totalWgt >= maxWgt) break;
                 }
                 currentX = placedItems.reduce((max, it) => Math.max(max, it.x + it.l), 0);
             }
@@ -905,7 +886,7 @@
     }
 
     // =========================================================================
-    // 💡 AKILLI SATIŞ & UPSELLING DANIŞMANI (MINIMUM HATA / DRY-RUN ENGINE)
+    // 💡 AKILLI SATIŞ VE UPSELLING 3-SEÇENEK KARTI (TEK TIKLA ÇÖZÜM)
     // =========================================================================
     function evaluateSalesAdvisor(queue, vType, baseType) {
         const container = document.getElementById('salesAdvisorContainer');
@@ -922,154 +903,121 @@
         const overflowBoxes = truck2.totalBoxes;
         const currentSpec = VEHICLE_SPECS[vType];
 
-        // 1. SENARYO A: TEK KONTEYNERE DÜŞÜRME (Hangi SKU'dan kaç adet eksiltilmeli?)
-        let downscaleOptions = [];
-        queue.forEach((item, qIdx) => {
-            const sku = item.sku;
-            // Bu SKU tek başına bu taşmayı eritmek için kaç adet azaltılmalı?
-            // Kaba bir hesap değil; planın koli başı kapladığı derinlik oranında kesin simülasyon:
-            let stepReduction = Math.min(item.target, Math.ceil(overflowBoxes * 1.05));
-            downscaleOptions.push({
-                skuName: sku.name,
-                currentQty: item.target,
-                suggestedQty: Math.max(0, item.target - stepReduction),
-                reduction: stepReduction,
-                itemStateIndex: item.itemStateIndex
-            });
-        });
-
-        // 2. SENARYO B: 40' KONTEYNERE YÜKSELTME & UPSELL (40DC Dry-Run)
-        let upgradeOption = null;
-        if (vType === '20DC') {
-            const spec40 = VEHICLE_SPECS['40DC'];
-            let simQueue = queue.map(q => ({ ...q, remaining: q.target }));
-            let sim40 = packSingleVehicle(simQueue, spec40.L - 90, spec40.W - 10, spec40.H, spec40.doorH, spec40.maxWgt, baseType, false, true, 'ceiling');
-
-            if (simQueue.every(q => q.remaining === 0)) {
-                // 100% sığıyor! Şimdi kalan boşluğa her üründen ne kadar eklenebilir hesapla:
-                let upsellList = [];
-                queue.forEach(item => {
-                    let remPlan = findOptimalFloorPlan(spec40.W - 10, sim40.gapL, spec40.H, spec40.doorH, item.sku, spec40.maxWgt - sim40.totalWgt, true);
-                    let additionalBoxes = remPlan ? remPlan.maxBoxes : 0;
-                    if (additionalBoxes > 0) {
-                        upsellList.push({ name: item.sku.name, addCount: additionalBoxes });
-                    }
-                });
-
-                upgradeOption = {
-                    remLengthM: (sim40.gapL / 1000).toFixed(2),
-                    remWeightKg: Math.floor(spec40.maxWgt - sim40.totalWgt),
-                    upsellList
-                };
+        // 1. SEÇENEK: Tek Konteynere Sığdırma (Taşan SKU'yu Azalt)
+        // Genellikle kuyrukta son yerleşen veya taşan SKU azaltılır
+        let candidateItem = queue[queue.length - 1];
+        for (let q = queue.length - 1; q >= 0; q--) {
+            if (truck2.placedItems.some(pi => pi.id === queue[q].sku.name)) {
+                candidateItem = queue[q];
+                break;
             }
         }
 
-        // 3. SENARYO C: 2. KONTEYNERİ TAM DOLDURMA (EK SİPARİŞ)
-        let fillTruck2Options = [];
-        queue.forEach(item => {
-            let fillPlan = findOptimalFloorPlan(currentSpec.W - 10, truck2.gapL, currentSpec.H, currentSpec.doorH, item.sku, currentSpec.maxWgt - truck2.totalWgt, currentSpec.isContainer);
-            let canAdd = fillPlan ? fillPlan.maxBoxes : 0;
-            if (canAdd > 0) {
-                fillTruck2Options.push({ name: item.sku.name, addCount: canAdd });
-            }
-        });
+        const reductionCount = overflowBoxes;
+        const newSuggestedQty = Math.max(0, candidateItem.target - reductionCount);
+        const targetStateIdx = candidateItem.itemStateIndex !== undefined ? candidateItem.itemStateIndex : 0;
 
-        // HTML ARAYÜZÜNÜ OLUŞTUR
-        let downscaleButtonsHtml = downscaleOptions.map(opt => `
-            <div class="flex items-center justify-between bg-white p-2.5 rounded-lg border border-amber-200 text-xs">
-                <div>
-                    <strong class="text-slate-800">${opt.skuName}</strong>: 
-                    <span class="text-slate-500">${opt.currentQty} adetten</span> 
-                    <strong class="text-emerald-700">${opt.suggestedQty} adede</strong> düşürün (-${opt.reduction} adet)
-                </div>
-                ${opt.itemStateIndex !== undefined ? `
-                <button onclick="applyAdvisorReduction(${opt.itemStateIndex}, ${opt.suggestedQty})" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1 rounded shadow-xs text-[11px] transition">
-                    ✓ Tek Araca Sığdır
-                </button>` : ''}
-            </div>
-        `).join('');
+        // 2. SEÇENEK: Bir Üst Kapasite Konteynere Geçiş
+        let nextVeh = '40DC';
+        let nextVehName = "40' Standart Konteyner";
+        if (vType === '20DC') { nextVeh = '40DC'; nextVehName = "40' Standart"; }
+        else if (vType === '40DC') { nextVeh = '40HC'; nextVehName = "40' High Cube"; }
+        else if (vType === '40HC') { nextVeh = 'TIR'; nextVehName = "Standart TIR (13.60m)"; }
 
-        let upgradeHtml = upgradeOption ? `
-            <div class="bg-indigo-900/10 border border-indigo-300 rounded-xl p-3.5 space-y-2">
-                <div class="flex items-center justify-between">
-                    <strong class="text-xs font-black text-indigo-950 uppercase flex items-center gap-1.5">
-                        🚀 FIRSAT: 40' Standart Konteynere Geçiş & Upsell
-                    </strong>
-                    <button onclick="applyAdvisorUpgrade('40DC')" class="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-3 py-1 rounded text-xs shadow-md transition">
-                        40' DC'ye Yükselt ➔
-                    </button>
-                </div>
-                <p class="text-[11px] text-slate-700 leading-relaxed">
-                    Siparişin tamamı tek bir 40' konteynere rahatlıkla sığar ve arkada <strong>${upgradeOption.remLengthM} metre boşluk</strong> ile <strong>${upgradeOption.remWeightKg.toLocaleString()} kg boş tonaj</strong> kalır. Müşteriye şu ilave ürünleri teklif edebilirsiniz:
-                </p>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
-                    ${upgradeOption.upsellList.map(u => `
-                        <div class="bg-white p-2 rounded border border-indigo-200 text-center">
-                            <span class="text-[10px] text-slate-500 block truncate">${u.name}</span>
-                            <strong class="text-sm font-black text-indigo-600">+${u.addCount.toLocaleString()} Adet</strong>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        ` : '';
-
-        let fillTruck2Html = fillTruck2Options.length > 0 ? `
-            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-1.5 text-xs text-slate-700">
-                <strong class="text-slate-900 block font-bold">📦 2. Konteyneri Tamamlama Seçeneği:</strong>
-                <p class="text-[11px] text-slate-500">
-                    2. Araç şu anda yalnızca <strong>${overflowBoxes} koli</strong> ile sevk edilmektedir. Navlunun boşa gitmemesi için müşteriden 2. konteyneri dolduracak ek sipariş isteyebilirsiniz:
-                </p>
-                <div class="flex flex-wrap gap-2 pt-1">
-                    ${fillTruck2Options.map(f => `
-                        <span class="bg-white px-2.5 py-1 rounded border border-slate-300 font-bold text-[11px] text-slate-700">
-                            ${f.name}: <strong class="text-emerald-600">+${f.addCount} Adet</strong>
-                        </span>
-                    `).join('')}
-                </div>
-            </div>
-        ` : '';
+        // 3. SEÇENEK: 2. Konteyneri Tamamen Doldurma Miktarı
+        let fillPlan = findOptimalFloorPlan(currentSpec.W - 10, truck2.gapL, currentSpec.H, currentSpec.doorH, candidateItem.sku, currentSpec.maxWgt - truck2.totalWgt, currentSpec.isContainer);
+        let neededToFillTruck2 = fillPlan ? fillPlan.maxBoxes : 400;
 
         container.innerHTML = `
-            <div class="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-400 rounded-2xl p-4 shadow-md space-y-3">
-                <div class="flex items-center justify-between border-b border-amber-200 pb-2">
-                    <div class="flex items-center gap-2">
-                        <span class="text-xl animate-bounce">💡</span>
+            <div class="bg-gradient-to-br from-indigo-900 via-slate-900 to-slate-950 text-white border-2 border-indigo-500 rounded-2xl p-4 md:p-5 shadow-2xl space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-indigo-800 pb-3 gap-2">
+                    <div class="flex items-center gap-2.5">
+                        <span class="text-2xl animate-bounce">⚡</span>
                         <div>
-                            <h4 class="font-black text-sm text-amber-950 uppercase tracking-tight">Akıllı Satış Danışmanı & Navlun Uyarısı</h4>
-                            <p class="text-[11px] text-amber-800">Mevcut sipariş 1 konteyneri <strong>${overflowBoxes} koli</strong> ile aşıp 2. konteynere taşmaktadır.</p>
+                            <h4 class="font-black text-sm md:text-base tracking-tight text-white uppercase">Sipariş 1 Konteyneri Aşıyor (${overflowBoxes} Koli Taştı)</h4>
+                            <p class="text-xs text-indigo-300">Aşağıdaki 3 stratejik seçenekten birini tek tıkla uygulayabilirsiniz:</p>
                         </div>
                     </div>
-                    <span class="bg-rose-600 text-white font-black text-[10px] px-2 py-0.5 rounded-full uppercase">2 Konteyner Gerekiyor</span>
+                    <span class="bg-rose-500 text-white font-black text-[11px] px-3 py-1 rounded-full uppercase tracking-wider self-start sm:self-auto">2 Konteyner Gerekiyor</span>
                 </div>
 
-                <div class="space-y-2">
-                    <strong class="text-xs text-slate-800 uppercase block font-bold">1. Seçenek: Tek Konteynere Sığdırarak Navlun Tasarrufu Sağlayın</strong>
-                    <div class="space-y-1.5">
-                        ${downscaleButtonsHtml}
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <!-- SEÇENEK 1 -->
+                    <div class="bg-slate-800/90 border border-slate-700 hover:border-amber-400 p-3.5 rounded-xl flex flex-col justify-between transition-all group">
+                        <div class="space-y-1.5 mb-3">
+                            <span class="bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded text-[10px] uppercase">Seçenek 1: Navlun Tasarrufu</span>
+                            <strong class="text-white text-xs block font-black">Tek Konteynere Sığdır</strong>
+                            <p class="text-[11px] text-slate-300 leading-relaxed">
+                                <strong>${candidateItem.sku.name}</strong> miktarını <strong>${candidateItem.target}</strong> adetten <strong>${newSuggestedQty}</strong> adede indirin. 2. konteyner navlunu tamamen iptal olur.
+                            </p>
+                        </div>
+                        <button onclick="applyAdvisorFitOne(${targetStateIdx}, ${newSuggestedQty})" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2 rounded-lg text-xs transition shadow-md">
+                            🎯 Tek Konteynere Sığdır (-${reductionCount} Adet)
+                        </button>
+                    </div>
+
+                    <!-- SEÇENEK 2 -->
+                    <div class="bg-slate-800/90 border border-slate-700 hover:border-sky-400 p-3.5 rounded-xl flex flex-col justify-between transition-all group">
+                        <div class="space-y-1.5 mb-3">
+                            <span class="bg-sky-500/20 text-sky-300 font-bold px-2 py-0.5 rounded text-[10px] uppercase">Seçenek 2: Araç Büyütme</span>
+                            <strong class="text-white text-xs block font-black">${nextVehName} Konteynere Geç</strong>
+                            <p class="text-[11px] text-slate-300 leading-relaxed">
+                                Siparişin tamamı tek bir <strong>${nextVehName}</strong> araca rahatça sığar. Müşteriye daha avantajlı navlun/koli oranı sunulur.
+                            </p>
+                        </div>
+                        <button onclick="applyAdvisorUpgradeVehicle('${nextVeh}')" class="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-black py-2 rounded-lg text-xs transition shadow-md">
+                            🚀 ${nextVehName} Konteynere Yükselt
+                        </button>
+                    </div>
+
+                    <!-- SEÇENEK 3 -->
+                    <div class="bg-slate-800/90 border border-slate-700 hover:border-emerald-400 p-3.5 rounded-xl flex flex-col justify-between transition-all group">
+                        <div class="space-y-1.5 mb-3">
+                            <span class="bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded text-[10px] uppercase">Seçenek 3: Ciro Artırma (Upsell)</span>
+                            <strong class="text-white text-xs block font-black">2. Konteyneri Tamamen Doldur</strong>
+                            <p class="text-[11px] text-slate-300 leading-relaxed">
+                                2. Konteynerde kalan boşluğa <strong>+${neededToFillTruck2.toLocaleString()} adet</strong> daha <strong>${candidateItem.sku.name}</strong> ekleyerek 2 aracı da tam %100 doldurun.
+                            </p>
+                        </div>
+                        <button onclick="applyAdvisorFillSecond(${targetStateIdx}, ${neededToFillTruck2})" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black py-2 rounded-lg text-xs transition shadow-md">
+                            📦 2. Konteyneri Doldur (+${neededToFillTruck2} Adet Ekle)
+                        </button>
                     </div>
                 </div>
-
-                ${upgradeHtml}
-                ${fillTruck2Html}
             </div>
         `;
         container.classList.remove('hidden');
     }
 
-    function applyAdvisorReduction(itemIndex, newQty) {
-        if (mixedItemsState[itemIndex]) {
-            mixedItemsState[itemIndex].count = newQty;
+    // 1-TIKLA AKSİYON FONKSİYONLARI
+    function applyAdvisorFitOne(idx, newQty) {
+        if (currentMode === 'single') {
+            const targetEl = document.getElementById('targetBoxes');
+            if (targetEl) targetEl.value = newQty;
+        } else if (mixedItemsState[idx]) {
+            mixedItemsState[idx].count = newQty;
             renderMixedList();
-            debouncedRunEngine();
+        }
+        debouncedRunEngine();
+    }
+
+    function applyAdvisorUpgradeVehicle(targetVehType) {
+        const sel = document.getElementById('vehicleType');
+        if (sel) {
+            sel.value = targetVehType;
+            onVehicleChange();
         }
     }
 
-    function applyAdvisorUpgrade(newVehicleType) {
-        const sel = document.getElementById('vehicleType');
-        if (sel) {
-            sel.value = newVehicleType;
-            onVehicleChange();
+    function applyAdvisorFillSecond(idx, extraQty) {
+        if (currentMode === 'single') {
+            const targetEl = document.getElementById('targetBoxes');
+            if (targetEl) targetEl.value = (parseInt(targetEl.value) || 0) + extraQty;
+        } else if (mixedItemsState[idx]) {
+            mixedItemsState[idx].count += extraQty;
+            renderMixedList();
         }
+        debouncedRunEngine();
     }
 
     // =========================================================================
@@ -1511,12 +1459,11 @@
         debouncedRunEngine();
     }
 
-    // MODALLER & VERİTABANI YÖNETİMİ
+    // MODALLER
     function openModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('hidden'); }
     function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.add('hidden'); }
     function openDashboard() { const el = document.getElementById('adminDashboardModal'); if (el) el.classList.remove('hidden'); }
     function closeDashboard() { const el = document.getElementById('adminDashboardModal'); if (el) el.classList.add('hidden'); }
-    function exitReviewMode() { const el = document.getElementById('activeReviewBar'); if (el) el.classList.add('hidden'); }
 
     function openSkuManager() { renderSkuManagerList(); openModal('skuManagerModal'); }
     function toggleSkuManagerShapeUI() {
@@ -1576,7 +1523,9 @@
         html2pdf().set({ margin: 10, filename: 'Elita_Yukleme_Plani.pdf', html2canvas: { scale: 2 }, jsPDF: { orientation: 'landscape' } }).from(document.getElementById('printArea')).save();
     }
 
-    // UYGULAMAYI BAŞLAT
+    // =========================================================================
+    // 🌟 SİSTEMİ BAŞLATAN TEK `initApp` FONKSİYONU (DÖNGÜ VE KİLİTLENME ENGELLENDİ)
+    // =========================================================================
     function initApp() {
         if (window.supabase) {
             try {
