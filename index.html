@@ -159,7 +159,7 @@
                         <label>Yükleme Stratejisi</label>
                         <select id="loadDistributionStrategy" class="bg-emerald-50 text-emerald-900 border-emerald-300 font-bold text-xs" onchange="debouncedRunEngine()">
                             <option value="spread" selected>Boyuna Yayılım (Sıfır Arka Boşluk)</option>
-                            <option value="ceiling">Tavana Kadar (Maksimum Hacim)</option>
+                            <option value="ceiling">Tavana Kadar (Maksimum Yükseklik)</option>
                         </select>
                     </div>
                 </div>
@@ -279,7 +279,7 @@
             <div class="bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col flex-grow min-h-[380px] md:min-h-[500px] relative">
                 <div class="bg-slate-50 border-b border-slate-200 px-4 py-3 rounded-t-xl flex justify-between items-center z-10 relative">
                     <span class="text-sm font-bold text-slate-700">3D İZOMETRİK TAŞIMA & YÜKLEME SİMÜLASYONU</span>
-                    <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200" id="badgeSimSubtitle">Kombine Dökme Aktif</span>
+                    <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200" id="badgeSimSubtitle">Kombine Dökme & Kapı Kademelendirme Aktif</span>
                 </div>
                 
                 <div class="flex-grow flex items-center justify-center p-2 md:p-4 bg-slate-800 relative rounded-b-xl overflow-hidden min-h-[350px] md:min-h-[460px]">
@@ -442,7 +442,7 @@
     }
 
     // =========================================================================
-    // 🚚 YÜKLEME VE YERLEŞTİRME MOTORU (PARALEL ŞERİT - SIFIR ARTIK KOLİ)
+    // 🚚 YÜKLEME VE YERLEŞTİRME MOTORU (KAPIYA KADAR KESİNTİSİZ YAYILIM)
     // =========================================================================
     function runEngine() {
         const vType = document.getElementById('vehicleType')?.value || '20DC';
@@ -523,7 +523,8 @@
         let currentX = optFrontCurve ? 100 : 0;
         const doorZoneX = effContL - 650;
 
-        for (let item of queue) {
+        for (let itemIdx = 0; itemIdx < queue.length; itemIdx++) {
+            let item = queue[itemIdx];
             if (item.remaining <= 0) continue;
             if (currentX >= effContL || totalWgt >= maxWgt) break;
 
@@ -533,6 +534,10 @@
 
             const plan = findOptimalFloorPlan(effContW, availableL, contH, doorH, sku, maxWgt - totalWgt, isContainer);
             if (!plan || plan.layerBoxes <= 0) continue;
+
+            const maxBoxesByWeight = Math.floor((maxWgt - totalWgt) / sku.Wt);
+            const boxesForThisTruck = Math.min(item.remaining, maxBoxesByWeight);
+            if (boxesForThisTruck <= 0) break;
 
             const widthUsed = (plan.colsA * plan.dimW1) + (plan.colsB * plan.dimW2);
             const startY = Math.max(0, (effContW - widthUsed) / 2);
@@ -544,7 +549,7 @@
             const stripBY = startY + widthA;
             const widthB = plan.colsB * plan.dimW2;
 
-            // Şerit A ve Şerit B'yi adım adım yan yana ve kesintisiz ilerlet
+            // Sıra sıra, iki şeridi eş zamanlı olarak kapıya kadar eksiksiz ilerlet
             while (item.remaining > 0 && totalWgt + sku.Wt <= maxWgt) {
                 const canA = (plan.colsA > 0) && (curX_A + plan.dimL1 <= effContL);
                 const canB = (plan.colsB > 0) && (curX_B + plan.dimL2 <= effContL);
@@ -618,7 +623,7 @@
     }
 
     // =========================================================================
-    // 💡 DRY-RUN TEST: SİMÜLASYONLU FİLO SAYISI HESAPLAYICI
+    // 💡 DRY-RUN TEST: SİMÜLASYONLU FİLO SAYISI TESTİ
     // =========================================================================
     function simulateTotalContainers(simQueue, vType, baseType) {
         const vSpec = VEHICLE_SPECS[vType];
@@ -681,7 +686,7 @@
                         <div>
                             <strong class="text-amber-300">${item.sku.name}</strong>: 
                             <span class="text-slate-300">${item.target} ➔ <strong>${exactFitQty} adede</strong> düşürün (-${removeCount} adet)</span>
-                            <span class="text-[10px] text-emerald-400 block font-semibold">✓ Konteyner hacmi ve tabanı %100 tam oturur</span>
+                            <span class="text-[10px] text-emerald-400 block font-semibold">✓ Konteyner tabanı ve hacmi %100 tam oturur</span>
                         </div>
                         <button onclick="applyAdvisorFitOne(${item.itemStateIndex}, ${exactFitQty})" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-3 py-1.5 rounded-lg text-xs shadow-md transition whitespace-nowrap">
                             🎯 Tam Sığdır (-${removeCount} Adet)
@@ -815,7 +820,6 @@
         container.classList.remove('hidden');
     }
 
-    // 1-TIKLA AKSİYON FONKSİYONLARI
     function applyAdvisorFitOne(idx, exactFitQty) {
         if (currentMode === 'single') {
             const targetEl = document.getElementById('targetBoxes');
