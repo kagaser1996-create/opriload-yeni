@@ -243,7 +243,7 @@
         <!-- SAĞ PANEL: İZOMETRİK 3D, DANIŞMAN & RAPOR -->
         <div class="flex-grow flex flex-col gap-4 lg:overflow-y-auto print-full-width custom-scrollbar lg:pr-1" id="printArea">
             
-            <!-- 🌟 DİNAMİK FİLO VE ÇOKLU-SKU SATIŞ DANIŞMANI BANNERI -->
+            <!-- 🌟 DİNAMİK FİLO VE ENTEGRE SATIŞ DANIŞMANI BANNERI -->
             <div id="salesAdvisorContainer" class="hidden no-print"></div>
 
             <div id="fleetPaginationContainer" class="no-print"></div>
@@ -301,7 +301,7 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- JAVASCRIPT: SUPABASE & MOTOR ENTEGRASYONU                                 -->
+<!-- JAVASCRIPT: MOTOR, DİNAMİK FİLO VE ENTEGRE DANIŞMAN                      -->
 <!-- ========================================================================= -->
 <script>
     const SUPABASE_URL = 'https://wukjeatpuysvlosbtahf.supabase.co';
@@ -346,9 +346,9 @@
 
     let skuDatabase = [];
     let mixedItemsState = [
-        { skuIdx: 5, count: 400 },
-        { skuIdx: 13, count: 600 },
-        { skuIdx: 0, count: 100 }
+        { skuIdx: 5, count: 400 },  // 5LX4 Kare
+        { skuIdx: 13, count: 600 }, // 0,85LX12 Yeni VK
+        { skuIdx: 0, count: 100 }   // Kızartmalık Teneke
     ];
 
     const colorMap = [
@@ -359,7 +359,7 @@
         { base: '#ea580c', top: '#fb923c', right: '#c2410c', left: '#9a3412' }
     ];
 
-    let currentMode = 'single';
+    let currentMode = 'mixed';
     let globalFleet = [];
     let currentVehicleIdx = 0;
     let globalEngineContext = {};
@@ -442,7 +442,7 @@
     }
 
     // =========================================================================
-    // 🚚 YÜKLEME VE YERLEŞTİRME MOTORU (KUSURSUZ KOMBİNE ENLEME & BOYUNA DAĞILIM)
+    // 🚚 YÜKLEME VE YERLEŞTİRME MOTORU
     // =========================================================================
     function runEngine() {
         const vType = document.getElementById('vehicleType')?.value || '20DC';
@@ -556,7 +556,7 @@
 
             let remBoxes = boxesForThisTruck;
 
-            // 1. STRIP A (DÜZ ŞERİT) YERLEŞTİRME
+            // 1. STRIP A (DÜZ ŞERİT)
             if (plan.colsA > 0 && targetRowsA > 0) {
                 const stripAY = startY;
                 const widthA = plan.colsA * plan.dimW1;
@@ -593,7 +593,7 @@
                 }
             }
 
-            // 2. STRIP B (ÇEVRİLMİŞ ŞERİT) YERLEŞTİRME
+            // 2. STRIP B (ÇEVRİLMİŞ ŞERİT)
             if (plan.colsB > 0 && targetRowsB > 0) {
                 const stripBY = startY + (plan.colsA * plan.dimW1);
                 const widthB = plan.colsB * plan.dimW2;
@@ -644,7 +644,24 @@
     }
 
     // =========================================================================
-    // 💡 DİNAMİK FİLO VE ÇOKLU-SKU SATIŞ DANIŞMANI (3 SEÇENEK)
+    // 💡 DRY-RUN TEST FONKSİYONU: FİLO SAYISI TESTİ
+    // =========================================================================
+    function simulateTotalContainers(simQueue, vType, baseType) {
+        const vSpec = VEHICLE_SPECS[vType];
+        let effL = vSpec.L - 90;
+        let effW = vSpec.W - 10;
+        let qCopy = simQueue.map(q => ({ ...q, remaining: q.target }));
+        let count = 0;
+        while (qCopy.some(q => q.remaining > 0) && count < 20) {
+            count++;
+            let res = packSingleVehicle(qCopy, effL, effW, vSpec.H, vSpec.doorH, vSpec.maxWgt, baseType, false, vSpec.isContainer, 'spread');
+            if (res.placedItems.length === 0) break;
+        }
+        return count;
+    }
+
+    // =========================================================================
+    // 💡 DİNAMİK FİLO VE ENTEGRE SATIŞ DANIŞMANI (1-TIKLA UPSELL & FİT ENGINE)
     // =========================================================================
     function evaluateSalesAdvisor(queue, vType, baseType) {
         const container = document.getElementById('salesAdvisorContainer');
@@ -661,34 +678,92 @@
         const overflowBoxes = lastTruck.totalBoxes;
         const currentSpec = VEHICLE_SPECS[vType];
 
-        let downscaleButtonsHtml = queue.map(item => {
-            const dropQty = Math.min(item.target, overflowBoxes);
-            const suggestedQty = Math.max(0, item.target - dropQty);
-            return `
-                <div class="flex items-center justify-between bg-slate-800/80 p-2 rounded-lg border border-slate-700 text-xs">
-                    <div>
-                        <strong class="text-amber-300">${item.sku.name}</strong>: 
-                        <span class="text-slate-300">${item.target} ➔ <strong>${suggestedQty} adede</strong> düşür</span>
-                    </div>
-                    <button onclick="applyAdvisorFitOne(${item.itemStateIndex}, ${suggestedQty})" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-2.5 py-1 rounded text-[11px] shadow-sm transition">
-                        ✓ Bu Üründen -${dropQty} Adet Düşür
-                    </button>
-                </div>
-            `;
-        }).join('');
+        // 1. SEÇENEK: KUSURSUZ FİT İÇİN KESİN SİMÜLASYONLU DÜŞÜRME (BINARY SEARCH DRY-RUN)
+        // Her bir SKU için siparişi tam N-1 (veya 1) konteynere %100 dolduracak kesin adedi bulur
+        let targetMaxContainers = Math.max(1, N - 1);
+        let downscaleButtonsHtml = '';
 
+        queue.forEach((item, qIdx) => {
+            let low = 0;
+            let high = item.target;
+            let exactFitQty = -1;
+
+            // İkili arama ile konteyner sınırına sıfır hata ile dayanan en büyük koli adedi
+            while (low <= high) {
+                let mid = Math.floor((low + high) / 2);
+                let testQueue = queue.map((q, idx) => ({ ...q, target: (idx === qIdx ? mid : q.target) }));
+                let neededContainers = simulateTotalContainers(testQueue, vType, baseType);
+
+                if (neededContainers <= targetMaxContainers) {
+                    exactFitQty = mid;
+                    low = mid + 1; // Daha fazla koli sığdırabilir miyiz test et
+                } else {
+                    high = mid - 1; // Taşıyor, biraz daha düşür
+                }
+            }
+
+            if (exactFitQty !== -1 && exactFitQty < item.target) {
+                let removeCount = item.target - exactFitQty;
+                downscaleButtonsHtml += `
+                    <div class="flex items-center justify-between bg-slate-800/80 p-2.5 rounded-lg border border-slate-700 text-xs">
+                        <div>
+                            <strong class="text-amber-300">${item.sku.name}</strong>: 
+                            <span class="text-slate-300">${item.target} ➔ <strong>${exactFitQty} adede</strong> düşürün (-${removeCount} adet)</span>
+                            <span class="text-[10px] text-emerald-400 block font-semibold">✓ Konteyner tabanı ve hacmi %100 tam oturur</span>
+                        </div>
+                        <button onclick="applyAdvisorFitOne(${item.itemStateIndex}, ${exactFitQty})" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-3 py-1.5 rounded-lg text-xs shadow-md transition whitespace-nowrap">
+                            🎯 Tam Sığdır (-${removeCount} Adet)
+                        </button>
+                    </div>
+                `;
+            }
+        });
+
+        // 2. SEÇENEK: BÜYÜK KONTEYNER & UPSELL DOLDURMA (BİRLEŞTİRİLMİŞ AKILLI SEÇENEK)
         let upgradeTargetVeh = (vType === '20DC') ? '40DC' : ((vType === '40DC') ? '40HC' : 'TIR');
         let upgradeVehName = VEHICLE_SPECS[upgradeTargetVeh].name;
         let upSpec = VEHICLE_SPECS[upgradeTargetVeh];
 
+        // Tüm siparişi büyük araçta simüle et
         let dryQueue = queue.map(q => ({ ...q, remaining: q.target }));
         let dryTrucks = 0;
+        let lastDryTruck = null;
         while (dryQueue.some(q => q.remaining > 0) && dryTrucks < 20) {
             dryTrucks++;
             let res = packSingleVehicle(dryQueue, upSpec.L - 90, upSpec.W - 10, upSpec.H, upSpec.doorH, upSpec.maxWgt, baseType, false, upSpec.isContainer, 'spread');
             if (res.placedItems.length === 0) break;
+            lastDryTruck = res;
         }
 
+        // Büyük araçta kalan boş hacim ve ağırlığa göre her bir SKU için ek sipariş (Upsell) miktarı
+        let bigContainerUpsells = [];
+        if (lastDryTruck) {
+            queue.forEach(item => {
+                let plan = findOptimalFloorPlan(upSpec.W - 10, lastDryTruck.gapL, upSpec.H, upSpec.doorH, item.sku, upSpec.maxWgt - lastDryTruck.totalWgt, upSpec.isContainer);
+                let addCount = plan ? plan.maxBoxes : 0;
+                if (addCount > 0) {
+                    bigContainerUpsells.push({
+                        skuName: item.sku.name,
+                        addCount: addCount,
+                        itemStateIndex: item.itemStateIndex
+                    });
+                }
+            });
+        }
+
+        let bigContainerActionsHtml = bigContainerUpsells.map(u => `
+            <div class="flex items-center justify-between bg-slate-800/80 p-2 rounded-lg border border-slate-700 text-xs">
+                <div>
+                    <strong class="text-sky-300">${u.skuName}</strong>: 
+                    <span class="text-slate-300">Kalan boşluğa <strong>+${u.addCount} adet</strong> ilave edilebilir</span>
+                </div>
+                <button onclick="applyAdvisorUpgradeAndFill('${upgradeTargetVeh}', ${u.itemStateIndex}, ${u.addCount})" class="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black px-2.5 py-1 rounded text-[11px] shadow-sm transition whitespace-nowrap">
+                    🚀 ${upgradeVehName}'ye Geç & +${u.addCount} Adet Ekle
+                </button>
+            </div>
+        `).join('');
+
+        // 3. SEÇENEK: MEVCUT FİLODA SON ARACI DOLDURMA (EK SİPARİŞ)
         let upsellButtonsHtml = queue.map(item => {
             const plan = findOptimalFloorPlan(currentSpec.W - 10, lastTruck.gapL, currentSpec.H, currentSpec.doorH, item.sku, currentSpec.maxWgt - lastTruck.totalWgt, currentSpec.isContainer);
             const addCount = plan ? plan.maxBoxes : 0;
@@ -699,7 +774,7 @@
                         <strong class="text-emerald-300">${item.sku.name}</strong>: 
                         <span class="text-slate-300">Boş alana <strong>+${addCount} adet</strong> sığar</span>
                     </div>
-                    <button onclick="applyAdvisorFillSecond(${item.itemStateIndex}, ${addCount})" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-2.5 py-1 rounded text-[11px] shadow-sm transition">
+                    <button onclick="applyAdvisorFillSecond(${item.itemStateIndex}, ${addCount})" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-2.5 py-1 rounded text-[11px] shadow-sm transition whitespace-nowrap">
                         +${addCount} Adet Ekle & Doldur
                     </button>
                 </div>
@@ -713,19 +788,20 @@
                         <span class="text-2xl animate-bounce">⚡</span>
                         <div>
                             <h4 class="font-black text-sm md:text-base tracking-tight text-white uppercase">Dinamik Filo & Satış Tavsiyesi: Toplam ${N} Konteyner Gerekiyor</h4>
-                            <p class="text-xs text-indigo-300">İlk ${N-1} araç tam dolu, son ${N}. araç <strong>${overflowBoxes} koli</strong> ile sevk edilmektedir. Aşağıdaki seçenekleri 1 tıkla uygulayabilirsiniz:</p>
+                            <p class="text-xs text-indigo-300">İlk ${N-1} araç tam dolu, son ${N}. araç <strong>${overflowBoxes} koli</strong> ile sevk edilmektedir. Aşağıdaki stratejik aksiyonları 1 tıkla uygulayabilirsiniz:</p>
                         </div>
                     </div>
                     <span class="bg-rose-500 text-white font-black text-[11px] px-3 py-1 rounded-full uppercase tracking-wider self-start sm:self-auto">${N}. Araç Yarım</span>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <!-- SEÇENEK 1: KUSURSUZ FİT -->
                     <div class="bg-slate-800/90 border border-slate-700 hover:border-amber-400 p-3.5 rounded-xl flex flex-col justify-between transition-all">
                         <div class="space-y-2 mb-3">
                             <span class="bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded text-[10px] uppercase">Seçenek 1: Navlun Tasarrufu</span>
-                            <strong class="text-white text-xs block font-black">Siparişi ${N-1} Konteynere Sığdır</strong>
+                            <strong class="text-white text-xs block font-black">Siparişi ${targetMaxContainers} Konteynere Tam Sığdır</strong>
                             <p class="text-[11px] text-slate-300 leading-relaxed">
-                                Son ${N}. konteyneri iptal edip tek navlunda kalmak için aşağıdaki ürünlerden birini düşürün:
+                                Son konteyneri tamamen iptal edip tek navlunda kalmak ve aracı %100 doldurmak için tam gereken düşürme miktarları:
                             </p>
                             <div class="space-y-1.5 pt-1">
                                 ${downscaleButtonsHtml}
@@ -733,25 +809,30 @@
                         </div>
                     </div>
 
+                    <!-- SEÇENEK 2: BÜYÜK KONTEYNER & UPSELL BİRLEŞİK -->
                     <div class="bg-slate-800/90 border border-slate-700 hover:border-sky-400 p-3.5 rounded-xl flex flex-col justify-between transition-all">
                         <div class="space-y-2 mb-3">
-                            <span class="bg-sky-500/20 text-sky-300 font-bold px-2 py-0.5 rounded text-[10px] uppercase">Seçenek 2: Filo Büyütme</span>
-                            <strong class="text-white text-xs block font-black">${dryTrucks} Adet ${upgradeVehName}'ye Geçiş</strong>
+                            <span class="bg-sky-500/20 text-sky-300 font-bold px-2 py-0.5 rounded text-[10px] uppercase">Seçenek 2: Büyük Araç & Upsell</span>
+                            <strong class="text-white text-xs block font-black">${dryTrucks}x ${upgradeVehName}'ye Geç & Doldur</strong>
                             <p class="text-[11px] text-slate-300 leading-relaxed">
-                                Mevcut ${N} adet 20' DC yerine, tüm siparişinizi <strong>${dryTrucks} adet ${upgradeVehName}</strong> ile taşımak navlunu düşürür.
+                                Siparişinizi <strong>${dryTrucks} adet ${upgradeVehName}</strong> konteynere taşıyıp kalan boş alana ürün ekleyerek navlun birim maliyetini düşürün:
                             </p>
+                            <div class="space-y-1.5 pt-1">
+                                <button onclick="applyAdvisorUpgradeVehicle('${upgradeTargetVeh}')" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-1.5 rounded text-xs transition mb-2">
+                                    Sadece ${upgradeVehName}'ye Geçiş Yap ➔
+                                </button>
+                                ${bigContainerActionsHtml}
+                            </div>
                         </div>
-                        <button onclick="applyAdvisorUpgradeVehicle('${upgradeTargetVeh}')" class="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-black py-2.5 rounded-lg text-xs transition shadow-md">
-                            🚀 ${dryTrucks}x ${upgradeVehName}'ye Dönüştür
-                        </button>
                     </div>
 
+                    <!-- SEÇENEK 3: MEVCUT FİLOYU DOLDUR -->
                     <div class="bg-slate-800/90 border border-slate-700 hover:border-emerald-400 p-3.5 rounded-xl flex flex-col justify-between transition-all">
                         <div class="space-y-2 mb-3">
                             <span class="bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded text-[10px] uppercase">Seçenek 3: Ciro Artırma (Upsell)</span>
                             <strong class="text-white text-xs block font-black">Son ${N}. Konteyneri Tam Doldur</strong>
                             <p class="text-[11px] text-slate-300 leading-relaxed">
-                                Son konteynerdeki boş alana müşteriden ilave sipariş alarak aracı %100 doldurun:
+                                Son konteynerdeki boş alana müşteriden aşağıdaki ürünlerden ilave sipariş alarak aracı %100 doldurun:
                             </p>
                             <div class="space-y-1.5 pt-1">
                                 ${upsellButtonsHtml}
@@ -764,12 +845,13 @@
         container.classList.remove('hidden');
     }
 
-    function applyAdvisorFitOne(idx, newQty) {
+    // 1-TIKLA AKSİYON FONKSİYONLARI
+    function applyAdvisorFitOne(idx, exactFitQty) {
         if (currentMode === 'single') {
             const targetEl = document.getElementById('targetBoxes');
-            if (targetEl) targetEl.value = newQty;
+            if (targetEl) targetEl.value = exactFitQty;
         } else if (mixedItemsState[idx] !== undefined) {
-            mixedItemsState[idx].count = newQty;
+            mixedItemsState[idx].count = exactFitQty;
             renderMixedList();
         }
         debouncedRunEngine();
@@ -781,6 +863,20 @@
             sel.value = targetVehType;
             onVehicleChange();
         }
+    }
+
+    function applyAdvisorUpgradeAndFill(targetVehType, itemIdx, extraQty) {
+        const sel = document.getElementById('vehicleType');
+        if (sel) sel.value = targetVehType;
+
+        if (currentMode === 'single') {
+            const targetEl = document.getElementById('targetBoxes');
+            if (targetEl) targetEl.value = (parseInt(targetEl.value) || 0) + extraQty;
+        } else if (mixedItemsState[itemIdx] !== undefined) {
+            mixedItemsState[itemIdx].count += extraQty;
+            renderMixedList();
+        }
+        onVehicleChange();
     }
 
     function applyAdvisorFillSecond(idx, extraQty) {
@@ -830,7 +926,6 @@
         let cogX = truck.totalWgt > 0 ? (momentX / truck.totalWgt) : 0;
         setElText('resStatusSub', `Dengeli Yük (CoG: ${(cogX/1000).toFixed(1)}m)`);
 
-        // KOMBİNE ŞERİT A VE ŞERİT B AYRIŞTIRILARAK ŞEFFAF TEYİT HESABI
         let blocksExplanation = '';
         let groupedSkus = {};
         truck.placedItems.forEach(item => {
@@ -875,7 +970,7 @@
                 <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-800 space-y-2">
                     <div class="flex items-center justify-between border-b pb-1.5">
                         <strong class="text-xs font-black text-slate-900">${sIdx + 1}. Blok: ${skuData.name}</strong>
-                        <span class="text-emerald-700 bg-emerald-100 font-bold px-2 py-0.5 rounded text-xs">${skuData.totalBoxes.toLocaleString()} Adet &bull; ${skuData.totalWgt.toLocaleString(undefined, {maximumFractionDigits:1})} kg</span>
+                        <span class="text-emerald-700 bg-emerald-100 font-bold px-2.5 py-0.5 rounded text-xs">${skuData.totalBoxes.toLocaleString()} Adet &bull; ${skuData.totalWgt.toLocaleString(undefined, {maximumFractionDigits:1})} kg</span>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         ${stripsHtml}
@@ -898,7 +993,7 @@
         performRender(lastRenderData);
     }
 
-    // 🎨 3D İZOMETRİK ÇİZİM (RENKLİ ÇİZGİLER VE OKLAR TEMİZLENDİ)
+    // 🎨 3D İZOMETRİK ÇİZİM
     function performRender(data) {
         if (!data) return;
         const { placedItems, contL, contW, contH, optFrontCurve, cogX } = data;
