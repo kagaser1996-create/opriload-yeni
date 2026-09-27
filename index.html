@@ -78,6 +78,10 @@
 
         <button id="authSubmitBtn" onclick="handleAuthSubmit()" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 rounded-xl transition-all shadow-md mt-6 text-sm">Giriş Yap</button>
         
+        <button onclick="loginAsGuest('sales')" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl transition-all text-xs mt-2 border border-slate-300">
+            ⚡ Demo / Hızlı Giriş (Şifresiz Devam Et)
+        </button>
+
         <p id="authErrorMsg" class="text-rose-500 text-xs font-bold text-center mt-3 hidden p-2.5 bg-rose-50 rounded-lg border border-rose-200"></p>
         <p id="authSuccessMsg" class="text-emerald-600 text-xs font-bold text-center mt-3 hidden p-2.5 bg-emerald-50 rounded-lg border border-emerald-200"></p>
     </div>
@@ -122,6 +126,26 @@
         </div>
     </nav>
 
+    <!-- LOJİSTİK İNCELEME ÇUBUĞU -->
+    <div id="activeReviewBar" class="hidden max-w-[1400px] mx-auto w-full mb-3 bg-gradient-to-r from-slate-900 to-indigo-950 text-white border-2 border-indigo-500 rounded-xl p-3 md:p-4 shadow-xl flex flex-col md:flex-row items-center justify-between gap-3 no-print">
+        <div class="flex items-center gap-3">
+            <span class="text-2xl animate-bounce">📋</span>
+            <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="bg-amber-500 text-slate-950 px-2 py-0.5 rounded font-black text-[10px] uppercase">Lojistik İnceleme Modu</span>
+                    <span id="reviewBarTalepMeta" class="text-xs font-bold text-slate-200">Talep #--</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-0.5">3D modeli ve yükleme planını inceledikten sonra nihai kararınızı verin:</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
+            <button onclick="decideReviewAction('onaylandi')" class="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg text-xs font-black shadow-lg transition-all">✓ Kabul Et (Onayla)</button>
+            <button onclick="decideReviewAction('duzeltme')" class="flex-1 md:flex-none bg-purple-600 hover:bg-purple-500 text-white px-3 py-2 rounded-lg text-xs font-black shadow-lg transition-all">↺ Düzelt & İade Et</button>
+            <button onclick="decideReviewAction('reddedildi')" class="flex-1 md:flex-none bg-rose-600 hover:bg-rose-500 text-white px-3 py-2 rounded-lg text-xs font-black shadow-lg transition-all">✕ Reddet</button>
+            <button onclick="exitReviewMode()" class="text-slate-400 hover:text-white px-2 py-1 text-xs font-bold underline">Kapat</button>
+        </div>
+    </div>
+
     <!-- WORKSPACE BODY: 2 SÜTUN -->
     <div class="flex-grow flex flex-col lg:flex-row max-w-[1400px] mx-auto w-full gap-4 print-full-width lg:overflow-hidden">
         
@@ -159,7 +183,7 @@
                         <label>Yükleme Stratejisi</label>
                         <select id="loadDistributionStrategy" class="bg-emerald-50 text-emerald-900 border-emerald-300 font-bold text-xs" onchange="debouncedRunEngine()">
                             <option value="spread" selected>Boyuna Yayılım (Sıfır Arka Boşluk)</option>
-                            <option value="ceiling">Tavana Kadar (Maksimum Yükseklik)</option>
+                            <option value="ceiling">Tavana Kadar (Maksimum Hacim)</option>
                         </select>
                     </div>
                 </div>
@@ -219,7 +243,6 @@
                     <select id="baseType" onchange="handleBaseChange(); autoSyncSingleTargetCapacity(); debouncedRunEngine();">
                         <option value="floor" selected>Dökme / Zemin Yükleme (Tam Boy Yayılımı)</option>
                         <option value="pallet">Ahşap Palet (Güvenli & Emniyetli)</option>
-                        <option value="slipsheet">Slipsheet (Çekme)</option>
                     </select>
                 </div>
 
@@ -334,8 +357,107 @@
     </div>
 </div>
 
+<!-- MODALLER: DASHBOARD & SKU YÖNETİMİ -->
+<div id="adminDashboardModal" class="hidden fixed inset-0 bg-slate-900/80 z-40 flex items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-[1150px] w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-200">
+        <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <span class="text-lg">📥</span>
+                <h3 class="font-bold text-base" id="dashboardModalHeader">Sevk Talepleri & Durum Takibi</h3>
+            </div>
+            <button onclick="closeDashboard()" class="text-slate-400 hover:text-white font-black text-lg">✕</button>
+        </div>
+        <div class="p-4 md:p-6 overflow-y-auto flex-grow custom-scrollbar">
+            <div id="dashboardLoading" class="text-center text-slate-400 py-8 font-semibold">Kayıtlar yükleniyor, lütfen bekleyin...</div>
+            <div class="overflow-x-auto">
+                <table id="dashboardTable" class="w-full text-left text-xs bg-white rounded border border-slate-200 hidden min-w-[800px]">
+                    <thead class="bg-slate-100 text-slate-700 uppercase font-bold border-b">
+                        <tr>
+                            <th class="p-3">Tarih</th>
+                            <th class="p-3">Sipariş / Talep Adı</th>
+                            <th class="p-3">Durum</th>
+                            <th class="p-3">Satış Temsilcisi</th>
+                            <th class="p-3">Araç & Yük</th>
+                            <th class="p-3">Lojistik Karar / Düzeltme Notu</th>
+                            <th class="p-3 text-center">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dashboardTableBody" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="skuManagerModal" class="hidden fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 border-t-8 border-sky-500 max-h-[90vh] flex flex-col">
+        <div class="flex justify-between items-start mb-3">
+            <div>
+                <h3 class="text-base font-black text-slate-800 uppercase">SKU & Teneke Veritabanı Yönetimi</h3>
+                <p class="text-xs text-slate-500">Mevcut ürünleri silebilir veya yeni teneke/koli tanımlayabilirsiniz.</p>
+            </div>
+            <button onclick="closeModal('skuManagerModal')" class="text-slate-400 hover:text-rose-500 font-bold text-lg">✕</button>
+        </div>
+        <div class="overflow-y-auto custom-scrollbar flex-grow space-y-4 pr-1">
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-3">
+                <strong class="text-slate-800 block text-xs uppercase font-bold">+ Yeni SKU / Teneke Ekle</strong>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Ürün Adı</label>
+                        <input type="text" id="mngSkuName" placeholder="Örn: 18L Teneke veya 5L Kare" class="w-full p-2 border rounded bg-white font-semibold">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Geometri</label>
+                        <div class="grid grid-cols-2 gap-1 bg-slate-200 p-1 rounded">
+                            <label class="flex items-center gap-1 cursor-pointer p-1 rounded font-bold text-slate-700 hover:bg-white transition text-[11px]">
+                                <input type="radio" name="mngSkuShape" value="box" checked onchange="toggleSkuManagerShapeUI()" class="text-sky-600"> ⏹ Kare / Kutu
+                            </label>
+                            <label class="flex items-center gap-1 cursor-pointer p-1 rounded font-bold text-slate-700 hover:bg-white transition text-[11px]">
+                                <input type="radio" name="mngSkuShape" value="round" onchange="toggleSkuManagerShapeUI()" class="text-sky-600"> ⚪ Silindirik Teneke
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div id="mngBoxDimGroup" class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">En (W - mm)</label>
+                        <input type="number" id="mngSkuW" value="260" class="w-full p-2 border rounded bg-white font-bold">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Boy (L - mm)</label>
+                        <input type="number" id="mngSkuL" value="260" class="w-full p-2 border rounded bg-white font-bold">
+                    </div>
+                </div>
+                <div id="mngRoundDimGroup" class="hidden">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Dış Çap (D - mm)</label>
+                    <input type="number" id="mngSkuDia" value="285" class="w-full p-2 border rounded bg-white font-bold">
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Yükseklik (H - mm)</label>
+                        <input type="number" id="mngSkuH" value="330" class="w-full p-2 border rounded bg-white font-bold">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Brüt Ağırlık (kg)</label>
+                        <input type="number" id="mngSkuWt" step="0.01" value="16.50" class="w-full p-2 border rounded bg-white font-bold">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Maks İstif (BCT)</label>
+                        <input type="number" id="mngSkuMaxLayers" value="6" class="w-full p-2 border rounded bg-white font-bold">
+                    </div>
+                </div>
+                <button onclick="saveNewSkuFromManager()" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-2 rounded text-xs transition shadow-sm">+ Listeye Kaydet</button>
+            </div>
+            <div class="space-y-1">
+                <strong class="text-slate-700 block text-xs uppercase font-bold mb-1">Kayıtlı SKU Listesi</strong>
+                <div id="skuManagerList" class="space-y-1 divide-y divide-slate-100 bg-white border border-slate-200 rounded-xl p-2 max-h-60 overflow-y-auto custom-scrollbar"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ========================================================================= -->
-<!-- JAVASCRIPT: MOTOR, DİNAMİK FİLO VE ÇOKLU-SKU DANIŞMANI                    -->
+<!-- JAVASCRIPT: TEK VE EKSİKSİZ YAŞAM DÖNGÜSÜ                                -->
 <!-- ========================================================================= -->
 <script>
     const SUPABASE_URL = 'https://wukjeatpuysvlosbtahf.supabase.co';
@@ -352,6 +474,7 @@
     let currentUser = null;
     let currentUserProfile = null;
     let authMode = 'login';
+    let currentSimulationId = null;
 
     const defaultSkuDatabase = [
         { name: "kızartmalık (285×285×330)", W: 285, L: 285, H: 330, Wt: 16.50, maxLayers: 6, shape: "round" },
@@ -388,7 +511,6 @@
     let skuDatabase = [];
     let standardPalletSizes = [];
 
-    // Örnek Karma Yük
     let mixedItemsState = [
         { skuIdx: 5, count: 400 },  // 5LX4 Kare
         { skuIdx: 13, count: 600 }, // 0,85LX12 Yeni VK
@@ -478,7 +600,7 @@
     }
 
     // =========================================================================
-    // 🚚 YÜKLEME MOTORU: BOYUNA YAYILIM & KOMBİNE ENLEME
+    // 🚚 YÜKLEME VE YERLEŞTİRME MOTORU
     // =========================================================================
     function runEngine() {
         const vType = document.getElementById('vehicleType')?.value || '20DC';
@@ -579,16 +701,13 @@
 
             if (baseType === 'floor') {
                 if (loadStrategy === 'spread') {
-                    // =========================================================
-                    // 🌟 BOYUNA YAYILIM (BED-SPREADING): TABANI TAM DOLDURUR, SIFIR ARKA BOŞLUK
-                    // =========================================================
+                    // BOYUNA YAYILIM (BED-SPREADING)
                     const maxRowsA = (plan.colsA > 0) ? Math.floor(availableL / plan.dimL1) : 0;
                     const maxRowsB = (plan.colsB > 0) ? Math.floor(availableL / plan.dimL2) : 0;
 
                     let useRowsA = maxRowsA;
                     let useRowsB = maxRowsB;
 
-                    // Karma listede arkadan başka SKU gelecekse her blok kendi hakkını kaplar
                     const isMixedWithMore = (currentMode === 'mixed' && queue.some(other => other !== item && other.remaining > 0));
                     if (isMixedWithMore) {
                         const oneRowCapacity = (plan.colsA * plan.physMaxLayers) + (plan.colsB * plan.physMaxLayers);
@@ -604,7 +723,6 @@
                     if (baseLayers >= 1) {
                         let remainderBoxes = boxesForThisTruck - (baseLayers * floorPositions);
 
-                        // Strip A'yı yerleştir (Tüm boyuna yayılır)
                         if (plan.colsA > 0 && useRowsA > 0) {
                             const stripAY = startY;
                             const widthA = plan.colsA * plan.dimW1;
@@ -617,12 +735,8 @@
                                 const rowX = currentX + (r * plan.dimL1);
                                 const isNearDoor = isContainer && (rowX + plan.dimL1 >= doorZoneX);
                                 let rowL = baseLayers + (r < extraRowsA ? 1 : 0);
-                                if (r === extraRowsA && remA > 0) {
-                                    rowL = baseLayers + 1;
-                                }
-                                if (isNearDoor) {
-                                    rowL = Math.min(rowL, plan.maxDoorLayers);
-                                }
+                                if (r === extraRowsA && remA > 0) rowL = baseLayers + 1;
+                                if (isNearDoor) rowL = Math.min(rowL, plan.maxDoorLayers);
                                 rowL = Math.min(rowL, plan.physMaxLayers);
 
                                 let rowBoxes = Math.min(plan.colsA * rowL, item.remaining);
@@ -646,7 +760,6 @@
                             }
                         }
 
-                        // Strip B'yi yerleştir (varsa)
                         if (plan.colsB > 0 && useRowsB > 0) {
                             const stripBY = startY + (plan.colsA * plan.dimW1);
                             const widthB = plan.colsB * plan.dimW2;
@@ -657,9 +770,7 @@
                                 const rowX = currentX + (r * plan.dimL2);
                                 const isNearDoor = isContainer && (rowX + plan.dimL2 >= doorZoneX);
                                 let rowL = baseLayers;
-                                if (isNearDoor) {
-                                    rowL = Math.min(rowL, plan.maxDoorLayers);
-                                }
+                                if (isNearDoor) rowL = Math.min(rowL, plan.maxDoorLayers);
                                 rowL = Math.min(rowL, plan.physMaxLayers);
 
                                 let rowBoxes = Math.min(plan.colsB * rowL, item.remaining);
@@ -683,7 +794,6 @@
                             }
                         }
                     } else {
-                        // Koli sayısı 1 tam taban katından az ise tabana yay
                         const rowsToFill = Math.min(useRowsA, Math.ceil(boxesForThisTruck / Math.max(1, plan.colsA)));
                         for (let r = 0; r < rowsToFill; r++) {
                             if (item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
@@ -713,9 +823,7 @@
                     currentX = placedItems.reduce((max, it) => Math.max(max, it.x + it.l), 0);
 
                 } else {
-                    // =========================================================
-                    // TAVANA KADAR (CEILING-FIRST) İSTİF
-                    // =========================================================
+                    // TAVANA KADAR (CEILING-FIRST)
                     let curX_A = currentX;
                     let curX_B = currentX;
                     const stripAY = startY;
@@ -793,7 +901,7 @@
     }
 
     // =========================================================================
-    // 💡 DİNAMİK FİLO VE ÇOKLU-SKU SATIŞ DANIŞMANI (TAM KAPSAMLI VAKA ANALİZİ)
+    // 💡 DİNAMİK FİLO VE ÇOKLU-SKU SATIŞ DANIŞMANI
     // =========================================================================
     function evaluateSalesAdvisor(queue, vType, baseType) {
         const container = document.getElementById('salesAdvisorContainer');
@@ -810,7 +918,6 @@
         const overflowBoxes = lastTruck.totalBoxes;
         const currentSpec = VEHICLE_SPECS[vType];
 
-        // 1. SEÇENEK: SON ARACI İPTAL ET (TÜM SKU'LAR İÇİN DÜŞÜRME SEÇENEKLERİ)
         let downscaleOptions = queue.map(item => {
             const dropQty = Math.min(item.target, overflowBoxes);
             return {
@@ -822,7 +929,6 @@
             };
         }).filter(opt => opt.dropQty > 0);
 
-        // 2. SEÇENEK: TÜM SİPARİŞİ BİR ÜST FİLOYA DÖNÜŞTÜR (DRY-RUN FİLO SİMÜLASYONU)
         let upgradeTargetVeh = (vType === '20DC') ? '40DC' : ((vType === '40DC') ? '40HC' : 'TIR');
         let upgradeVehName = VEHICLE_SPECS[upgradeTargetVeh].name;
         let upSpec = VEHICLE_SPECS[upgradeTargetVeh];
@@ -835,7 +941,6 @@
             if (res.placedItems.length === 0) break;
         }
 
-        // 3. SEÇENEK: SON KONTEYNERİ DOLDURMA (TÜM SKU'LAR İÇİN AYRI EKLEME HESABI)
         let upsellOptions = queue.map(item => {
             const plan = findOptimalFloorPlan(currentSpec.W - 10, lastTruck.gapL, currentSpec.H, currentSpec.doorH, item.sku, currentSpec.maxWgt - lastTruck.totalWgt, currentSpec.isContainer);
             return {
@@ -903,7 +1008,7 @@
                             <span class="bg-sky-500/20 text-sky-300 font-bold px-2 py-0.5 rounded text-[10px] uppercase">Seçenek 2: Filo Dönüşümü</span>
                             <strong class="text-white text-xs block font-black">${dryTrucks} Adet ${upgradeVehName}'ye Geçiş</strong>
                             <p class="text-[11px] text-slate-300 leading-relaxed">
-                                Mevcut ${N} adet 20' DC yerine, tüm siparişinizi <strong>${dryTrucks} adet ${upgradeVehName}</strong> ile taşımak navlunu ve elleçlemeyi düşürür.
+                                Mevcut ${N} adet 20' DC yerine, tüm siparişinizi <strong>${dryTrucks} adet ${upgradeVehName}</strong> ile taşımak navlunu ve operasyon masraflarını düşürür.
                             </p>
                         </div>
                         <button onclick="applyAdvisorUpgradeVehicle('${upgradeTargetVeh}')" class="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-black py-2.5 rounded-lg text-xs transition shadow-md">
@@ -1128,9 +1233,6 @@
 
     function resetView() { panX = 0; panY = 0; zoomLevel = 1; if (lastRenderData) performRender(lastRenderData); }
 
-    // =========================================================================
-    // FORM VE MODAL AKSİYONLARI
-    // =========================================================================
     function populateSelects() {
         const select = document.getElementById('skuSelect');
         if (!select) return;
@@ -1212,7 +1314,6 @@
         debouncedRunEngine();
     }
 
-    // REAKTİF DRAG-AND-DROP LİSTESİ
     let draggedIndex = null;
 
     function renderMixedList() {
@@ -1287,13 +1388,16 @@
 
     function openModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('hidden'); }
     function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.add('hidden'); }
+    function openDashboard() { const el = document.getElementById('adminDashboardModal'); if (el) el.classList.remove('hidden'); }
+    function closeDashboard() { const el = document.getElementById('adminDashboardModal'); if (el) el.classList.add('hidden'); }
+    function exitReviewMode() { const el = document.getElementById('activeReviewBar'); if (el) el.classList.add('hidden'); }
+
     function openSkuManager() { renderSkuManagerList(); openModal('skuManagerModal'); }
     function toggleSkuManagerShapeUI() {
         const shape = document.querySelector('input[name="mngSkuShape"]:checked')?.value || 'box';
         document.getElementById('mngBoxDimGroup')?.classList.toggle('hidden', shape === 'round');
         document.getElementById('mngRoundDimGroup')?.classList.toggle('hidden', shape !== 'round');
     }
-
     function renderSkuManagerList() {
         const c = document.getElementById('skuManagerList');
         if (!c) return;
@@ -1305,7 +1409,6 @@
             c.appendChild(item);
         });
     }
-
     function deleteSku(idx) {
         if (skuDatabase.length <= 1) return alert("En az 1 SKU kalmalıdır.");
         skuDatabase.splice(idx, 1);
@@ -1314,7 +1417,6 @@
         renderMixedList();
         onSkuSelectChanged();
     }
-
     function saveNewSkuFromManager() {
         const name = document.getElementById('mngSkuName')?.value.trim() || 'Yeni SKU';
         const shape = document.querySelector('input[name="mngSkuShape"]:checked')?.value || 'box';
@@ -1349,9 +1451,28 @@
     }
 
     // =========================================================================
-    // 🚀 BAŞLATICI & OTURUM YÖNETİMİ
+    // 🚀 BAŞLATICI & OTURUM KONTROLÜ
     // =========================================================================
     function initApp() {
+        if (window.supabase) {
+            try {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                supabaseClient.auth.getSession().then(({ data: { session } }) => {
+                    handleAuthChange(session?.user || null);
+                }).catch(() => {
+                    handleAuthChange(null);
+                });
+
+                supabaseClient.auth.onAuthStateChange((_event, session) => {
+                    handleAuthChange(session?.user || null);
+                });
+            } catch (e) {
+                handleAuthChange(null);
+            }
+        } else {
+            handleAuthChange(null);
+        }
+
         skuDatabase = [...defaultSkuDatabase];
         standardPalletSizes = [...defaultPalletSizes];
 
@@ -1370,15 +1491,172 @@
         runEngine();
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initApp);
-    } else {
-        initApp();
+    function loginAsGuest(role = 'sales') {
+        const landingPage = document.getElementById('authLandingPage');
+        const protectedApp = document.getElementById('protectedApp');
+        landingPage.classList.add('hidden');
+        protectedApp.classList.remove('hidden');
+
+        currentUser = { email: 'demo@elita.com', id: 'demo-user' };
+        currentUserProfile = { full_name: 'Demo Kullanıcı', role: role };
+        applyRolePermissions();
+        runEngine();
     }
 
     function debouncedRunEngine() {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(runEngine, 60);
+    }
+
+    function handleAuthChange(user) {
+        currentUser = user;
+        const landingPage = document.getElementById('authLandingPage');
+        const protectedApp = document.getElementById('protectedApp');
+
+        if (user) {
+            landingPage.classList.add('hidden');
+            protectedApp.classList.remove('hidden');
+            loadUserProfile(user.id);
+            runEngine();
+        } else {
+            landingPage.classList.remove('hidden');
+            protectedApp.classList.add('hidden');
+            currentUserProfile = null;
+        }
+    }
+
+    function switchAuthTab(mode) {
+        authMode = mode;
+        const btnLogin = document.getElementById('authTabLogin');
+        const btnReg = document.getElementById('authTabRegister');
+        const regFields = document.getElementById('registerFields');
+        const submitBtn = document.getElementById('authSubmitBtn');
+        const err = document.getElementById('authErrorMsg');
+        const scs = document.getElementById('authSuccessMsg');
+        err.classList.add('hidden');
+        scs.classList.add('hidden');
+
+        if (mode === 'login') {
+            btnLogin.className = "flex-1 py-2 font-bold text-sm border-b-2 border-sky-500 text-sky-600";
+            btnReg.className = "flex-1 py-2 font-bold text-sm text-slate-400 border-b-2 border-transparent";
+            regFields.classList.add('hidden');
+            submitBtn.innerText = "Giriş Yap";
+        } else {
+            btnReg.className = "flex-1 py-2 font-bold text-sm border-b-2 border-sky-500 text-sky-600";
+            btnLogin.className = "flex-1 py-2 font-bold text-sm text-slate-400 border-b-2 border-transparent";
+            regFields.classList.remove('hidden');
+            submitBtn.innerText = "Hesap Oluştur";
+        }
+    }
+
+    async function handleAuthSubmit() {
+        const errLabel = document.getElementById('authErrorMsg');
+        const scsLabel = document.getElementById('authSuccessMsg');
+        errLabel.classList.add('hidden');
+        scsLabel.classList.add('hidden');
+
+        if (!supabaseClient) {
+            errLabel.innerText = "Veritabanı bağlantısı kurulamadı. Demo Modu ile devam edebilirsiniz.";
+            errLabel.classList.remove('hidden');
+            return;
+        }
+
+        const email = document.getElementById('authEmail').value.trim();
+        const password = document.getElementById('authPassword').value;
+        if (!email || !password) {
+            errLabel.innerText = "Lütfen e-posta ve şifrenizi girin.";
+            errLabel.classList.remove('hidden');
+            return;
+        }
+
+        const btn = document.getElementById('authSubmitBtn');
+        btn.innerText = "İşlem yapılıyor...";
+        btn.disabled = true;
+
+        try {
+            if (authMode === 'login') {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                if (error) throw error;
+                handleAuthChange(data.user);
+            } else {
+                const fullName = document.getElementById('regFullName').value.trim() || 'Kullanıcı';
+                const role = document.getElementById('regRole').value;
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email, password, options: { data: { full_name: fullName, role: role } }
+                });
+                if (error) throw error;
+                if (data?.session) {
+                    handleAuthChange(data.user);
+                } else {
+                    scsLabel.innerText = "Hesabınız oluşturuldu! Şimdi giriş yapabilirsiniz.";
+                    scsLabel.classList.remove('hidden');
+                    switchAuthTab('login');
+                }
+            }
+        } catch (e) {
+            errLabel.innerText = "Hata: " + (e.message || "Giriş yapılamadı.");
+            errLabel.classList.remove('hidden');
+        } finally {
+            btn.innerText = authMode === 'login' ? "Giriş Yap" : "Hesap Oluştur";
+            btn.disabled = false;
+        }
+    }
+
+    async function loadUserProfile(userId) {
+        if (!currentUser) return;
+        try {
+            const { data } = await supabaseClient.from('profiles').select('*').eq('id', userId).single();
+            currentUserProfile = data || {
+                role: currentUser.user_metadata?.role || 'sales',
+                full_name: currentUser.user_metadata?.full_name || currentUser.email
+            };
+        } catch (e) {
+            currentUserProfile = {
+                role: currentUser.user_metadata?.role || 'sales',
+                full_name: currentUser.user_metadata?.full_name || currentUser.email
+            };
+        }
+        applyRolePermissions();
+    }
+
+    function applyRolePermissions() {
+        const role = currentUserProfile?.role || 'sales';
+        const roleBadge = document.getElementById('userRoleBadge');
+        const btnSales = document.getElementById('btnSubmitSales');
+
+        setElText('userEmailLabel', currentUserProfile?.full_name || currentUser?.email || 'Kullanıcı');
+
+        if (role === 'logistics' || role === 'admin') {
+            if (roleBadge) {
+                roleBadge.innerText = role === 'admin' ? "YÖNETİCİ" : "LOJİSTİK & SAHA";
+                roleBadge.className = "px-1.5 py-0.5 rounded font-black text-[9px] bg-indigo-600 text-white uppercase";
+            }
+            setElText('dashboardBtnText', "📥 Gelen Sevk Talepleri");
+            if (btnSales) btnSales.classList.add('hidden');
+        } else {
+            if (roleBadge) {
+                roleBadge.innerText = "SATIŞ EKİBİ";
+                roleBadge.className = "px-1.5 py-0.5 rounded font-black text-[9px] bg-amber-600 text-white uppercase";
+            }
+            setElText('dashboardBtnText', "📥 Sevk Taleplerim");
+            if (btnSales) {
+                btnSales.classList.remove('hidden');
+                btnSales.classList.add('flex');
+            }
+        }
+    }
+
+    async function handleLogout() {
+        if (supabaseClient) {
+            try { await supabaseClient.auth.signOut(); } catch(e){}
+        }
+        handleAuthChange(null);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initApp);
+    } else {
+        initApp();
     }
 </script>
 </body>
