@@ -3,62 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Elita OptiLoad | Akıllı Lojistik & Sevk Onay Sistemi</title>
+    <title>Elita OptiLoad | Akıllı Lojistik & Sevk Optimizasyonu</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Supabase JS Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- HTML2PDF for PDF Exports -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; color: #0f172a; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            color: #0f172a; 
+        }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        .input-group label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 0.25rem; display: block; }
-        .input-group input[type="number"], .input-group select, .input-group input[type="text"], .input-group input[type="password"] { width: 100%; padding: 0.6rem; border: 1px solid #e2e8f0; border-radius: 0.5rem; font-size: 0.875rem; background-color: #f8fafc; transition: all 0.2s; }
-        .input-group input:focus, .input-group select:focus { outline: none; border-color: #0284c7; background-color: #ffffff; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1); }
-        .section-header { font-size: 0.85rem; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.4rem; margin-top: 1.25rem; margin-bottom: 0.75rem; }
-        .tab-btn { padding: 0.75rem 1.5rem; font-weight: 600; border-bottom: 3px solid transparent; cursor: pointer; transition: all 0.2s; }
-        .tab-btn.active { border-bottom-color: #0284c7; color: #0284c7; background: white; }
+        
+        .input-group label { 
+            font-size: 0.68rem; 
+            font-weight: 700; 
+            text-transform: uppercase; 
+            letter-spacing: 0.06em; 
+            color: #64748b; 
+            margin-bottom: 0.35rem; 
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .input-group input[type="number"], 
+        .input-group select, 
+        .input-group input[type="text"], 
+        .input-group input[type="password"] { 
+            width: 100%; 
+            padding: 0.55rem 0.75rem; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 0.625rem; 
+            font-size: 0.825rem; 
+            background-color: #ffffff; 
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+        }
+        .input-group input:focus, .input-group select:focus { 
+            outline: none; 
+            border-color: #0284c7; 
+            background-color: #ffffff; 
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15); 
+        }
+        .section-header { 
+            font-size: 0.75rem; 
+            font-weight: 800; 
+            color: #1e293b; 
+            text-transform: uppercase; 
+            letter-spacing: 0.08em; 
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1.25rem; 
+            margin-bottom: 0.65rem; 
+        }
+        .section-header::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e2e8f0;
+        }
+        .tab-btn { 
+            padding: 0.65rem 1rem; 
+            font-weight: 700; 
+            font-size: 0.78rem;
+            border-radius: 0.5rem;
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+        }
+        .tab-btn.active { 
+            color: #0369a1; 
+            background: #ffffff; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
         .drag-handle { cursor: grab; }
         .drag-handle:active { cursor: grabbing; }
 
         @media print {
             @page { size: A4 landscape; margin: 8mm; }
-            html, body { height: auto !important; overflow: visible !important; background-color: white !important; font-size: 9pt; display: block !important; }
+            html, body { height: auto !important; overflow: visible !important; background: white !important; font-size: 9pt; display: block !important; }
             .no-print { display: none !important; }
             .print-only { display: block !important; }
             canvas { max-width: 100% !important; height: auto !important; page-break-inside: avoid; }
         }
     </style>
 </head>
-<body class="p-2 md:p-4 min-h-[100dvh] lg:h-[100dvh] flex flex-col justify-between">
+<body class="p-2 md:p-3 min-h-[100dvh] lg:h-[100dvh] flex flex-col justify-between antialiased selection:bg-sky-500 selection:text-white">
 
 <!-- 🔒 GİRİŞ & KAYIT AÇILIŞ SAYFASI (AUTH GATE) -->
 <div id="authLandingPage" class="flex-grow flex items-center justify-center p-4">
-    <div class="bg-white p-6 md:p-8 rounded-2xl shadow-2xl max-w-md w-full border-t-8 border-sky-500">
-        <div class="flex items-center gap-3 mb-2 justify-center">
-            <div class="w-10 h-10 bg-sky-500 rounded flex items-center justify-center font-black text-white text-2xl">E</div>
-            <h2 class="text-2xl md:text-3xl font-black text-slate-800 tracking-tight">Elita <span class="font-light text-sky-500">OptiLoad</span></h2>
+    <div class="bg-white/95 backdrop-blur-xl p-8 rounded-3xl shadow-2xl shadow-slate-900/10 max-w-md w-full border border-slate-100 relative overflow-hidden">
+        <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-sky-500 via-indigo-500 to-emerald-500"></div>
+        <div class="flex items-center gap-3.5 mb-2 justify-center pt-2">
+            <div class="w-11 h-11 bg-gradient-to-tr from-sky-600 to-indigo-600 rounded-xl flex items-center justify-center font-black text-white text-2xl shadow-md shadow-sky-600/20">E</div>
+            <div>
+                <h2 class="text-2xl font-black text-slate-900 tracking-tight leading-none">Elita <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-indigo-600">OptiLoad</span></h2>
+                <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Lojistik Planlama Platformu</p>
+            </div>
         </div>
-        <p class="text-center text-slate-500 font-bold mb-6 uppercase text-[11px] tracking-widest">Saha & Sevk Onay Paneli Girişi</p>
         
-        <div class="flex border-b border-slate-200 mb-6">
-            <button id="authTabLogin" onclick="switchAuthTab('login')" class="flex-1 py-2 font-bold text-sm border-b-2 border-sky-500 text-sky-600">Giriş Yap</button>
-            <button id="authTabRegister" onclick="switchAuthTab('register')" class="flex-1 py-2 font-bold text-sm text-slate-400 border-b-2 border-transparent">Hesap Oluştur</button>
+        <div class="flex p-1 bg-slate-100/80 rounded-xl my-6 border border-slate-200/60">
+            <button id="authTabLogin" onclick="switchAuthTab('login')" class="flex-1 py-2 font-bold text-xs rounded-lg transition-all bg-white text-slate-900 shadow-sm">Giriş Yap</button>
+            <button id="authTabRegister" onclick="switchAuthTab('register')" class="flex-1 py-2 font-bold text-xs rounded-lg text-slate-500 hover:text-slate-900 transition-all">Hesap Oluştur</button>
         </div>
 
         <div id="registerFields" class="hidden space-y-3 mb-3">
             <div>
-                <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">Ad Soyad</label>
-                <input type="text" id="regFullName" class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm focus:border-sky-500 outline-none" placeholder="Ad Soyad">
+                <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Ad Soyad</label>
+                <input type="text" id="regFullName" class="w-full p-2.5 border rounded-xl bg-slate-50/50 text-xs focus:border-sky-500 outline-none" placeholder="Ad Soyad">
             </div>
             <div>
-                <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">Departman / Rol</label>
-                <select id="regRole" class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm focus:border-sky-500 outline-none font-semibold">
+                <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Departman / Rol</label>
+                <select id="regRole" class="w-full p-2.5 border rounded-xl bg-slate-50/50 text-xs focus:border-sky-500 outline-none font-semibold">
                     <option value="sales">Satış Ekibi (Talep Oluşturur & Takip Eder)</option>
                     <option value="logistics">Lojistik & Saha (İnceler, Düzeltme İster, Onaylar)</option>
                 </select>
@@ -67,19 +133,19 @@
 
         <div class="space-y-3">
             <div>
-                <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">E-Posta Adresi</label>
-                <input type="email" id="authEmail" class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm focus:border-sky-500 outline-none" placeholder="ornek@elita.com" onkeydown="if(event.key==='Enter') handleAuthSubmit()">
+                <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">E-Posta Adresi</label>
+                <input type="email" id="authEmail" class="w-full p-2.5 border rounded-xl bg-slate-50/50 text-xs focus:border-sky-500 outline-none transition" placeholder="ornek@elita.com" onkeydown="if(event.key==='Enter') handleAuthSubmit()">
             </div>
             <div>
-                <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">Şifre</label>
-                <input type="password" id="authPassword" class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm focus:border-sky-500 outline-none" placeholder="••••••••" onkeydown="if(event.key==='Enter') handleAuthSubmit()">
+                <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Şifre</label>
+                <input type="password" id="authPassword" class="w-full p-2.5 border rounded-xl bg-slate-50/50 text-xs focus:border-sky-500 outline-none transition" placeholder="••••••••" onkeydown="if(event.key==='Enter') handleAuthSubmit()">
             </div>
         </div>
 
-        <button id="authSubmitBtn" onclick="handleAuthSubmit()" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 rounded-xl transition-all shadow-md mt-6 text-sm">Giriş Yap</button>
+        <button id="authSubmitBtn" onclick="handleAuthSubmit()" class="w-full bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-sky-600/25 mt-6 text-xs uppercase tracking-wider">Giriş Yap</button>
         
-        <p id="authErrorMsg" class="text-rose-500 text-xs font-bold text-center mt-3 hidden p-2.5 bg-rose-50 rounded-lg border border-rose-200"></p>
-        <p id="authSuccessMsg" class="text-emerald-600 text-xs font-bold text-center mt-3 hidden p-2.5 bg-emerald-50 rounded-lg border border-emerald-200"></p>
+        <p id="authErrorMsg" class="text-rose-600 text-xs font-bold text-center mt-3 hidden p-2.5 bg-rose-50 rounded-xl border border-rose-200"></p>
+        <p id="authSuccessMsg" class="text-emerald-700 text-xs font-bold text-center mt-3 hidden p-2.5 bg-emerald-50 rounded-xl border border-emerald-200"></p>
     </div>
 </div>
 
@@ -87,60 +153,66 @@
 <div id="protectedApp" class="hidden flex flex-col flex-grow">
 
     <!-- ÜST MENÜ (NAVBAR) -->
-    <nav class="bg-slate-900 text-white shadow-md rounded-t-xl md:rounded-xl mx-auto max-w-[1400px] w-full z-10 relative no-print mb-3">
-        <div class="px-4 md:px-6 py-3 flex flex-col md:flex-row justify-between items-center gap-3">
+    <nav class="bg-slate-900/95 backdrop-blur-md text-white shadow-xl shadow-slate-950/10 rounded-2xl mx-auto max-w-[1440px] w-full z-10 relative no-print mb-2.5 border border-slate-800">
+        <div class="px-4 md:px-5 py-2.5 flex flex-col md:flex-row justify-between items-center gap-2.5">
             <div class="flex items-center gap-3 w-full md:w-auto">
-                <div class="w-8 h-8 bg-sky-500 rounded flex items-center justify-center font-black text-xl tracking-tighter">E</div>
+                <div class="w-8 h-8 bg-gradient-to-tr from-sky-500 to-indigo-600 rounded-lg flex items-center justify-center font-black text-lg tracking-tighter shadow-md shadow-sky-500/30">E</div>
                 <div>
-                    <h1 class="text-lg md:text-xl font-black tracking-tight leading-none">Elita <span class="font-light text-sky-400">OptiLoad</span></h1>
-                    <p class="text-[9px] md:text-[10px] text-slate-400 font-semibold tracking-widest uppercase mt-1">Akıllı Lojistik, Emniyet & Sevk Onay Planlayıcı</p>
+                    <h1 class="text-base md:text-lg font-black tracking-tight leading-none">Elita <span class="font-normal text-sky-400">OptiLoad</span></h1>
+                    <p class="text-[9px] text-slate-400 font-medium tracking-wider uppercase mt-0.5">Saha Yükleme & Sevk Simülatörü</p>
                 </div>
             </div>
 
-            <div class="flex items-center gap-2 w-full md:w-auto justify-center md:justify-end flex-wrap">
-                <button onclick="exportCSV()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1.5 md:px-3 md:py-1.5 rounded-lg text-xs font-bold shadow-md transition-all">📊 CSV</button>
-                <button onclick="exportPDF()" class="bg-rose-600 hover:bg-rose-500 text-white px-2.5 py-1.5 md:px-3 md:py-1.5 rounded-lg text-xs font-bold shadow-md transition-all">📄 PDF</button>
-                <button onclick="window.print()" class="bg-sky-600 hover:bg-sky-500 text-white px-2.5 py-1.5 md:px-3 md:py-1.5 rounded-lg text-xs font-bold shadow-md transition-all">🖨️ Yazdır</button>
+            <div class="flex items-center gap-1.5 w-full md:w-auto justify-center md:justify-end flex-wrap">
+                <div class="bg-slate-800/80 p-0.5 rounded-lg border border-slate-700/80 flex items-center gap-1">
+                    <button onclick="exportCSV()" class="hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1">📊 CSV</button>
+                    <button onclick="exportPDF()" class="hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1">📄 PDF</button>
+                    <button onclick="window.print()" class="hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1">🖨️ Yazdır</button>
+                </div>
 
-                <div class="flex items-center gap-2 flex-wrap ml-1 md:ml-3">
-                    <div id="userProfileBadge" class="flex items-center gap-2 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 text-xs">
-                        <span id="userRoleBadge" class="px-1.5 py-0.5 rounded font-black text-[9px] uppercase">Kullanıcı</span>
-                        <span id="userEmailLabel" class="text-slate-300 font-medium hidden sm:inline">user@mail.com</span>
+                <div class="h-4 w-px bg-slate-700 mx-1 hidden sm:block"></div>
+
+                <div class="flex items-center gap-2">
+                    <div id="userProfileBadge" class="flex items-center gap-2 bg-slate-800/90 px-2.5 py-1 rounded-lg border border-slate-700/80 text-xs">
+                        <span id="userRoleBadge" class="px-1.5 py-0.5 rounded font-black text-[9px] uppercase tracking-wider">Kullanıcı</span>
+                        <span id="userEmailLabel" class="text-slate-300 font-semibold text-[11px] hidden sm:inline">user@mail.com</span>
                     </div>
                     
-                    <button id="btnDashboard" onclick="openDashboard()" class="relative bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm">
+                    <button id="btnDashboard" onclick="openDashboard()" class="relative bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 shadow-sm">
                         <span id="dashboardBtnText">📥 Taleplerim</span>
-                        <span id="pendingBadgeBubble" class="hidden absolute -top-1.5 -right-1.5 bg-rose-600 text-white text-[10px] font-black px-1.5 py-0.2 rounded-full shadow-md animate-pulse">0</span>
+                        <span id="pendingBadgeBubble" class="hidden absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full shadow-md animate-pulse">0</span>
                     </button>
 
-                    <button id="btnSubmitSales" onclick="saveSimulation('bekliyor')" class="hidden bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-lg transition-all items-center gap-1">
+                    <button id="btnSubmitSales" onclick="saveSimulation('bekliyor')" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold shadow-md transition items-center gap-1">
                         ↗ Onaya Gönder
                     </button>
-                    <button onclick="handleLogout()" class="text-xs text-rose-400 hover:text-rose-300 font-bold ml-1">Çıkış Yap</button>
+                    <button onclick="handleLogout()" class="text-[11px] text-slate-400 hover:text-rose-400 font-semibold ml-1 transition">Çıkış</button>
                 </div>
             </div>
         </div>
     </nav>
 
     <!-- WORKSPACE BODY: 2 SÜTUN -->
-    <div class="flex-grow flex flex-col lg:flex-row max-w-[1400px] mx-auto w-full gap-4 print-full-width lg:overflow-hidden">
+    <div class="flex-grow flex flex-col lg:flex-row max-w-[1440px] mx-auto w-full gap-3 print-full-width lg:overflow-hidden">
         
         <!-- SOL PANEL: PARAMETRELER -->
-        <div class="w-full lg:w-[360px] bg-white rounded-xl shadow-md border border-slate-200 flex flex-col no-print flex-shrink-0">
-            <div class="grid grid-cols-2 bg-slate-100 rounded-t-xl border-b border-slate-200">
-                <div class="tab-btn active text-sm text-center py-3" id="tab-single" onclick="switchTab('single')">📦 Tekil SKU</div>
-                <div class="tab-btn text-sm text-slate-500 text-center py-3" id="tab-mixed" onclick="switchTab('mixed')">🔀 Karma (Blok)</div>
+        <div class="w-full lg:w-[350px] bg-white rounded-2xl shadow-sm border border-slate-200/80 flex flex-col no-print flex-shrink-0">
+            <div class="p-2 border-b border-slate-100">
+                <div class="grid grid-cols-2 p-0.5 bg-slate-100 rounded-xl">
+                    <div class="tab-btn active text-center" id="tab-single" onclick="switchTab('single')">📦 Tekil SKU</div>
+                    <div class="tab-btn text-slate-500 text-center" id="tab-mixed" onclick="switchTab('mixed')">🔀 Karma (Blok)</div>
+                </div>
             </div>
 
-            <div class="p-4 md:p-5 lg:overflow-y-auto flex-grow custom-scrollbar">
+            <div class="p-3.5 md:p-4 lg:overflow-y-auto flex-grow custom-scrollbar">
                 
-                <div class="mb-3 bg-sky-50 border border-sky-200 p-3 rounded-lg">
-                    <label class="text-[10px] font-black text-sky-800 uppercase mb-1 block">Sipariş / Talep Adı (Yazdırmaya Çıkar)</label>
-                    <input type="text" id="orderTitle" placeholder="Örn: Sipariş #1042 - ABC Dağıtım" class="w-full p-2 border border-sky-300 rounded bg-white text-xs font-bold text-slate-800 focus:outline-none focus:border-sky-500" oninput="syncOrderTitleToPrint();">
+                <div class="mb-3 bg-slate-50/80 border border-slate-200/80 p-2.5 rounded-xl">
+                    <label class="text-[9px] font-bold text-slate-500 uppercase mb-1 block">Sipariş / Talep Tanımı</label>
+                    <input type="text" id="orderTitle" placeholder="Örn: Sipariş #1042 - ABC Dağıtım" class="w-full p-2 border border-slate-200 rounded-lg bg-white text-xs font-bold text-slate-800 focus:outline-none focus:border-sky-500 transition" oninput="syncOrderTitleToPrint();">
                 </div>
 
-                <div class="section-header mt-0">Araç & Güvenlik Sınırları</div>
-                <div class="input-group mb-3">
+                <div class="section-header mt-1">Araç & Güvenlik Sınırları</div>
+                <div class="input-group mb-2.5">
                     <label>Araç Tipi</label>
                     <select id="vehicleType" onchange="onVehicleChange()">
                         <option value="TIR">TIR (13600 x 2420 x 2600 mm)</option>
@@ -150,147 +222,169 @@
                     </select>
                 </div>
 
-                <div class="grid grid-cols-2 gap-2 mb-3">
+                <div class="grid grid-cols-2 gap-2 mb-2.5">
                     <div class="input-group">
                         <label>Maks Tonaj (kg)</label>
-                        <input type="number" id="maxWgt" value="27800" max="27800" class="bg-slate-50 text-rose-700 font-bold" oninput="if(this.value > 27800) this.value = 27800; autoSyncSingleTargetCapacity();" onchange="debouncedRunEngine()">
+                        <input type="number" id="maxWgt" value="27800" max="27800" class="font-bold text-slate-800" oninput="if(this.value > 27800) this.value = 27800; autoSyncSingleTargetCapacity();" onchange="debouncedRunEngine()">
                     </div>
                     <div class="input-group">
-                        <label>Yükleme Stratejisi</label>
-                        <select id="loadDistributionStrategy" class="bg-emerald-50 text-emerald-900 border-emerald-300 font-bold text-xs" onchange="debouncedRunEngine()">
-                            <option value="spread" selected>Boyuna Yayılım (Sıfır Arka Boşluk)</option>
-                            <option value="ceiling">Tavana Kadar (Maksimum Yükseklik)</option>
+                        <label>Yük Stratejisi</label>
+                        <select id="loadDistributionStrategy" class="font-bold text-sky-900 bg-sky-50/50 border-sky-200" onchange="debouncedRunEngine()">
+                            <option value="spread" selected>Boyuna Yayılım</option>
+                            <option value="ceiling">Tavana Kadar</option>
                         </select>
                     </div>
                 </div>
 
                 <!-- TEKİL ÜRÜN PANELİ -->
                 <div id="panel-single" class="block">
-                    <div class="section-header flex justify-between items-center">
-                        <span>Tekil Ürün Modu</span>
-                        <button onclick="openSkuManager()" class="text-[10px] bg-sky-600 hover:bg-sky-500 text-white font-bold px-2 py-0.5 rounded shadow-sm transition">⚙️ SKU Ekle / Sil</button>
+                    <div class="section-header">
+                        <span>Tekil Ürün Ayarları</span>
+                        <button onclick="openSkuManager()" class="text-[9px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-2 py-0.5 rounded-md transition border border-slate-200">⚙️ SKU Listesi</button>
                     </div>
-                    <div class="input-group mb-3">
+                    <div class="input-group mb-2.5">
                         <label>Ürün Seçimi</label>
                         <select id="skuSelect" onchange="onSkuSelectChanged()"></select>
                     </div>
                     
-                    <div class="input-group mb-3 p-3 bg-fuchsia-50 border border-fuchsia-200 rounded-lg">
-                        <label class="!text-fuchsia-800 flex items-center justify-between">
-                            <span>Hedef Adet / Talep (İhtiyaç Kadar)</span>
-                            <span id="capacityHintBadge" class="text-[9px] bg-fuchsia-200 text-fuchsia-900 px-1.5 py-0.5 rounded font-bold">Maksimum Kapasite</span>
+                    <div class="input-group mb-2.5 p-2.5 bg-gradient-to-br from-slate-50 to-indigo-50/30 border border-slate-200 rounded-xl">
+                        <label class="!text-slate-700">
+                            <span>Hedef Adet / Talep</span>
+                            <span id="capacityHintBadge" class="text-[9px] bg-indigo-100 text-indigo-800 px-1.5 py-0.2 rounded font-bold">Kapasite</span>
                         </label>
-                        <input type="number" id="targetBoxes" value="" placeholder="Otomatik Araç Kapasitesi" class="bg-white border-fuchsia-300 font-bold text-fuchsia-900" oninput="isUserDefinedTarget = (this.value !== ''); debouncedRunEngine();">
-                        <span class="text-[10px] text-fuchsia-700 mt-1 block">Boş bırakıldığında aracın fiziksel net kapasitesi otomatik hesaplanır.</span>
+                        <input type="number" id="targetBoxes" value="" placeholder="Otomatik Kapasite" class="bg-white border-slate-300 font-black text-indigo-950 font-mono" oninput="isUserDefinedTarget = (this.value !== ''); debouncedRunEngine();">
+                        <span class="text-[9px] text-slate-400 mt-1 block">Boş bırakıldığında aracın net fiziksel kapasitesi hesaplanır.</span>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
-                        <div class="input-group"><label id="lblBoxW">En (E - mm)</label><input type="number" id="boxW" readonly class="bg-slate-100 font-bold"></div>
-                        <div class="input-group"><label id="lblBoxL">Boy (B - mm)</label><input type="number" id="boxL" readonly class="bg-slate-100 font-bold"></div>
-                        <div class="input-group"><label>Yük (Y - mm)</label><input type="number" id="boxH" readonly class="bg-slate-100 font-bold"></div>
-                        <div class="input-group"><label>Ağrlk (kg)</label><input type="number" id="boxWt" readonly class="bg-slate-100 font-bold"></div>
+                    <div class="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 font-mono text-xs">
+                        <div class="input-group"><label id="lblBoxW">En (mm)</label><input type="number" id="boxW" readonly class="bg-slate-100/80 font-bold text-slate-700"></div>
+                        <div class="input-group"><label id="lblBoxL">Boy (mm)</label><input type="number" id="boxL" readonly class="bg-slate-100/80 font-bold text-slate-700"></div>
+                        <div class="input-group"><label>Yük (mm)</label><input type="number" id="boxH" readonly class="bg-slate-100/80 font-bold text-slate-700"></div>
+                        <div class="input-group"><label>Ağrlk (kg)</label><input type="number" id="boxWt" readonly class="bg-slate-100/80 font-bold text-slate-700"></div>
                     </div>
                 </div>
 
                 <!-- KARMA BLOK PANELİ -->
                 <div id="panel-mixed" class="hidden">
-                    <div class="section-header flex justify-between items-center mb-2">
+                    <div class="section-header">
                         <span>Karma Yük Listesi</span>
-                        <button onclick="openSkuManager()" class="text-[10px] bg-sky-600 hover:bg-sky-500 text-white font-bold px-2 py-0.5 rounded shadow-sm transition">⚙️ SKU Ekle / Sil</button>
+                        <button onclick="openSkuManager()" class="text-[9px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-2 py-0.5 rounded-md transition border border-slate-200">⚙️ SKU Ekle</button>
                     </div>
 
-                    <div class="p-2.5 bg-indigo-50 border border-indigo-200 rounded-lg mb-3">
-                        <strong class="text-xs text-indigo-950 uppercase font-black block mb-0.5">📦 Bağımsız Blok Düzeni (Kombine Enleme)</strong>
+                    <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl mb-2.5">
                         <p class="text-[11px] text-slate-600 leading-relaxed">
-                            Her SKU dorse tabanında kendine ait ayrı bir kompartıman oluşturur. Her blok Strip A + B kombine yerleşimini bağımsız çözer.
+                            Her SKU tabanda kendine ait bağımsız bir kompartıman oluşturur. Sürükleyip bırakarak yükleme sırasını belirleyebilirsiniz.
                         </p>
-                        <span class="text-[10px] text-indigo-700 font-bold block mt-1">
-                            🖱️ Tutamaktan (⋮⋮) sürükleyip bırakarak yükleme sırasını (Ön ➔ Arka) belirleyebilirsiniz.
-                        </span>
                     </div>
 
-                    <div id="mixedList" class="space-y-2 mb-3"></div>
-                    <button onclick="addNewMixedRow()" class="w-full bg-slate-200 text-slate-700 text-xs font-bold py-2 rounded border border-slate-300 hover:bg-slate-300 shadow-sm">+ Yeni Satır Ekle</button>
+                    <div id="mixedList" class="space-y-1.5 mb-2.5"></div>
+                    <button onclick="addNewMixedRow()" class="w-full bg-slate-100 text-slate-700 text-xs font-bold py-2 rounded-xl border border-slate-200 hover:bg-slate-200/80 transition shadow-2xs">+ Yeni Satır Ekle</button>
                 </div>
                 
                 <!-- TAŞIMA TABANI -->
-                <div class="section-header">Taşıma Tabanı</div>
-                <div class="input-group mb-3">
+                <div class="section-header">Taşıma Modu</div>
+                <div class="input-group mb-2.5">
                     <select id="baseType" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();">
-                        <option value="floor" selected>Dökme / Zemin Yükleme (Tam Boy Yayılımı)</option>
+                        <option value="floor" selected>Dökme / Zemin Yükleme (Tam CBM Yayılımı)</option>
                     </select>
                 </div>
 
-                <!-- GÜVENLİK & FİZİKSEL KISITLAR -->
+                <!-- GÜVENLİK KISITLARI -->
                 <div class="section-header">Güvenlik & Dinamik Engeller</div>
-                <div class="p-3 bg-indigo-50 border border-indigo-200 rounded-lg space-y-2">
-                    <label id="optFrontCurveLabel" class="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer" style="display:none;">
-                        <input type="checkbox" id="optFrontCurve" class="w-4 h-4 text-indigo-600" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"> Ön Bombe Kör Noktası (-100mm Boy)
+                <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
+                    <label id="optFrontCurveLabel" class="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer" style="display:none;">
+                        <input type="checkbox" id="optFrontCurve" class="w-3.5 h-3.5 text-sky-600 rounded" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"> Ön Bombe Kör Noktası (-100mm Boy)
                     </label>
-                    <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
-                        <input type="checkbox" id="optDoor" checked class="w-4 h-4 text-indigo-600" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"> Kapı Kapanma Payı (-80mm Boy)
+                    <label class="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+                        <input type="checkbox" id="optDoor" checked class="w-3.5 h-3.5 text-sky-600 rounded" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"> Kapı Kapanma Payı (-80mm Boy)
                     </label>
-                    <label class="flex items-center gap-2 text-xs font-semibold text-sky-700 cursor-pointer">
-                        <input type="checkbox" id="optAirbag" class="w-4 h-4 text-sky-500" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"> Hava Yastığı Payı (-80mm En)
+                    <label class="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+                        <input type="checkbox" id="optAirbag" class="w-3.5 h-3.5 text-sky-600 rounded" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"> Hava Yastığı Payı (-80mm En)
                     </label>
-                    <label class="flex items-center gap-2 text-xs font-semibold text-orange-700 cursor-pointer">
-                        <input type="checkbox" id="optLashing" class="w-4 h-4 text-orange-500" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"> Spanset (Lashing) Alanı (-150mm Boy)
+                    <label class="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+                        <input type="checkbox" id="optLashing" class="w-3.5 h-3.5 text-sky-600 rounded" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"> Spanset (Lashing) Alanı (-150mm Boy)
                     </label>
                 </div>
             </div>
         </div>
 
         <!-- SAĞ PANEL: İZOMETRİK 3D, DANIŞMAN & RAPOR -->
-        <div class="flex-grow flex flex-col gap-4 lg:overflow-y-auto print-full-width custom-scrollbar lg:pr-1" id="printArea">
+        <div class="flex-grow flex flex-col gap-2.5 lg:overflow-y-auto print-full-width custom-scrollbar lg:pr-1" id="printArea">
             
             <!-- 🌟 DİNAMİK FİLO VE ENTEGRE SATIŞ DANIŞMANI BANNERI -->
             <div id="salesAdvisorContainer" class="hidden no-print"></div>
 
             <div id="fleetPaginationContainer" class="no-print"></div>
 
-            <!-- 4 ANA METRİK -->
-            <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4 print-grid print-stats">
-                <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center">
-                    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1" id="lblMetricTotalBoxes">Toplam Taşıma Miktarı</p>
-                    <p class="text-xl md:text-2xl font-black text-emerald-600 leading-none" id="resTotalBoxes">-</p>
-                    <span class="text-[10px] text-slate-400 font-semibold mt-1" id="resTotalBoxesSub">Araç İçi Net Adet</span>
+            <!-- 4 ANA METRİK KPI KARTI -->
+            <div class="grid grid-cols-2 xl:grid-cols-4 gap-2.5 print-grid print-stats">
+                <div class="bg-white p-3 rounded-2xl shadow-xs border border-slate-200/80 flex flex-col justify-between">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Taşıma Miktarı</span>
+                        <span class="w-6 h-6 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center text-xs">📦</span>
+                    </div>
+                    <div class="mt-2">
+                        <p class="text-xl md:text-2xl font-black text-slate-900 font-mono tracking-tight" id="resTotalBoxes">-</p>
+                        <span class="text-[10px] text-slate-400 font-medium" id="resTotalBoxesSub">Araç İçi Net Adet</span>
+                    </div>
                 </div>
-                <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center">
-                    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Taşıma Brüt Ağırlığı</p>
-                    <p class="text-xl md:text-2xl font-black text-rose-600 leading-none" id="resWeight">-</p>
-                    <span class="text-[10px] text-slate-400 font-semibold mt-1" id="resWeightSub">Ürün + Ambalaj / Dara</span>
+
+                <div class="bg-white p-3 rounded-2xl shadow-xs border border-slate-200/80 flex flex-col justify-between">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Brüt Ağırlık</span>
+                        <span class="w-6 h-6 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center text-xs">⚖️</span>
+                    </div>
+                    <div class="mt-2">
+                        <p class="text-xl md:text-2xl font-black text-slate-900 font-mono tracking-tight" id="resWeight">-</p>
+                        <span class="text-[10px] text-slate-400 font-medium" id="resWeightSub">Yasal Sınır: -</span>
+                    </div>
                 </div>
-                <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center">
-                    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Taşıma Birimi (İstif)</p>
-                    <p class="text-xl md:text-2xl font-black text-slate-800 leading-none" id="resLoads">-</p>
-                    <span class="text-[10px] text-slate-400 font-semibold mt-1" id="resLoadsSub">Dorse Boyunca Sıralı</span>
+
+                <div class="bg-white p-3 rounded-2xl shadow-xs border border-slate-200/80 flex flex-col justify-between">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Taşıma Birimi</span>
+                        <span class="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs">📐</span>
+                    </div>
+                    <div class="mt-2">
+                        <p class="text-xl md:text-2xl font-black text-slate-900 font-mono tracking-tight" id="resLoads">-</p>
+                        <span class="text-[10px] text-slate-400 font-medium" id="resLoadsSub">Dorse Boyunca Sıralı</span>
+                    </div>
                 </div>
-                <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center">
-                    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Yük Emniyeti & Sevk Durumu</p>
-                    <p class="text-xs md:text-sm font-bold text-emerald-600 leading-tight mt-1" id="resStatus">✓ Sevkiyata Uygun</p>
-                    <span class="text-[10px] text-slate-400 font-semibold mt-1" id="resStatusSub">Dengeli & Güvenli Yük</span>
+
+                <div class="bg-white p-3 rounded-2xl shadow-xs border border-slate-200/80 flex flex-col justify-between">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Emniyet & Denge</span>
+                        <span class="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">✓</span>
+                    </div>
+                    <div class="mt-2">
+                        <p class="text-xs md:text-sm font-bold text-emerald-700 leading-tight" id="resStatus">✓ Sevkiyata Uygun</p>
+                        <span class="text-[10px] text-slate-400 font-medium font-mono" id="resStatusSub">Dengeli Yük</span>
+                    </div>
                 </div>
             </div>
 
             <!-- DETAYLI SAHA OPERASYON VE YÜKLEME TALİMATI -->
             <div id="layerOptimizationInfo"><div id="optimizationDetailsList"></div></div>
 
-            <!-- 3D CANVASI (SADE VE ÇİZGİSİZ İZOMETRİK GÖRÜNÜM) -->
-            <div class="bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col flex-grow min-h-[380px] md:min-h-[500px] relative">
-                <div class="bg-slate-50 border-b border-slate-200 px-4 py-3 rounded-t-xl flex justify-between items-center z-10 relative">
-                    <span class="text-sm font-bold text-slate-700">3D İZOMETRİK TAŞIMA & YÜKLEME SİMÜLASYONU</span>
-                    <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200" id="badgeSimSubtitle">Kombine Dökme & Kapı Kademelendirme Aktif</span>
+            <!-- 3D CANVASI -->
+            <div class="bg-white border border-slate-200/80 rounded-2xl shadow-xs flex flex-col flex-grow min-h-[380px] md:min-h-[480px] relative overflow-hidden">
+                <div class="bg-slate-50/80 border-b border-slate-100 px-4 py-2.5 flex justify-between items-center z-10 relative">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span class="text-xs font-black tracking-tight text-slate-800 uppercase">3D İzometrik Model</span>
+                    </div>
+                    <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80" id="badgeSimSubtitle">Kombine Dökme Aktif</span>
                 </div>
                 
-                <div class="flex-grow flex items-center justify-center p-2 md:p-4 bg-slate-800 relative rounded-b-xl overflow-hidden min-h-[350px] md:min-h-[460px]">
-                    <div class="absolute top-2 right-2 md:top-4 md:right-4 z-20 flex gap-2 no-print">
-                        <button onclick="resetView()" class="bg-white text-slate-800 px-2.5 py-1.5 rounded shadow-lg border border-slate-300 hover:bg-slate-100 font-bold text-xs flex items-center gap-1 transition">
-                            <span class="text-base leading-none">⟲</span> Merkeze Al
+                <div class="flex-grow flex items-center justify-center p-2 md:p-4 bg-gradient-to-b from-slate-900 to-slate-950 relative overflow-hidden min-h-[350px]">
+                    <div class="absolute top-3 right-3 z-20 flex gap-2 no-print">
+                        <button onclick="resetView()" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-xl shadow-lg border border-slate-700/80 font-bold text-xs flex items-center gap-1.5 transition backdrop-blur-md">
+                            <span class="text-sm leading-none">⟲</span> Merkeze Al
                         </button>
                     </div>
-                    <div class="absolute bottom-2 left-2 md:bottom-4 md:left-4 z-20 pointer-events-none no-print">
-                        <span class="bg-slate-900/80 text-slate-200 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold backdrop-blur-sm">
-                            🖱️ Masaüstünde sürükleyin/yakınlaştırın &bull; Mobilde tek parmakla kaydırın
+                    <div class="absolute bottom-3 left-3 z-20 pointer-events-none no-print">
+                        <span class="bg-slate-950/70 text-slate-400 px-3 py-1.5 rounded-xl text-[10px] font-medium backdrop-blur-md border border-slate-800/80">
+                            🖱️ Çevirmek için sürükleyin &bull; Yakınlaştırmak için kaydırın
                         </span>
                     </div>
                     <canvas id="contCanvas" width="950" height="520" class="max-w-full w-full h-full object-contain"></canvas>
@@ -301,7 +395,7 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- JAVASCRIPT: MOTOR, DİNAMİK FİLO VE ENTEGRE DANIŞMAN                      -->
+<!-- JAVASCRIPT: SUPABASE & MOTOR ENTEGRASYONU                                 -->
 <!-- ========================================================================= -->
 <script>
     const SUPABASE_URL = 'https://wukjeatpuysvlosbtahf.supabase.co';
@@ -549,7 +643,6 @@
             const stripBY = startY + widthA;
             const widthB = plan.colsB * plan.dimW2;
 
-            // Sıra sıra, iki şeridi eş zamanlı olarak kapıya kadar eksiksiz ilerlet
             while (item.remaining > 0 && totalWgt + sku.Wt <= maxWgt) {
                 const canA = (plan.colsA > 0) && (curX_A + plan.dimL1 <= effContL);
                 const canB = (plan.colsB > 0) && (curX_B + plan.dimL2 <= effContL);
@@ -657,7 +750,6 @@
         const overflowBoxes = lastTruck.totalBoxes;
         const currentSpec = VEHICLE_SPECS[vType];
 
-        // 1. SEÇENEK: KUSURSUZ FİT İÇİN KESİN SİMÜLASYONLU DÜŞÜRME (BINARY SEARCH DRY-RUN)
         let targetMaxContainers = Math.max(1, N - 1);
         let downscaleButtonsHtml = '';
 
@@ -682,21 +774,20 @@
             if (exactFitQty !== -1 && exactFitQty < item.target) {
                 let removeCount = item.target - exactFitQty;
                 downscaleButtonsHtml += `
-                    <div class="flex items-center justify-between bg-slate-800/80 p-2.5 rounded-lg border border-slate-700 text-xs">
+                    <div class="flex items-center justify-between bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/80 text-xs">
                         <div>
-                            <strong class="text-amber-300">${item.sku.name}</strong>: 
-                            <span class="text-slate-300">${item.target} ➔ <strong>${exactFitQty} adede</strong> düşürün (-${removeCount} adet)</span>
-                            <span class="text-[10px] text-emerald-400 block font-semibold">✓ Konteyner tabanı ve hacmi %100 tam oturur</span>
+                            <strong class="text-amber-300 font-bold">${item.sku.name}</strong>: 
+                            <span class="text-slate-300">${item.target} ➔ <strong class="text-white">${exactFitQty} adet</strong></span>
+                            <span class="text-[10px] text-emerald-400 block font-semibold mt-0.5">✓ 2. Konteyner iptal olur, tek navlunda kalır</span>
                         </div>
                         <button onclick="applyAdvisorFitOne(${item.itemStateIndex}, ${exactFitQty})" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-3 py-1.5 rounded-lg text-xs shadow-md transition whitespace-nowrap">
-                            🎯 Tam Sığdır (-${removeCount} Adet)
+                            🎯 Sığdır (-${removeCount})
                         </button>
                     </div>
                 `;
             }
         });
 
-        // 2. SEÇENEK: BÜYÜK KONTEYNER & UPSELL DOLDURMA (BİRLEŞİK SEÇENEK)
         let upgradeTargetVeh = (vType === '20DC') ? '40DC' : ((vType === '40DC') ? '40HC' : 'TIR');
         let upgradeVehName = VEHICLE_SPECS[upgradeTargetVeh].name;
         let upSpec = VEHICLE_SPECS[upgradeTargetVeh];
@@ -727,56 +818,54 @@
         }
 
         let bigContainerActionsHtml = bigContainerUpsells.map(u => `
-            <div class="flex items-center justify-between bg-slate-800/80 p-2 rounded-lg border border-slate-700 text-xs">
+            <div class="flex items-center justify-between bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/80 text-xs">
                 <div>
-                    <strong class="text-sky-300">${u.skuName}</strong>: 
-                    <span class="text-slate-300">Kalan boşluğa <strong>+${u.addCount} adet</strong> ilave edilebilir</span>
+                    <strong class="text-sky-300 font-bold">${u.skuName}</strong>: 
+                    <span class="text-slate-300">Kalan boşluğa <strong>+${u.addCount} adet</strong></span>
                 </div>
-                <button onclick="applyAdvisorUpgradeAndFill('${upgradeTargetVeh}', ${u.itemStateIndex}, ${u.addCount})" class="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black px-2.5 py-1 rounded text-[11px] shadow-sm transition whitespace-nowrap">
-                    🚀 ${upgradeVehName}'ye Geç & +${u.addCount} Adet Ekle
+                <button onclick="applyAdvisorUpgradeAndFill('${upgradeTargetVeh}', ${u.itemStateIndex}, ${u.addCount})" class="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black px-3 py-1.5 rounded-lg text-xs shadow-md transition whitespace-nowrap">
+                    🚀 Geç & +${u.addCount} Ekle
                 </button>
             </div>
         `).join('');
 
-        // 3. SEÇENEK: MEVCUT FİLODA SON ARACI DOLDURMA (EK SİPARİŞ)
         let upsellButtonsHtml = queue.map(item => {
             const plan = findOptimalFloorPlan(currentSpec.W - 10, lastTruck.gapL, currentSpec.H, currentSpec.doorH, item.sku, currentSpec.maxWgt - lastTruck.totalWgt, currentSpec.isContainer);
             const addCount = plan ? plan.maxBoxes : 0;
             if (addCount <= 0) return '';
             return `
-                <div class="flex items-center justify-between bg-slate-800/80 p-2 rounded-lg border border-slate-700 text-xs">
+                <div class="flex items-center justify-between bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/80 text-xs">
                     <div>
-                        <strong class="text-emerald-300">${item.sku.name}</strong>: 
-                        <span class="text-slate-300">Boş alana <strong>+${addCount} adet</strong> sığar</span>
+                        <strong class="text-emerald-300 font-bold">${item.sku.name}</strong>: 
+                        <span class="text-slate-300">Boş alana <strong>+${addCount} adet</strong></span>
                     </div>
-                    <button onclick="applyAdvisorFillSecond(${item.itemStateIndex}, ${addCount})" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-2.5 py-1 rounded text-[11px] shadow-sm transition whitespace-nowrap">
-                        +${addCount} Adet Ekle & Doldur
+                    <button onclick="applyAdvisorFillSecond(${item.itemStateIndex}, ${addCount})" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-3 py-1.5 rounded-lg text-xs shadow-md transition whitespace-nowrap">
+                        +${addCount} Ekle & Doldur
                     </button>
                 </div>
             `;
         }).join('');
 
         container.innerHTML = `
-            <div class="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white border-2 border-indigo-500 rounded-2xl p-4 md:p-5 shadow-2xl space-y-4">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-indigo-800 pb-3 gap-2">
+            <div class="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 text-white border border-indigo-500/40 rounded-3xl p-4 md:p-5 shadow-xl shadow-slate-950/20 space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-indigo-800/60 pb-3 gap-2">
                     <div class="flex items-center gap-2.5">
                         <span class="text-2xl animate-bounce">⚡</span>
                         <div>
-                            <h4 class="font-black text-sm md:text-base tracking-tight text-white uppercase">Dinamik Filo & Satış Tavsiyesi: Toplam ${N} Konteyner Gerekiyor</h4>
-                            <p class="text-xs text-indigo-300">İlk ${N-1} araç tam dolu, son ${N}. araç <strong>${overflowBoxes} koli</strong> ile sevk edilmektedir. Aşağıdaki stratejik aksiyonları 1 tıkla uygulayabilirsiniz:</p>
+                            <h4 class="font-black text-sm md:text-base tracking-tight text-white uppercase">Dinamik Filo & Satış Strateji Konsolu</h4>
+                            <p class="text-xs text-indigo-300">İlk ${N-1} araç tam dolu, son ${N}. araç yalnızca <strong>${overflowBoxes} koli</strong> ile sevk edilmektedir. Aksiyonu 1 tıkla uygulayabilirsiniz:</p>
                         </div>
                     </div>
-                    <span class="bg-rose-500 text-white font-black text-[11px] px-3 py-1 rounded-full uppercase tracking-wider self-start sm:self-auto">${N}. Araç Yarım</span>
+                    <span class="bg-rose-500/90 text-white font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-wider self-start sm:self-auto border border-rose-400/30">${N}. Konteyner Yarım</span>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <!-- SEÇENEK 1: KUSURSUZ FİT -->
-                    <div class="bg-slate-800/90 border border-slate-700 hover:border-amber-400 p-3.5 rounded-xl flex flex-col justify-between transition-all">
+                    <div class="bg-slate-900/60 border border-slate-800 hover:border-amber-500/40 p-4 rounded-2xl flex flex-col justify-between transition-all backdrop-blur-sm">
                         <div class="space-y-2 mb-3">
-                            <span class="bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded text-[10px] uppercase">Seçenek 1: Navlun Tasarrufu</span>
+                            <span class="bg-amber-500/10 text-amber-300 font-black px-2 py-0.5 rounded-md text-[9px] uppercase border border-amber-500/20">Seçenek 1: Navlun Tasarrufu</span>
                             <strong class="text-white text-xs block font-black">Siparişi ${targetMaxContainers} Konteynere Tam Sığdır</strong>
                             <p class="text-[11px] text-slate-300 leading-relaxed">
-                                Son konteyneri tamamen iptal edip tek navlunda kalmak ve aracı %100 doldurmak için tam gereken düşürme miktarları:
+                                Son konteyneri tamamen iptal edip tek navlunda kalmak için gereken kusursuz düşürme miktarları:
                             </p>
                             <div class="space-y-1.5 pt-1">
                                 ${downscaleButtonsHtml}
@@ -784,16 +873,15 @@
                         </div>
                     </div>
 
-                    <!-- SEÇENEK 2: BÜYÜK KONTEYNER & UPSELL BİRLEŞİK -->
-                    <div class="bg-slate-800/90 border border-slate-700 hover:border-sky-400 p-3.5 rounded-xl flex flex-col justify-between transition-all">
+                    <div class="bg-slate-900/60 border border-slate-800 hover:border-sky-500/40 p-4 rounded-2xl flex flex-col justify-between transition-all backdrop-blur-sm">
                         <div class="space-y-2 mb-3">
-                            <span class="bg-sky-500/20 text-sky-300 font-bold px-2 py-0.5 rounded text-[10px] uppercase">Seçenek 2: Büyük Araç & Upsell</span>
+                            <span class="bg-sky-500/10 text-sky-300 font-black px-2 py-0.5 rounded-md text-[9px] uppercase border border-sky-500/20">Seçenek 2: Büyük Araç & Upsell</span>
                             <strong class="text-white text-xs block font-black">${dryTrucks}x ${upgradeVehName}'ye Geç & Doldur</strong>
                             <p class="text-[11px] text-slate-300 leading-relaxed">
-                                Siparişinizi <strong>${dryTrucks} adet ${upgradeVehName}</strong> konteynere taşıyıp kalan boş alana ürün ekleyerek navlun birim maliyetini düşürün:
+                                Siparişinizi <strong>${dryTrucks} adet ${upgradeVehName}</strong> konteynere taşıyıp boş kalan alana ek ürün alarak koli başı navlunu düşürün:
                             </p>
                             <div class="space-y-1.5 pt-1">
-                                <button onclick="applyAdvisorUpgradeVehicle('${upgradeTargetVeh}')" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-bold py-1.5 rounded text-xs transition mb-2">
+                                <button onclick="applyAdvisorUpgradeVehicle('${upgradeTargetVeh}')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2 rounded-xl text-xs transition mb-2 border border-slate-700">
                                     Sadece ${upgradeVehName}'ye Geçiş Yap ➔
                                 </button>
                                 ${bigContainerActionsHtml}
@@ -801,13 +889,12 @@
                         </div>
                     </div>
 
-                    <!-- SEÇENEK 3: MEVCUT FİLOYU DOLDUR -->
-                    <div class="bg-slate-800/90 border border-slate-700 hover:border-emerald-400 p-3.5 rounded-xl flex flex-col justify-between transition-all">
+                    <div class="bg-slate-900/60 border border-slate-800 hover:border-emerald-500/40 p-4 rounded-2xl flex flex-col justify-between transition-all backdrop-blur-sm">
                         <div class="space-y-2 mb-3">
-                            <span class="bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded text-[10px] uppercase">Seçenek 3: Ciro Artırma (Upsell)</span>
+                            <span class="bg-emerald-500/10 text-emerald-300 font-black px-2 py-0.5 rounded-md text-[9px] uppercase border border-emerald-500/20">Seçenek 3: Ciro Artırma</span>
                             <strong class="text-white text-xs block font-black">Son ${N}. Konteyneri Tam Doldur</strong>
                             <p class="text-[11px] text-slate-300 leading-relaxed">
-                                Son konteynerdeki boş alana müşteriden aşağıdaki ürünlerden ilave sipariş alarak aracı %100 doldurun:
+                                Son konteynerdeki boş alana müşteriden ilave sipariş alarak aracı %100 doldurun:
                             </p>
                             <div class="space-y-1.5 pt-1">
                                 ${upsellButtonsHtml}
@@ -871,10 +958,10 @@
         let pagContainer = document.getElementById('fleetPaginationContainer');
         if (pagContainer) {
             if (globalFleet.length > 1) {
-                let pagHtml = `<div class="flex gap-2 mb-2 p-2 bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">`;
+                let pagHtml = `<div class="flex gap-1.5 mb-2.5 p-1.5 bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-x-auto">`;
                 globalFleet.forEach((v, idx) => {
-                    let activeClass = idx === currentVehicleIdx ? 'bg-sky-600 text-white shadow-md' : 'bg-slate-100 text-slate-600 hover:bg-slate-200';
-                    pagHtml += `<button onclick="currentVehicleIdx = ${idx}; updateFleetUI();" class="px-4 py-1.5 rounded-lg font-bold text-xs whitespace-nowrap ${activeClass}">🚚 Araç ${idx + 1} (${v.totalBoxes} Adet)</button>`;
+                    let activeClass = idx === currentVehicleIdx ? 'bg-slate-900 text-white shadow-sm' : 'bg-slate-50 text-slate-600 hover:bg-slate-100';
+                    pagHtml += `<button onclick="currentVehicleIdx = ${idx}; updateFleetUI();" class="px-3.5 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap transition ${activeClass}">🚚 Araç ${idx + 1} (${v.totalBoxes} Adet)</button>`;
                 });
                 pagHtml += `</div>`;
                 pagContainer.innerHTML = pagHtml;
@@ -928,23 +1015,23 @@
                 let isRotated = (k === 'B');
                 let tagTitle = isRotated ? 'Şerit B (Enine Çevrilmiş)' : 'Şerit A (Boyuna Düz)';
                 return `
-                    <div class="bg-white p-2.5 rounded-lg border border-slate-200">
-                        <span class="text-[10px] text-slate-500 font-bold uppercase block mb-1">${tagTitle}</span>
-                        <div class="grid grid-cols-4 gap-1 text-center">
-                            <div><span class="text-[9px] text-slate-400 block">En (Sütun)</span><strong class="text-indigo-900 font-black text-xs">${st.cols}</strong></div>
-                            <div><span class="text-[9px] text-slate-400 block">Boy (Sıra)</span><strong class="text-indigo-900 font-black text-xs">${st.rows}</strong></div>
-                            <div><span class="text-[9px] text-slate-400 block">Kat (Yük.)</span><strong class="text-indigo-900 font-black text-xs">${st.layers}</strong></div>
-                            <div><span class="text-[9px] text-emerald-600 block">Adet</span><strong class="text-emerald-700 font-black text-xs">${st.boxes}</strong></div>
+                    <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs">
+                        <span class="text-[10px] text-slate-500 font-bold uppercase block mb-1.5">${tagTitle}</span>
+                        <div class="grid grid-cols-4 gap-1.5 text-center font-mono">
+                            <div class="bg-slate-50 p-1 rounded-lg"><span class="text-[9px] text-slate-400 block uppercase">En</span><strong class="text-slate-800 font-black text-xs">${st.cols} Sütun</strong></div>
+                            <div class="bg-slate-50 p-1 rounded-lg"><span class="text-[9px] text-slate-400 block uppercase">Boy</span><strong class="text-slate-800 font-black text-xs">${st.rows} Sıra</strong></div>
+                            <div class="bg-slate-50 p-1 rounded-lg"><span class="text-[9px] text-slate-400 block uppercase">Kat</span><strong class="text-slate-800 font-black text-xs">${st.layers} Kat</strong></div>
+                            <div class="bg-emerald-50 p-1 rounded-lg"><span class="text-[9px] text-emerald-600 block uppercase font-sans font-bold">Toplam</span><strong class="text-emerald-700 font-black text-xs">${st.boxes}</strong></div>
                         </div>
                     </div>
                 `;
             }).join('');
 
             return `
-                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-800 space-y-2">
-                    <div class="flex items-center justify-between border-b pb-1.5">
+                <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/80 text-slate-800 space-y-2">
+                    <div class="flex items-center justify-between border-b border-slate-200/60 pb-2">
                         <strong class="text-xs font-black text-slate-900">${sIdx + 1}. Blok: ${skuData.name}</strong>
-                        <span class="text-emerald-700 bg-emerald-100 font-bold px-2 py-0.5 rounded text-xs">${skuData.totalBoxes.toLocaleString()} Adet &bull; ${skuData.totalWgt.toLocaleString(undefined, {maximumFractionDigits:1})} kg</span>
+                        <span class="text-emerald-700 bg-emerald-50 border border-emerald-200 font-bold px-2.5 py-0.5 rounded-full text-xs font-mono">${skuData.totalBoxes.toLocaleString()} Adet &bull; ${skuData.totalWgt.toLocaleString(undefined, {maximumFractionDigits:1})} kg</span>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                         ${stripsHtml}
@@ -956,8 +1043,11 @@
         const optListEl = document.getElementById('optimizationDetailsList');
         if (optListEl) {
             optListEl.innerHTML = `
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-xs space-y-3">
-                    <strong class="text-slate-800 text-sm block">🚚 DORSE TABANI KOMBİNE DÖKME YERLEŞİM PLANI (ARAÇ ${currentVehicleIdx + 1} / ${globalFleet.length})</strong>
+                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs text-xs space-y-3">
+                    <div class="flex items-center justify-between border-b pb-2">
+                        <strong class="text-slate-900 text-xs uppercase font-black tracking-tight">🚚 Kombine Dökme Yerleşim Planı (Araç ${currentVehicleIdx + 1} / ${globalFleet.length})</strong>
+                        <span class="text-[10px] text-slate-400 font-medium">Ön duvardan kapıya doğru dizilim</span>
+                    </div>
                     <div class="space-y-2">${blocksExplanation}</div>
                 </div>
             `;
@@ -967,7 +1057,7 @@
         performRender(lastRenderData);
     }
 
-    // 🎨 3D İZOMETRİK ÇİZİM (RENKLİ ÇİZGİLER VE OKLAR TEMİZLENDİ)
+    // 🎨 3D İZOMETRİK ÇİZİM
     function performRender(data) {
         if (!data) return;
         const { placedItems, contL, contW, contH, optFrontCurve, cogX } = data;
@@ -1005,32 +1095,32 @@
             ctx.strokeStyle = stroke; ctx.lineWidth = width; ctx.stroke();
         }
 
-        drawPoly([project(0,0,0), project(validContL,0,0), project(validContL,validContW,0), project(0,validContW,0)], '#334155');
-        drawPoly([project(0,0,0), project(validContL,0,0), project(validContL,0,validContH), project(0,0,validContH)], '#1e293b');
-        drawPoly([project(0,0,0), project(0,validContW,0), project(0,validContW,validContH), project(0,0,validContH)], '#0f172a');
+        drawPoly([project(0,0,0), project(validContL,0,0), project(validContL,validContW,0), project(0,validContW,0)], '#1e293b');
+        drawPoly([project(0,0,0), project(validContL,0,0), project(validContL,0,validContH), project(0,0,validContH)], '#0f172a');
+        drawPoly([project(0,0,0), project(0,validContW,0), project(0,validContW,validContH), project(0,0,validContH)], '#090d16');
 
         if (Array.isArray(placedItems)) {
             placedItems.forEach(b => {
                 const z0 = b.z || 0;
                 const z1 = z0 + b.h;
 
-                drawPoly([project(b.x + b.l, b.y, z0), project(b.x + b.l, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z1), project(b.x + b.l, b.y, z1)], b.color.right, 'rgba(0,0,0,0.6)', 1.2);
-                drawPoly([project(b.x, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z1), project(b.x, b.y + b.w, z1)], b.color.left, 'rgba(0,0,0,0.6)', 1.2);
-                drawPoly([project(b.x, b.y, z1), project(b.x + b.l, b.y, z1), project(b.x + b.l, b.y + b.w, z1), project(b.x, b.y + b.w, z1)], b.color.top, 'rgba(0,0,0,0.6)', 1.2);
+                drawPoly([project(b.x + b.l, b.y, z0), project(b.x + b.l, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z1), project(b.x + b.l, b.y, z1)], b.color.right, 'rgba(0,0,0,0.5)', 1);
+                drawPoly([project(b.x, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z1), project(b.x, b.y + b.w, z1)], b.color.left, 'rgba(0,0,0,0.5)', 1);
+                drawPoly([project(b.x, b.y, z1), project(b.x + b.l, b.y, z1), project(b.x + b.l, b.y + b.w, z1), project(b.x, b.y + b.w, z1)], b.color.top, 'rgba(0,0,0,0.5)', 1);
 
                 if (b.layers && b.layers > 1) {
                     for (let l = 1; l < b.layers; l++) {
                         let z = z0 + (l * b.singleBoxH);
-                        drawLine(project(b.x + b.l, b.y, z), project(b.x + b.l, b.y + b.w, z), 'rgba(0,0,0,0.35)');
-                        drawLine(project(b.x, b.y + b.w, z), project(b.x + b.l, b.y + b.w, z), 'rgba(0,0,0,0.35)');
+                        drawLine(project(b.x + b.l, b.y, z), project(b.x + b.l, b.y + b.w, z), 'rgba(0,0,0,0.3)');
+                        drawLine(project(b.x, b.y + b.w, z), project(b.x + b.l, b.y + b.w, z), 'rgba(0,0,0,0.3)');
                     }
                 }
 
                 if (b.cols && b.cols > 1) {
                     for (let c = 1; c < b.cols; c++) {
                         let y = b.y + c * (b.w / b.cols);
-                        drawLine(project(b.x + b.l, y, z0), project(b.x + b.l, y, z1), 'rgba(0,0,0,0.35)');
-                        drawLine(project(b.x, y, z1), project(b.x + b.l, y, z1), 'rgba(0,0,0,0.4)');
+                        drawLine(project(b.x + b.l, y, z0), project(b.x + b.l, y, z1), 'rgba(0,0,0,0.3)');
+                        drawLine(project(b.x, y, z1), project(b.x + b.l, y, z1), 'rgba(0,0,0,0.35)');
                     }
                 }
             });
@@ -1038,10 +1128,10 @@
 
         if (placedItems && placedItems.length > 0) {
             let cogPt = project(cogX, validContW / 2, validContH / 2);
-            ctx.beginPath(); ctx.arc(cogPt.x, cogPt.y, 6, 0, 2*Math.PI);
-            ctx.fillStyle = '#e11d48'; ctx.fill();
+            ctx.beginPath(); ctx.arc(cogPt.x, cogPt.y, 5.5, 0, 2*Math.PI);
+            ctx.fillStyle = '#ef4444'; ctx.fill();
             ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke();
-            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 9px Inter'; ctx.fillText('⌖ CoG', cogPt.x - 12, cogPt.y - 10);
+            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 9px JetBrains Mono'; ctx.fillText('⌖ CoG', cogPt.x - 12, cogPt.y - 9);
         }
     }
 
@@ -1081,8 +1171,8 @@
         const boxHEl = document.getElementById('boxH'); if (boxHEl) boxHEl.value = sku.H;
         const boxWtEl = document.getElementById('boxWt'); if (boxWtEl) boxWtEl.value = sku.Wt;
 
-        setElText('lblBoxW', sku.shape === 'round' ? 'Çap (D)' : 'En (E - mm)');
-        setElText('lblBoxL', sku.shape === 'round' ? 'Çap (D)' : 'Boy (B - mm)');
+        setElText('lblBoxW', sku.shape === 'round' ? 'Çap (mm)' : 'En (mm)');
+        setElText('lblBoxL', sku.shape === 'round' ? 'Çap (mm)' : 'Boy (mm)');
     }
 
     function updateVehicleDims() {
@@ -1117,8 +1207,8 @@
 
     function switchTab(mode) {
         currentMode = mode;
-        const tabS = document.getElementById('tab-single'); if (tabS) tabS.className = mode === 'single' ? 'tab-btn active text-sm text-center py-3' : 'tab-btn text-sm text-slate-500 text-center py-3';
-        const tabM = document.getElementById('tab-mixed'); if (tabM) tabM.className = mode === 'mixed' ? 'tab-btn active text-sm text-center py-3' : 'tab-btn text-sm text-slate-500 text-center py-3';
+        const tabS = document.getElementById('tab-single'); if (tabS) tabS.className = mode === 'single' ? 'tab-btn active text-center' : 'tab-btn text-slate-500 text-center';
+        const tabM = document.getElementById('tab-mixed'); if (tabM) tabM.className = mode === 'mixed' ? 'tab-btn active text-center' : 'tab-btn text-slate-500 text-center';
         const panS = document.getElementById('panel-single'); if (panS) panS.style.display = mode === 'single' ? 'block' : 'none';
         const panM = document.getElementById('panel-mixed'); if (panM) panM.style.display = mode === 'mixed' ? 'block' : 'none';
         if (mode === 'single') autoSyncSingleTargetCapacity();
@@ -1156,7 +1246,7 @@
 
         mixedItemsState.forEach((item, idx) => {
             const row = document.createElement('div');
-            row.className = "mixed-row p-2.5 bg-white border border-slate-200 rounded-xl shadow-xs flex flex-col gap-2 transition hover:border-sky-400 select-none cursor-default";
+            row.className = "mixed-row p-2.5 bg-white border border-slate-200/80 rounded-xl shadow-2xs flex flex-col gap-2 transition hover:border-slate-400 select-none cursor-default";
             row.draggable = true;
             row.dataset.index = idx;
 
@@ -1164,16 +1254,16 @@
             const badgeText = idx === 0 ? "1. Blok (Ön Bölüm)" : `${idx + 1}. Blok`;
 
             row.innerHTML = `
-                <div class="flex items-center justify-between gap-2 border-b pb-1.5">
-                    <div class="flex items-center gap-2">
-                        <span class="drag-handle text-slate-400 hover:text-slate-800 font-bold px-1.5 py-0.5 text-base cursor-grab active:cursor-grabbing">⋮⋮</span>
-                        <span class="bg-indigo-100 text-indigo-900 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">${badgeText}</span>
+                <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-1.5">
+                    <div class="flex items-center gap-1.5">
+                        <span class="drag-handle text-slate-400 hover:text-slate-800 font-bold px-1 text-base cursor-grab active:cursor-grabbing">⋮⋮</span>
+                        <span class="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">${badgeText}</span>
                     </div>
-                    <button onclick="removeMixedRow(${idx})" class="text-rose-500 hover:text-rose-700 font-bold px-2 py-0.5 text-xs">✕</button>
+                    <button onclick="removeMixedRow(${idx})" class="text-rose-400 hover:text-rose-600 font-bold px-1.5 text-xs">✕</button>
                 </div>
                 <div class="flex gap-2 items-center">
-                    <select class="w-[60%] p-2 border rounded-lg text-xs mixed-sku font-semibold bg-slate-50" onchange="onMixedSkuChange(${idx}, this.value)">${options}</select>
-                    <input type="number" class="w-[40%] p-2 border rounded-lg text-xs mixed-val font-bold text-sky-700 bg-slate-50" placeholder="Adet" value="${item.count}" oninput="onMixedCountChange(${idx}, this.value)">
+                    <select class="w-[62%] p-1.5 border rounded-lg text-xs font-semibold bg-slate-50" onchange="onMixedSkuChange(${idx}, this.value)">${options}</select>
+                    <input type="number" class="w-[38%] p-1.5 border rounded-lg text-xs font-bold text-slate-900 bg-slate-50 font-mono" placeholder="Adet" value="${item.count}" oninput="onMixedCountChange(${idx}, this.value)">
                 </div>
             `;
 
@@ -1239,13 +1329,13 @@
         scs.classList.add('hidden');
 
         if (mode === 'login') {
-            btnLogin.className = "flex-1 py-2 font-bold text-sm border-b-2 border-sky-500 text-sky-600";
-            btnReg.className = "flex-1 py-2 font-bold text-sm text-slate-400 border-b-2 border-transparent";
+            btnLogin.className = "flex-1 py-2 font-bold text-xs rounded-lg transition-all bg-white text-slate-900 shadow-sm";
+            btnReg.className = "flex-1 py-2 font-bold text-xs rounded-lg text-slate-500 hover:text-slate-900 transition-all";
             regFields.classList.add('hidden');
             submitBtn.innerText = "Giriş Yap";
         } else {
-            btnReg.className = "flex-1 py-2 font-bold text-sm border-b-2 border-sky-500 text-sky-600";
-            btnLogin.className = "flex-1 py-2 font-bold text-sm text-slate-400 border-b-2 border-transparent";
+            btnReg.className = "flex-1 py-2 font-bold text-xs rounded-lg transition-all bg-white text-slate-900 shadow-sm";
+            btnLogin.className = "flex-1 py-2 font-bold text-xs rounded-lg text-slate-500 hover:text-slate-900 transition-all";
             regFields.classList.remove('hidden');
             submitBtn.innerText = "Hesap Oluştur";
         }
@@ -1348,14 +1438,14 @@
         if (role === 'logistics' || role === 'admin') {
             if (roleBadge) {
                 roleBadge.innerText = role === 'admin' ? "YÖNETİCİ" : "LOJİSTİK & SAHA";
-                roleBadge.className = "px-1.5 py-0.5 rounded font-black text-[9px] bg-indigo-600 text-white uppercase";
+                roleBadge.className = "px-2 py-0.5 rounded-full font-black text-[9px] bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 uppercase tracking-wider";
             }
             setElText('dashboardBtnText', "📥 Gelen Sevk Talepleri");
             if (btnSales) btnSales.classList.add('hidden');
         } else {
             if (roleBadge) {
                 roleBadge.innerText = "SATIŞ EKİBİ";
-                roleBadge.className = "px-1.5 py-0.5 rounded font-black text-[9px] bg-amber-600 text-white uppercase";
+                roleBadge.className = "px-2 py-0.5 rounded-full font-black text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase tracking-wider";
             }
             setElText('dashboardBtnText', "📥 Sevk Taleplerim");
             if (btnSales) {
@@ -1389,7 +1479,7 @@
     }
 
     // =========================================================================
-    // 🚀 BAŞLATICI (TEK VE TEMİZ YAŞAM DÖNGÜSÜ)
+    // 🚀 BAŞLATICI
     // =========================================================================
     function initApp() {
         if (window.supabase) {
