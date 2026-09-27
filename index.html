@@ -37,7 +37,7 @@
 </head>
 <body class="p-2 md:p-4 min-h-[100dvh] lg:h-[100dvh] flex flex-col justify-between">
 
-<!-- 🔒 GİRİŞ & KAYIT AÇILIŞ SAYFASI (AUTH GATE - DEMO BUTONU KALDIRILDI) -->
+<!-- 🔒 GİRİŞ & KAYIT AÇILIŞ SAYFASI (AUTH GATE) -->
 <div id="authLandingPage" class="flex-grow flex items-center justify-center p-4">
     <div class="bg-white p-6 md:p-8 rounded-2xl shadow-2xl max-w-md w-full border-t-8 border-sky-500">
         <div class="flex items-center gap-3 mb-2 justify-center">
@@ -263,7 +263,7 @@
                 <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center">
                     <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Taşıma Birimi (İstif)</p>
                     <p class="text-xl md:text-2xl font-black text-slate-800 leading-none" id="resLoads">-</p>
-                    <span class="text-[10px] text-slate-400 font-semibold mt-1" id="resLoadsSub">Palet / Sıra Dağılımı</span>
+                    <span class="text-[10px] text-slate-400 font-semibold mt-1" id="resLoadsSub">Dorse Boyunca Sıralı</span>
                 </div>
                 <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center">
                     <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">Yük Emniyeti & Sevk Durumu</p>
@@ -279,7 +279,7 @@
             <div class="bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col flex-grow min-h-[380px] md:min-h-[500px] relative">
                 <div class="bg-slate-50 border-b border-slate-200 px-4 py-3 rounded-t-xl flex justify-between items-center z-10 relative">
                     <span class="text-sm font-bold text-slate-700">3D İZOMETRİK TAŞIMA & YÜKLEME SİMÜLASYONU</span>
-                    <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200" id="badgeSimSubtitle">Dinamik Çözücü Aktif</span>
+                    <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200" id="badgeSimSubtitle">Kombine Dökme Aktif</span>
                 </div>
                 
                 <div class="flex-grow flex items-center justify-center p-2 md:p-4 bg-slate-800 relative rounded-b-xl overflow-hidden min-h-[350px] md:min-h-[460px]">
@@ -346,9 +346,9 @@
 
     let skuDatabase = [];
     let mixedItemsState = [
-        { skuIdx: 5, count: 400 },  // 5LX4 Kare
-        { skuIdx: 13, count: 600 }, // 0,85LX12 Yeni VK
-        { skuIdx: 0, count: 100 }   // Kızartmalık Teneke
+        { skuIdx: 5, count: 400 },
+        { skuIdx: 13, count: 600 },
+        { skuIdx: 0, count: 100 }
     ];
 
     const colorMap = [
@@ -359,7 +359,7 @@
         { base: '#ea580c', top: '#fb923c', right: '#c2410c', left: '#9a3412' }
     ];
 
-    let currentMode = 'mixed';
+    let currentMode = 'single';
     let globalFleet = [];
     let currentVehicleIdx = 0;
     let globalEngineContext = {};
@@ -418,7 +418,15 @@
             const layerBoxes = (a * rowsA) + (b * rowsB);
             if (layerBoxes <= 0) continue;
 
-            const feasibleBoxes = Math.min(layerBoxes * physMaxLayers, maxBoxesByWeight);
+            const doorRowsA = isContainer ? Math.min(rowsA, Math.ceil(650 / boxL)) : 0;
+            const innerRowsA = rowsA - doorRowsA;
+            const countA = a * (innerRowsA * physMaxLayers + doorRowsA * maxDoorLayers);
+
+            const doorRowsB = isContainer ? Math.min(rowsB, Math.ceil(650 / boxW)) : 0;
+            const innerRowsB = rowsB - doorRowsB;
+            const countB = b * (innerRowsB * physMaxLayers + doorRowsB * maxDoorLayers);
+
+            const feasibleBoxes = Math.min(countA + countB, maxBoxesByWeight);
 
             if (feasibleBoxes > maxBoxesFound) {
                 maxBoxesFound = feasibleBoxes;
@@ -434,7 +442,7 @@
     }
 
     // =========================================================================
-    // 🚚 YÜKLEME VE YERLEŞTİRME MOTORU
+    // 🚚 YÜKLEME VE YERLEŞTİRME MOTORU (KUSURSUZ KOMBİNE ENLEME & BOYUNA DAĞILIM)
     // =========================================================================
     function runEngine() {
         const vType = document.getElementById('vehicleType')?.value || '20DC';
@@ -533,64 +541,93 @@
             const widthUsed = (plan.colsA * plan.dimW1) + (plan.colsB * plan.dimW2);
             const startY = Math.max(0, (effContW - widthUsed) / 2);
 
-            let curX = currentX;
+            const rateA = (plan.colsA > 0) ? (plan.colsA * plan.physMaxLayers) / plan.dimL1 : 0;
+            const rateB = (plan.colsB > 0) ? (plan.colsB * plan.physMaxLayers) / plan.dimL2 : 0;
+            const totalRate = rateA + rateB;
 
-            // Sıra sıra konteyneri doldur (Kombine şeritler sütun sütun tam oturur)
-            while (item.remaining > 0 && curX + Math.min(plan.dimL1, plan.dimL2 || plan.dimL1) <= effContL && totalWgt + sku.Wt <= maxWgt) {
-                const isNearDoor = isContainer && (curX + plan.dimL1 >= doorZoneX);
-                const rowMaxLayers = isNearDoor ? plan.maxDoorLayers : plan.physMaxLayers;
+            let targetLen = availableL;
+            const isMixedWithMore = (currentMode === 'mixed' && queue.some(other => other !== item && other.remaining > 0));
+            if (isMixedWithMore || boxesForThisTruck < plan.maxBoxes) {
+                targetLen = Math.min(availableL, boxesForThisTruck / Math.max(0.001, totalRate));
+            }
 
-                // Strip A Sırası
-                if (plan.colsA > 0 && curX + plan.dimL1 <= effContL && item.remaining > 0) {
-                    let rowBoxesA = Math.min(plan.colsA * rowMaxLayers, item.remaining);
-                    rowBoxesA = Math.min(rowBoxesA, Math.floor((maxWgt - totalWgt) / sku.Wt));
+            const targetRowsA = (plan.colsA > 0) ? Math.max(1, Math.min(plan.rowsA, Math.round(targetLen / plan.dimL1))) : 0;
+            const targetRowsB = (plan.colsB > 0) ? Math.max(1, Math.min(plan.rowsB, Math.round(targetLen / plan.dimL2))) : 0;
 
-                    if (rowBoxesA > 0) {
-                        let rowLayersA = Math.max(1, Math.ceil(rowBoxesA / plan.colsA));
-                        let rowWgtA = rowBoxesA * sku.Wt;
+            let remBoxes = boxesForThisTruck;
 
-                        placedItems.push({
-                            id: sku.name, x: curX, y: startY, z: 0,
-                            l: plan.dimL1, w: plan.colsA * plan.dimW1, h: rowLayersA * sku.H,
-                            boxes: rowBoxesA, wgt: rowWgtA, color: item.color,
-                            cols: plan.colsA, rows: 1, layers: rowLayersA,
-                            singleBoxL: plan.dimL1, singleBoxW: plan.dimW1, singleBoxH: sku.H,
-                            isRound: (sku.shape === 'round'),
-                            blockName: item.blockName || `${sku.name} Bloğu`
-                        });
+            // 1. STRIP A (DÜZ ŞERİT) YERLEŞTİRME
+            if (plan.colsA > 0 && targetRowsA > 0) {
+                const stripAY = startY;
+                const widthA = plan.colsA * plan.dimW1;
 
-                        totalWgt += rowWgtA;
-                        totalBoxes += rowBoxesA;
-                        item.remaining -= rowBoxesA;
-                    }
+                for (let r = 0; r < targetRowsA; r++) {
+                    if (remBoxes <= 0 || item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
+
+                    const rowX = currentX + (r * plan.dimL1);
+                    const isNearDoor = isContainer && (rowX + plan.dimL1 >= doorZoneX);
+                    let rowL = isNearDoor ? plan.maxDoorLayers : plan.physMaxLayers;
+
+                    let rowBoxes = Math.min(plan.colsA * rowL, remBoxes);
+                    rowBoxes = Math.min(rowBoxes, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                    if (rowBoxes <= 0) break;
+
+                    let rowWgt = rowBoxes * sku.Wt;
+
+                    placedItems.push({
+                        id: sku.name,
+                        stripTag: 'A',
+                        x: rowX, y: stripAY, z: 0,
+                        l: plan.dimL1, w: widthA, h: rowL * sku.H,
+                        boxes: rowBoxes, wgt: rowWgt, color: item.color,
+                        cols: plan.colsA, rows: 1, layers: rowL,
+                        singleBoxL: plan.dimL1, singleBoxW: plan.dimW1, singleBoxH: sku.H,
+                        isRound: (sku.shape === 'round'),
+                        blockName: item.blockName || `${sku.name} Bloğu`
+                    });
+
+                    totalWgt += rowWgt;
+                    totalBoxes += rowBoxes;
+                    remBoxes -= rowBoxes;
+                    item.remaining -= rowBoxes;
                 }
+            }
 
-                // Strip B Sırası
-                if (plan.colsB > 0 && curX + plan.dimL2 <= effContL && item.remaining > 0) {
-                    let rowBoxesB = Math.min(plan.colsB * rowMaxLayers, item.remaining);
-                    rowBoxesB = Math.min(rowBoxesB, Math.floor((maxWgt - totalWgt) / sku.Wt));
+            // 2. STRIP B (ÇEVRİLMİŞ ŞERİT) YERLEŞTİRME
+            if (plan.colsB > 0 && targetRowsB > 0) {
+                const stripBY = startY + (plan.colsA * plan.dimW1);
+                const widthB = plan.colsB * plan.dimW2;
 
-                    if (rowBoxesB > 0) {
-                        let rowLayersB = Math.max(1, Math.ceil(rowBoxesB / plan.colsB));
-                        let rowWgtB = rowBoxesB * sku.Wt;
+                for (let r = 0; r < targetRowsB; r++) {
+                    if (remBoxes <= 0 || item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
 
-                        placedItems.push({
-                            id: sku.name, x: curX, y: startY + (plan.colsA * plan.dimW1), z: 0,
-                            l: plan.dimL2, w: plan.colsB * plan.dimW2, h: rowLayersB * sku.H,
-                            boxes: rowBoxesB, wgt: rowWgtB, color: item.color,
-                            cols: plan.colsB, rows: 1, layers: rowLayersB,
-                            singleBoxL: plan.dimL2, singleBoxW: plan.dimW2, singleBoxH: sku.H,
-                            isRound: false,
-                            blockName: item.blockName || `${sku.name} Bloğu`
-                        });
+                    const rowX = currentX + (r * plan.dimL2);
+                    const isNearDoor = isContainer && (rowX + plan.dimL2 >= doorZoneX);
+                    let rowL = isNearDoor ? plan.maxDoorLayers : plan.physMaxLayers;
 
-                        totalWgt += rowWgtB;
-                        totalBoxes += rowBoxesB;
-                        item.remaining -= rowBoxesB;
-                    }
+                    let rowBoxes = Math.min(plan.colsB * rowL, remBoxes);
+                    rowBoxes = Math.min(rowBoxes, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                    if (rowBoxes <= 0) break;
+
+                    let rowWgt = rowBoxes * sku.Wt;
+
+                    placedItems.push({
+                        id: sku.name,
+                        stripTag: 'B',
+                        x: rowX, y: stripBY, z: 0,
+                        l: plan.dimL2, w: widthB, h: rowL * sku.H,
+                        boxes: rowBoxes, wgt: rowWgt, color: item.color,
+                        cols: plan.colsB, rows: 1, layers: rowL,
+                        singleBoxL: plan.dimL2, singleBoxW: plan.dimW2, singleBoxH: sku.H,
+                        isRound: false,
+                        blockName: item.blockName || `${sku.name} Bloğu`
+                    });
+
+                    totalWgt += rowWgt;
+                    totalBoxes += rowBoxes;
+                    remBoxes -= rowBoxes;
+                    item.remaining -= rowBoxes;
                 }
-
-                curX += Math.max(plan.dimL1, plan.dimL2 || plan.dimL1);
             }
 
             currentX = placedItems.reduce((max, it) => Math.max(max, it.x + it.l), 0);
@@ -683,7 +720,6 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <!-- SEÇENEK 1 -->
                     <div class="bg-slate-800/90 border border-slate-700 hover:border-amber-400 p-3.5 rounded-xl flex flex-col justify-between transition-all">
                         <div class="space-y-2 mb-3">
                             <span class="bg-amber-500/20 text-amber-300 font-bold px-2 py-0.5 rounded text-[10px] uppercase">Seçenek 1: Navlun Tasarrufu</span>
@@ -697,7 +733,6 @@
                         </div>
                     </div>
 
-                    <!-- SEÇENEK 2 -->
                     <div class="bg-slate-800/90 border border-slate-700 hover:border-sky-400 p-3.5 rounded-xl flex flex-col justify-between transition-all">
                         <div class="space-y-2 mb-3">
                             <span class="bg-sky-500/20 text-sky-300 font-bold px-2 py-0.5 rounded text-[10px] uppercase">Seçenek 2: Filo Büyütme</span>
@@ -711,7 +746,6 @@
                         </button>
                     </div>
 
-                    <!-- SEÇENEK 3 -->
                     <div class="bg-slate-800/90 border border-slate-700 hover:border-emerald-400 p-3.5 rounded-xl flex flex-col justify-between transition-all">
                         <div class="space-y-2 mb-3">
                             <span class="bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded text-[10px] uppercase">Seçenek 3: Ciro Artırma (Upsell)</span>
@@ -761,7 +795,7 @@
     }
 
     // =========================================================================
-    // 📊 METRİKLER VE 3D İZOMETRİK ÇİZİM
+    // 📊 METRİKLER VE ŞEFFAF MATEMATİKSEL TEYİT RAPORU
     // =========================================================================
     function updateFleetUI() {
         let pagContainer = document.getElementById('fleetPaginationContainer');
@@ -796,50 +830,55 @@
         let cogX = truck.totalWgt > 0 ? (momentX / truck.totalWgt) : 0;
         setElText('resStatusSub', `Dengeli Yük (CoG: ${(cogX/1000).toFixed(1)}m)`);
 
-        let groupedItems = {};
+        // KOMBİNE ŞERİT A VE ŞERİT B AYRIŞTIRILARAK ŞEFFAF TEYİT HESABI
+        let blocksExplanation = '';
+        let groupedSkus = {};
         truck.placedItems.forEach(item => {
-            if (!groupedItems[item.id]) {
-                groupedItems[item.id] = {
-                    name: item.id, totalBoxes: 0, totalRows: 0, cols: item.cols,
-                    layers: item.layers, color: item.color, totalWeight: 0,
-                    singleBoxL: item.singleBoxL, singleBoxW: item.singleBoxW, singleBoxH: item.singleBoxH
+            if (!groupedSkus[item.id]) {
+                groupedSkus[item.id] = { name: item.id, totalBoxes: 0, totalWgt: 0, strips: {} };
+            }
+            groupedSkus[item.id].totalBoxes += item.boxes;
+            groupedSkus[item.id].totalWgt += item.wgt;
+
+            let tag = item.stripTag || (item.cols > 1 ? 'B' : 'A');
+            if (!groupedSkus[item.id].strips[tag]) {
+                groupedSkus[item.id].strips[tag] = {
+                    cols: item.cols, rows: 0, layers: item.layers,
+                    boxes: 0, singleL: item.singleBoxL, singleW: item.singleBoxW
                 };
             }
-            groupedItems[item.id].totalBoxes += item.boxes;
-            groupedItems[item.id].totalRows += (item.rows || 1);
-            groupedItems[item.id].totalWeight += item.wgt;
-            groupedItems[item.id].layers = Math.max(groupedItems[item.id].layers, item.layers);
+            groupedSkus[item.id].strips[tag].rows += (item.rows || 1);
+            groupedSkus[item.id].strips[tag].boxes += item.boxes;
+            groupedSkus[item.id].strips[tag].layers = Math.max(groupedSkus[item.id].strips[tag].layers, item.layers);
         });
 
-        let groupList = Object.values(groupedItems);
-        let blocksExplanation = groupList.map((g, bIdx) => {
-            return `
-                <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-slate-800 space-y-2">
-                    <div class="flex items-center justify-between border-b pb-2">
-                        <strong class="text-xs font-black text-slate-900">${bIdx + 1}. Blok: ${g.name}</strong>
-                        <span class="text-emerald-700 bg-emerald-100 font-bold px-2.5 py-0.5 rounded text-xs">${g.totalBoxes.toLocaleString()} Adet &bull; ${g.totalWeight.toLocaleString(undefined, {maximumFractionDigits:1})} kg</span>
+        blocksExplanation = Object.values(groupedSkus).map((skuData, sIdx) => {
+            let stripKeys = Object.keys(skuData.strips);
+            let stripsHtml = stripKeys.map(k => {
+                let st = skuData.strips[k];
+                let isRotated = (k === 'B');
+                let tagTitle = isRotated ? 'Şerit B (Enine Çevrilmiş)' : 'Şerit A (Boyuna Düz)';
+                return `
+                    <div class="bg-white p-2.5 rounded-lg border border-slate-200">
+                        <span class="text-[10px] text-slate-500 font-bold uppercase block mb-1">${tagTitle}</span>
+                        <div class="grid grid-cols-4 gap-1 text-center">
+                            <div><span class="text-[9px] text-slate-400 block">En (Sütun)</span><strong class="text-indigo-900 font-black text-xs">${st.cols}</strong></div>
+                            <div><span class="text-[9px] text-slate-400 block">Boy (Sıra)</span><strong class="text-indigo-900 font-black text-xs">${st.rows}</strong></div>
+                            <div><span class="text-[9px] text-slate-400 block">Kat (Yük.)</span><strong class="text-indigo-900 font-black text-xs">${st.layers}</strong></div>
+                            <div><span class="text-[9px] text-emerald-600 block">Adet</span><strong class="text-emerald-700 font-black text-xs">${st.boxes}</strong></div>
+                        </div>
                     </div>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                        <div class="bg-white p-2 rounded border border-slate-200">
-                            <span class="text-[10px] text-slate-400 block font-bold uppercase">En (Sütun)</span>
-                            <strong class="text-indigo-900 font-black text-sm">${g.cols} Koli</strong>
-                            <span class="text-[9px] text-slate-500 block">Yan yana sütun</span>
-                        </div>
-                        <div class="bg-white p-2 rounded border border-slate-200">
-                            <span class="text-[10px] text-slate-400 block font-bold uppercase">Boy (Sıra)</span>
-                            <strong class="text-indigo-900 font-black text-sm">${g.totalRows} Sıra</strong>
-                            <span class="text-[9px] text-slate-500 block">Boyuna derinlik</span>
-                        </div>
-                        <div class="bg-white p-2 rounded border border-slate-200">
-                            <span class="text-[10px] text-slate-400 block font-bold uppercase">Yükseklik (Kat)</span>
-                            <strong class="text-indigo-900 font-black text-sm">${g.layers} Kat</strong>
-                            <span class="text-[9px] text-slate-500 block">Düşey istif</span>
-                        </div>
-                        <div class="bg-white p-2 rounded border border-slate-200">
-                            <span class="text-[10px] text-slate-400 block font-bold uppercase">Matematiksel Teyit</span>
-                            <strong class="text-emerald-700 font-black text-xs">${g.cols} × ${g.totalRows} × ${g.layers}</strong>
-                            <span class="text-[9px] text-emerald-600 block">= ${g.totalBoxes} Adet</span>
-                        </div>
+                `;
+            }).join('');
+
+            return `
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-800 space-y-2">
+                    <div class="flex items-center justify-between border-b pb-1.5">
+                        <strong class="text-xs font-black text-slate-900">${sIdx + 1}. Blok: ${skuData.name}</strong>
+                        <span class="text-emerald-700 bg-emerald-100 font-bold px-2 py-0.5 rounded text-xs">${skuData.totalBoxes.toLocaleString()} Adet &bull; ${skuData.totalWgt.toLocaleString(undefined, {maximumFractionDigits:1})} kg</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        ${stripsHtml}
                     </div>
                 </div>
             `;
@@ -849,7 +888,7 @@
         if (optListEl) {
             optListEl.innerHTML = `
                 <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-xs space-y-3">
-                    <strong class="text-slate-800 text-sm block">🚚 DORSE TABANI DÖKME YERLEŞİM VE BOYUT REHBERİ (ARAÇ ${currentVehicleIdx + 1} / ${globalFleet.length})</strong>
+                    <strong class="text-slate-800 text-sm block">🚚 DORSE TABANI KOMBİNE DÖKME YERLEŞİM PLANI (ARAÇ ${currentVehicleIdx + 1} / ${globalFleet.length})</strong>
                     <div class="space-y-2">${blocksExplanation}</div>
                 </div>
             `;
@@ -859,7 +898,7 @@
         performRender(lastRenderData);
     }
 
-    // 🎨 3D İZOMETRİK ÇİZİM (RENKLİ ÇİZGİLER VE OKLAR KALDIRILDI)
+    // 🎨 3D İZOMETRİK ÇİZİM (RENKLİ ÇİZGİLER VE OKLAR TEMİZLENDİ)
     function performRender(data) {
         if (!data) return;
         const { placedItems, contL, contW, contH, optFrontCurve, cogX } = data;
@@ -897,7 +936,6 @@
             ctx.strokeStyle = stroke; ctx.lineWidth = width; ctx.stroke();
         }
 
-        // Konteyner Gövdesi
         drawPoly([project(0,0,0), project(validContL,0,0), project(validContL,validContW,0), project(0,validContW,0)], '#334155');
         drawPoly([project(0,0,0), project(validContL,0,0), project(validContL,0,validContH), project(0,0,validContH)], '#1e293b');
         drawPoly([project(0,0,0), project(0,validContW,0), project(0,validContW,validContH), project(0,0,validContH)], '#0f172a');
@@ -992,7 +1030,13 @@
         if (!sku) return;
 
         const maxWgt = parseInt(document.getElementById('maxWgt')?.value) || vSpec.maxWgt;
-        const plan = findOptimalFloorPlan(vSpec.W - 10, vSpec.L - 90, vSpec.H, vSpec.doorH, sku, maxWgt, vSpec.isContainer);
+        let effL = vSpec.L - 10 - 80;
+        let effW = vSpec.W - 10;
+        if (vType === 'TIR' && document.getElementById('optFrontCurve')?.checked) effL -= 100;
+        if (document.getElementById('optAirbag')?.checked) effW -= 80;
+        if (document.getElementById('optLashing')?.checked) effL -= 150;
+
+        const plan = findOptimalFloorPlan(effW, effL, vSpec.H, vSpec.doorH, sku, maxWgt, vSpec.isContainer);
         const totalMax = plan ? plan.maxBoxes : Math.floor(maxWgt / sku.Wt);
 
         const targetEl = document.getElementById('targetBoxes');
@@ -1008,6 +1052,7 @@
         const tabM = document.getElementById('tab-mixed'); if (tabM) tabM.className = mode === 'mixed' ? 'tab-btn active text-sm text-center py-3' : 'tab-btn text-sm text-slate-500 text-center py-3';
         const panS = document.getElementById('panel-single'); if (panS) panS.style.display = mode === 'single' ? 'block' : 'none';
         const panM = document.getElementById('panel-mixed'); if (panM) panM.style.display = mode === 'mixed' ? 'block' : 'none';
+        if (mode === 'single') autoSyncSingleTargetCapacity();
         debouncedRunEngine();
     }
 
@@ -1111,7 +1156,7 @@
     function closeDashboard() { const el = document.getElementById('adminDashboardModal'); if (el) el.classList.add('hidden'); }
 
     // =========================================================================
-    // 🔐 SUPABASE OTURUM & GİRİŞ YÖNETİMİ (TAM KONTROL)
+    // 🔐 SUPABASE OTURUM & GİRİŞ YÖNETİMİ
     // =========================================================================
     function switchAuthTab(mode) {
         authMode = mode;
