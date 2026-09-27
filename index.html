@@ -37,7 +37,7 @@
 </head>
 <body class="p-2 md:p-4 min-h-[100dvh] lg:h-[100dvh] flex flex-col justify-between">
 
-<!-- 🔒 GİRİŞ & KAYIT AÇILIŞ SAYFASI (DEMO BUTONU KALDIRILDI) -->
+<!-- 🔒 GİRİŞ & KAYIT AÇILIŞ SAYFASI (AUTH GATE) -->
 <div id="authLandingPage" class="flex-grow flex items-center justify-center p-4">
     <div class="bg-white p-6 md:p-8 rounded-2xl shadow-2xl max-w-md w-full border-t-8 border-sky-500">
         <div class="flex items-center gap-3 mb-2 justify-center">
@@ -68,11 +68,11 @@
         <div class="space-y-3">
             <div>
                 <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">E-Posta Adresi</label>
-                <input type="email" id="authEmail" class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm focus:border-sky-500 outline-none" placeholder="ornek@elita.com">
+                <input type="email" id="authEmail" class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm focus:border-sky-500 outline-none" placeholder="ornek@elita.com" onkeydown="if(event.key==='Enter') handleAuthSubmit()">
             </div>
             <div>
                 <label class="text-xs font-bold text-slate-500 uppercase mb-1 block">Şifre</label>
-                <input type="password" id="authPassword" class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm focus:border-sky-500 outline-none" placeholder="••••••••">
+                <input type="password" id="authPassword" class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm focus:border-sky-500 outline-none" placeholder="••••••••" onkeydown="if(event.key==='Enter') handleAuthSubmit()">
             </div>
         </div>
 
@@ -275,11 +275,11 @@
             <!-- DETAYLI SAHA OPERASYON VE YÜKLEME TALİMATI -->
             <div id="layerOptimizationInfo"><div id="optimizationDetailsList"></div></div>
 
-            <!-- 3D CANVASI -->
+            <!-- 3D CANVASI (SADE VE ÇİZGİSİZ İZOMETRİK GÖRÜNÜM) -->
             <div class="bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col flex-grow min-h-[380px] md:min-h-[500px] relative">
                 <div class="bg-slate-50 border-b border-slate-200 px-4 py-3 rounded-t-xl flex justify-between items-center z-10 relative">
                     <span class="text-sm font-bold text-slate-700">3D İZOMETRİK TAŞIMA & YÜKLEME SİMÜLASYONU</span>
-                    <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200" id="badgeSimSubtitle">Dinamik Boyut Rehberi Aktif</span>
+                    <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200" id="badgeSimSubtitle">Dinamik Çözücü Aktif</span>
                 </div>
                 
                 <div class="flex-grow flex items-center justify-center p-2 md:p-4 bg-slate-800 relative rounded-b-xl overflow-hidden min-h-[350px] md:min-h-[460px]">
@@ -290,7 +290,7 @@
                     </div>
                     <div class="absolute bottom-2 left-2 md:bottom-4 md:left-4 z-20 pointer-events-none no-print">
                         <span class="bg-slate-900/80 text-slate-200 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold backdrop-blur-sm">
-                            📐 Sarı Ölçü Rehberi: En (Sütun Sayısı) &bull; Boy (Sıra Sayısı) &bull; Yükseklik (Kat Sayısı)
+                            🖱️ Masaüstünde sürükleyin/yakınlaştırın &bull; Mobilde tek parmakla kaydırın
                         </span>
                     </div>
                     <canvas id="contCanvas" width="950" height="520" class="max-w-full w-full h-full object-contain"></canvas>
@@ -301,7 +301,7 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- JAVASCRIPT MOTORU                                                         -->
+<!-- JAVASCRIPT: SUPABASE & MOTOR ENTEGRASYONU                                 -->
 <!-- ========================================================================= -->
 <script>
     const SUPABASE_URL = 'https://wukjeatpuysvlosbtahf.supabase.co';
@@ -376,7 +376,7 @@
     }
 
     // =========================================================================
-    // 📐 GEOMETRİK ÇÖZÜCÜ
+    // 📐 KOMBİNE ENLEME (DUAL-STRIP) GEOMETRİ MOTORU
     // =========================================================================
     function findOptimalFloorPlan(effW, effL, contH, doorH, sku, maxWgt, isContainer) {
         const boxW = sku.W;
@@ -409,6 +409,7 @@
         for (let a = 0; a <= maxA; a++) {
             const remainingW = effW - (a * boxW);
             const b = Math.floor(remainingW / boxL); 
+
             if (a === 0 && b === 0) continue;
 
             const rowsA = (a > 0) ? Math.floor(effL / boxL) : 0;
@@ -433,12 +434,12 @@
     }
 
     // =========================================================================
-    // 🚚 YÜKLEME MOTORU (SIFIR 3. KONTEYNER HATASI & KUSURSUZ DOLULUK)
+    // 🚚 YÜKLEME VE YERLEŞTİRME MOTORU
     // =========================================================================
     function runEngine() {
         const vType = document.getElementById('vehicleType')?.value || '20DC';
         const vSpec = VEHICLE_SPECS[vType] || VEHICLE_SPECS['20DC'];
-        const baseType = document.getElementById('baseType')?.value || 'floor';
+        const baseType = 'floor';
         const loadStrategy = document.getElementById('loadDistributionStrategy')?.value || 'spread';
 
         const contL = vSpec.L;
@@ -489,7 +490,6 @@
         let remainingQueue = queue.map(q => ({ ...q, remaining: q.target }));
         let safetyTruck = 0;
 
-        // Bütün koli kuyruğu bitene kadar sırayla araçları doldur
         while (remainingQueue.some(q => q.remaining > 0) && safetyTruck < 20) {
             safetyTruck++;
             let truckResult = packSingleVehicle(remainingQueue, effContL, effContW, contH, doorH, maxWgt, baseType, optFrontCurve, vSpec.isContainer, loadStrategy);
@@ -533,13 +533,9 @@
             const widthUsed = (plan.colsA * plan.dimW1) + (plan.colsB * plan.dimW2);
             const startY = Math.max(0, (effContW - widthUsed) / 2);
 
-            // Her bir sıranın koli kapasitesi (sütun sayısı)
-            const rowCapacityA = plan.colsA;
-            const rowCapacityB = plan.colsB;
-
             let curX = currentX;
 
-            // Sıra sıra konteyneri doldur (Ön duvardan kapıya doğru sütun sütun tam oturur)
+            // Sıra sıra konteyneri doldur (Kombine şeritler sütun sütun tam oturur)
             while (item.remaining > 0 && curX + Math.min(plan.dimL1, plan.dimL2 || plan.dimL1) <= effContL && totalWgt + sku.Wt <= maxWgt) {
                 const isNearDoor = isContainer && (curX + plan.dimL1 >= doorZoneX);
                 const rowMaxLayers = isNearDoor ? plan.maxDoorLayers : plan.physMaxLayers;
@@ -569,7 +565,7 @@
                     }
                 }
 
-                // Strip B Sırası (Kombine döndürülmüş şerit)
+                // Strip B Sırası
                 if (plan.colsB > 0 && curX + plan.dimL2 <= effContL && item.remaining > 0) {
                     let rowBoxesB = Math.min(plan.colsB * rowMaxLayers, item.remaining);
                     rowBoxesB = Math.min(rowBoxesB, Math.floor((maxWgt - totalWgt) / sku.Wt));
@@ -628,7 +624,6 @@
         const overflowBoxes = lastTruck.totalBoxes;
         const currentSpec = VEHICLE_SPECS[vType];
 
-        // 1. SEÇENEK: Son Aracı İptal Et (Tüm SKU'lar için ayrı ayrı)
         let downscaleButtonsHtml = queue.map(item => {
             const dropQty = Math.min(item.target, overflowBoxes);
             const suggestedQty = Math.max(0, item.target - dropQty);
@@ -645,7 +640,6 @@
             `;
         }).join('');
 
-        // 2. SEÇENEK: Bir Üst Boyuta Geçiş (40DC veya TIR)
         let upgradeTargetVeh = (vType === '20DC') ? '40DC' : ((vType === '40DC') ? '40HC' : 'TIR');
         let upgradeVehName = VEHICLE_SPECS[upgradeTargetVeh].name;
         let upSpec = VEHICLE_SPECS[upgradeTargetVeh];
@@ -658,7 +652,6 @@
             if (res.placedItems.length === 0) break;
         }
 
-        // 3. SEÇENEK: Son Konteyneri Doldurma Miktarı
         let upsellButtonsHtml = queue.map(item => {
             const plan = findOptimalFloorPlan(currentSpec.W - 10, lastTruck.gapL, currentSpec.H, currentSpec.doorH, item.sku, currentSpec.maxWgt - lastTruck.totalWgt, currentSpec.isContainer);
             const addCount = plan ? plan.maxBoxes : 0;
@@ -768,7 +761,7 @@
     }
 
     // =========================================================================
-    // 📊 METRİKLER VE 3D İZOMETRİK ÇİZİM (BOYUT REHBERİ EKLENDİ)
+    // 📊 METRİKLER VE 3D İZOMETRİK ÇİZİM
     // =========================================================================
     function updateFleetUI() {
         let pagContainer = document.getElementById('fleetPaginationContainer');
@@ -803,7 +796,6 @@
         let cogX = truck.totalWgt > 0 ? (momentX / truck.totalWgt) : 0;
         setElText('resStatusSub', `Dengeli Yük (CoG: ${(cogX/1000).toFixed(1)}m)`);
 
-        // DETAYLI EN, BOY, YÜKSEKLİK VE FORMÜL ANALİZİ
         let groupedItems = {};
         truck.placedItems.forEach(item => {
             if (!groupedItems[item.id]) {
@@ -863,13 +855,14 @@
             `;
         }
 
-        lastRenderData = { placedItems: truck.placedItems, contL: ctx.contL, contW: ctx.contW, contH: ctx.contH, optFrontCurve: ctx.optFrontCurve, cogX, groupList };
+        lastRenderData = { placedItems: truck.placedItems, contL: ctx.contL, contW: ctx.contW, contH: ctx.contH, optFrontCurve: ctx.optFrontCurve, cogX };
         performRender(lastRenderData);
     }
 
+    // 🎨 3D İZOMETRİK ÇİZİM (RENKLİ ÇİZGİLER VE OKLAR KALDIRILDI)
     function performRender(data) {
         if (!data) return;
-        const { placedItems, contL, contW, contH, optFrontCurve, cogX, groupList } = data;
+        const { placedItems, contL, contW, contH, optFrontCurve, cogX } = data;
         const canvas = document.getElementById('contCanvas');
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
@@ -881,7 +874,7 @@
         const validContW = contW || 2345;
         const validContH = contH || 2385;
 
-        let scale = Math.min((canvas.width - 120) / ((validContL + validContW) * cosA), (canvas.height - 120) / ((validContL + validContW) * sinA + validContH)) * (zoomLevel || 1);
+        let scale = Math.min((canvas.width - 100) / ((validContL + validContW) * cosA), (canvas.height - 100) / ((validContL + validContW) * sinA + validContH)) * (zoomLevel || 1);
         if (!isFinite(scale) || scale <= 0) scale = 0.035;
 
         let cx = canvas.width / 2 + (panX || 0);
@@ -918,7 +911,6 @@
                 drawPoly([project(b.x, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z1), project(b.x, b.y + b.w, z1)], b.color.left, 'rgba(0,0,0,0.6)', 1.2);
                 drawPoly([project(b.x, b.y, z1), project(b.x + b.l, b.y, z1), project(b.x + b.l, b.y + b.w, z1), project(b.x, b.y + b.w, z1)], b.color.top, 'rgba(0,0,0,0.6)', 1.2);
 
-                // Kat çizgileri
                 if (b.layers && b.layers > 1) {
                     for (let l = 1; l < b.layers; l++) {
                         let z = z0 + (l * b.singleBoxH);
@@ -927,7 +919,6 @@
                     }
                 }
 
-                // Sütun (kolon) çizgileri
                 if (b.cols && b.cols > 1) {
                     for (let c = 1; c < b.cols; c++) {
                         let y = b.y + c * (b.w / b.cols);
@@ -936,52 +927,6 @@
                     }
                 }
             });
-        }
-
-        // 🌟 3D MODEL ÜZERİNDE BOYUT ETİKETLERİ & OKLARI (EN, BOY, YÜKSEKLİK)
-        if (groupList && groupList.length > 0) {
-            let firstG = groupList[0];
-            let pFrontLeft = project(0, 0, 0);
-            let pFrontRight = project(0, validContW, 0);
-            let pBackLeft = project(validContL, 0, 0);
-            let pTop = project(0, 0, firstG.layers * firstG.singleBoxH);
-
-            // EN (SÜTUN) OKU
-            ctx.strokeStyle = '#facc15';
-            ctx.lineWidth = 2.5;
-            ctx.beginPath();
-            ctx.moveTo(pFrontLeft.x - 20, pFrontLeft.y + 10);
-            ctx.lineTo(pFrontRight.x - 20, pFrontRight.y + 10);
-            ctx.stroke();
-
-            ctx.fillStyle = '#fef08a';
-            ctx.font = 'black 11px Inter';
-            ctx.fillText(`↔ EN: ${firstG.cols} Sütun Yan Yana (${firstG.cols * firstG.singleBoxW} mm)`, (pFrontLeft.x + pFrontRight.x)/2 - 80, (pFrontLeft.y + pFrontRight.y)/2 + 28);
-
-            // BOY (SIRA) OKU
-            ctx.strokeStyle = '#38bdf8';
-            ctx.lineWidth = 2.5;
-            ctx.beginPath();
-            ctx.moveTo(pFrontLeft.x + 10, pFrontLeft.y + 15);
-            ctx.lineTo(pBackLeft.x + 10, pBackLeft.y + 15);
-            ctx.stroke();
-
-            ctx.fillStyle = '#bae6fd';
-            ctx.font = 'black 11px Inter';
-            let totalR = groupList.reduce((acc, g) => acc + g.totalRows, 0);
-            ctx.fillText(`↔ BOY: ${totalR} Sıra Derinlik`, (pFrontLeft.x + pBackLeft.x)/2 - 50, (pFrontLeft.y + pBackLeft.y)/2 + 30);
-
-            // YÜKSEKLİK (KAT) OKU
-            ctx.strokeStyle = '#4ade80';
-            ctx.lineWidth = 2.5;
-            ctx.beginPath();
-            ctx.moveTo(pFrontLeft.x - 30, pFrontLeft.y);
-            ctx.lineTo(pTop.x - 30, pTop.y);
-            ctx.stroke();
-
-            ctx.fillStyle = '#bbf7d0';
-            ctx.font = 'black 11px Inter';
-            ctx.fillText(`↕ YÜK: ${firstG.layers} Kat İstif`, pTop.x - 90, (pFrontLeft.y + pTop.y)/2);
         }
 
         if (placedItems && placedItems.length > 0) {
@@ -1160,8 +1105,13 @@
         debouncedRunEngine();
     }
 
+    function openModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('hidden'); }
+    function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.add('hidden'); }
+    function openDashboard() { const el = document.getElementById('adminDashboardModal'); if (el) el.classList.remove('hidden'); }
+    function closeDashboard() { const el = document.getElementById('adminDashboardModal'); if (el) el.classList.add('hidden'); }
+
     // =========================================================================
-    // 🔐 SUPABASE OTURUM & GİRİŞ YÖNETİMİ
+    // 🔐 SUPABASE OTURUM & GİRİŞ YÖNETİMİ (TAM KONTROL)
     // =========================================================================
     function switchAuthTab(mode) {
         authMode = mode;
