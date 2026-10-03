@@ -98,7 +98,7 @@
         }
     </style>
 </head>
-<body class="p-2 md:p-3 min-h-[100dvh] lg:h-[100dvh] flex flex-col justify-between antialiased selection:bg-sky-500 selection:text-white">
+<body class="p-2 md:p-3 min-h-[100dvh] lg:h-[100dvh] flex flex-col justify-between antialiased">
 
 <!-- 🔒 GİRİŞ & KAYIT AÇILIŞ SAYFASI (AUTH GATE) -->
 <div id="authLandingPage" class="flex-grow flex items-center justify-center p-4">
@@ -230,8 +230,8 @@
                     <div class="input-group">
                         <label>Yük Stratejisi</label>
                         <select id="loadDistributionStrategy" class="font-bold text-sky-900 bg-sky-50/50 border-sky-200" onchange="debouncedRunEngine()">
-                            <option value="spread" selected>Boyuna Yayılım</option>
-                            <option value="ceiling">Tavana Kadar</option>
+                            <option value="spread" selected>Kapıya Kadar Yayılım (Sıfır Arka Boşluk)</option>
+                            <option value="ceiling">Tavana Kadar (Maksimum Yükseklik)</option>
                         </select>
                     </div>
                 </div>
@@ -268,7 +268,7 @@
                 <div id="panel-mixed" class="hidden">
                     <div class="section-header">
                         <span>Karma Yük Listesi</span>
-                        <button onclick="openSkuManager()" class="text-[9px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-2 py-0.5 rounded-md transition border border-slate-200">⚙️ SKU Ekle</button>
+                        <button onclick="openSkuManager()" class="text-[9px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-2 py-0.5 rounded-md transition border border-slate-200">⚙️️ SKU Ekle</button>
                     </div>
 
                     <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl mb-2.5">
@@ -373,7 +373,7 @@
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                         <span class="text-xs font-black tracking-tight text-slate-800 uppercase">3D İzometrik Model</span>
                     </div>
-                    <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80" id="badgeSimSubtitle">Kombine Dökme Aktif</span>
+                    <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80" id="badgeSimSubtitle">Kapıya Kadar Yayılım Aktif</span>
                 </div>
                 
                 <div class="flex-grow flex items-center justify-center p-2 md:p-4 bg-gradient-to-b from-slate-900 to-slate-950 relative overflow-hidden min-h-[350px]">
@@ -395,7 +395,7 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- JAVASCRIPT: SUPABASE & MOTOR ENTEGRASYONU                                 -->
+<!-- JAVASCRIPT: MOTOR, DİNAMİK FİLO VE ENTEGRE DANIŞMAN                      -->
 <!-- ========================================================================= -->
 <script>
     const SUPABASE_URL = 'https://wukjeatpuysvlosbtahf.supabase.co';
@@ -536,7 +536,7 @@
     }
 
     // =========================================================================
-    // 🚚 YÜKLEME VE YERLEŞTİRME MOTORU (KAPIYA KADAR KESİNTİSİZ YAYILIM)
+    // 🚚 YÜKLEME VE YERLEŞTİRME MOTORU: KAPIYA KADAR KESİNTİSİZ YAYILIM
     // =========================================================================
     function runEngine() {
         const vType = document.getElementById('vehicleType')?.value || '20DC';
@@ -636,73 +636,177 @@
             const widthUsed = (plan.colsA * plan.dimW1) + (plan.colsB * plan.dimW2);
             const startY = Math.max(0, (effContW - widthUsed) / 2);
 
-            let curX_A = currentX;
-            let curX_B = currentX;
-            const stripAY = startY;
-            const widthA = plan.colsA * plan.dimW1;
-            const stripBY = startY + widthA;
-            const widthB = plan.colsB * plan.dimW2;
+            // =========================================================================
+            // 🌟 SIFIR ARKA BOŞLUK & KAPIYA KADAR GERÇEK TABAN YAYILIMI (SPREAD STRATEGY)
+            // =========================================================================
+            const isSingleOrLast = (itemIdx === queue.length - 1) || (queue.slice(itemIdx + 1).every(it => it.remaining <= 0));
 
-            while (item.remaining > 0 && totalWgt + sku.Wt <= maxWgt) {
-                const canA = (plan.colsA > 0) && (curX_A + plan.dimL1 <= effContL);
-                const canB = (plan.colsB > 0) && (curX_B + plan.dimL2 <= effContL);
-                if (!canA && !canB) break;
+            if (loadStrategy === 'spread' && isSingleOrLast) {
+                // Tekil üründe veya kuyruktaki son üründe mevcut aracın kalan tüm boyunu kapıya kadar aç
+                const totalRowsA = (plan.colsA > 0) ? Math.floor(availableL / plan.dimL1) : 0;
+                const totalRowsB = (plan.colsB > 0) ? Math.floor(availableL / plan.dimL2) : 0;
 
-                let chooseA = canA && (!canB || curX_A <= curX_B);
+                const positionsPerLayer = (plan.colsA * totalRowsA) + (plan.colsB * totalRowsB);
+                let baseLayers = Math.max(1, Math.floor(boxesForThisTruck / Math.max(1, positionsPerLayer)));
+                baseLayers = Math.min(baseLayers, plan.physMaxLayers);
 
-                if (chooseA) {
-                    const isNearDoor = isContainer && (curX_A + plan.dimL1 >= doorZoneX);
-                    const rowMaxL = isNearDoor ? plan.maxDoorLayers : plan.physMaxLayers;
-                    let rowB = Math.min(plan.colsA * rowMaxL, item.remaining);
-                    rowB = Math.min(rowB, Math.floor((maxWgt - totalWgt) / sku.Wt));
-                    if (rowB <= 0) break;
-                    let rowL = Math.max(1, Math.ceil(rowB / plan.colsA));
-                    let rowW = rowB * sku.Wt;
+                // Eğer koli sayısı yeterliyse tabanı boydan boya ser ve kalanları ön sıralara basamak olarak koy
+                let remainingToDistribute = boxesForThisTruck;
 
-                    placedItems.push({
-                        id: sku.name,
-                        stripTag: 'A',
-                        x: curX_A, y: stripAY, z: 0,
-                        l: plan.dimL1, w: widthA, h: rowL * sku.H,
-                        boxes: rowB, wgt: rowW, color: item.color,
-                        cols: plan.colsA, rows: 1, layers: rowL,
-                        singleBoxL: plan.dimL1, singleBoxW: plan.dimW1, singleBoxH: sku.H,
-                        isRound: (sku.shape === 'round'),
-                        blockName: item.blockName || `${sku.name} Bloğu`
-                    });
+                // Strip A
+                if (plan.colsA > 0 && totalRowsA > 0) {
+                    const stripAY = startY;
+                    const widthA = plan.colsA * plan.dimW1;
 
-                    totalWgt += rowW;
-                    totalBoxes += rowB;
-                    item.remaining -= rowB;
-                    curX_A += plan.dimL1;
-                } else {
-                    const isNearDoor = isContainer && (curX_B + plan.dimL2 >= doorZoneX);
-                    const rowMaxL = isNearDoor ? plan.maxDoorLayers : plan.physMaxLayers;
-                    let rowB = Math.min(plan.colsB * rowMaxL, item.remaining);
-                    rowB = Math.min(rowB, Math.floor((maxWgt - totalWgt) / sku.Wt));
-                    if (rowB <= 0) break;
-                    let rowL = Math.max(1, Math.ceil(rowB / plan.colsB));
-                    let rowW = rowB * sku.Wt;
+                    for (let r = 0; r < totalRowsA; r++) {
+                        if (remainingToDistribute <= 0 || item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
 
-                    placedItems.push({
-                        id: sku.name,
-                        stripTag: 'B',
-                        x: curX_B, y: stripBY, z: 0,
-                        l: plan.dimL2, w: widthB, h: rowL * sku.H,
-                        boxes: rowB, wgt: rowW, color: item.color,
-                        cols: plan.colsB, rows: 1, layers: rowL,
-                        singleBoxL: plan.dimL2, singleBoxW: plan.dimW2, singleBoxH: sku.H,
-                        isRound: false,
-                        blockName: item.blockName || `${sku.name} Bloğu`
-                    });
+                        const rowX = currentX + (r * plan.dimL1);
+                        const isNearDoor = isContainer && (rowX + plan.dimL1 >= doorZoneX);
+                        let rowL = baseLayers;
 
-                    totalWgt += rowW;
-                    totalBoxes += rowB;
-                    item.remaining -= rowB;
-                    curX_B += plan.dimL2;
+                        // Ön sıralara ekstra kat paylaştır (tavan sınırına kadar)
+                        let maxPossibleLayers = isNearDoor ? plan.maxDoorLayers : plan.physMaxLayers;
+                        if (rowL < maxPossibleLayers && remainingToDistribute > (totalRowsA - r) * plan.colsA * rowL) {
+                            rowL = Math.min(maxPossibleLayers, rowL + 1);
+                        }
+
+                        let rowBoxes = Math.min(plan.colsA * rowL, remainingToDistribute);
+                        rowBoxes = Math.min(rowBoxes, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                        if (rowBoxes <= 0) break;
+
+                        let actualLayers = Math.max(1, Math.ceil(rowBoxes / plan.colsA));
+                        let rowWgt = rowBoxes * sku.Wt;
+
+                        placedItems.push({
+                            id: sku.name, stripTag: 'A',
+                            x: rowX, y: stripAY, z: 0,
+                            l: plan.dimL1, w: widthA, h: actualLayers * sku.H,
+                            boxes: rowBoxes, wgt: rowWgt, color: item.color,
+                            cols: plan.colsA, rows: 1, layers: actualLayers,
+                            singleBoxL: plan.dimL1, singleBoxW: plan.dimW1, singleBoxH: sku.H,
+                            isRound: (sku.shape === 'round'),
+                            blockName: item.blockName || `${sku.name} Bloğu`
+                        });
+
+                        totalWgt += rowWgt;
+                        totalBoxes += rowBoxes;
+                        remainingToDistribute -= rowBoxes;
+                        item.remaining -= rowBoxes;
+                    }
+                }
+
+                // Strip B
+                if (plan.colsB > 0 && totalRowsB > 0) {
+                    const stripBY = startY + (plan.colsA * plan.dimW1);
+                    const widthB = plan.colsB * plan.dimW2;
+
+                    for (let r = 0; r < totalRowsB; r++) {
+                        if (remainingToDistribute <= 0 || item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
+
+                        const rowX = currentX + (r * plan.dimL2);
+                        const isNearDoor = isContainer && (rowX + plan.dimL2 >= doorZoneX);
+                        let rowL = baseLayers;
+
+                        let maxPossibleLayers = isNearDoor ? plan.maxDoorLayers : plan.physMaxLayers;
+                        if (rowL < maxPossibleLayers && remainingToDistribute > (totalRowsB - r) * plan.colsB * rowL) {
+                            rowL = Math.min(maxPossibleLayers, rowL + 1);
+                        }
+
+                        let rowBoxes = Math.min(plan.colsB * rowL, remainingToDistribute);
+                        rowBoxes = Math.min(rowBoxes, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                        if (rowBoxes <= 0) break;
+
+                        let actualLayers = Math.max(1, Math.ceil(rowBoxes / plan.colsB));
+                        let rowWgt = rowBoxes * sku.Wt;
+
+                        placedItems.push({
+                            id: sku.name, stripTag: 'B',
+                            x: rowX, y: stripBY, z: 0,
+                            l: plan.dimL2, w: widthB, h: actualLayers * sku.H,
+                            boxes: rowBoxes, wgt: rowWgt, color: item.color,
+                            cols: plan.colsB, rows: 1, layers: actualLayers,
+                            singleBoxL: plan.dimL2, singleBoxW: plan.dimW2, singleBoxH: sku.H,
+                            isRound: false,
+                            blockName: item.blockName || `${sku.name} Bloğu`
+                        });
+
+                        totalWgt += rowWgt;
+                        totalBoxes += rowBoxes;
+                        remainingToDistribute -= rowBoxes;
+                        item.remaining -= rowBoxes;
+                    }
+                }
+
+            } else {
+                // TAVANA KADAR (CEILING) VEYA KARMA YÜKTE ARA BLOK DÜZENİ
+                let curX_A = currentX;
+                let curX_B = currentX;
+                const stripAY = startY;
+                const widthA = plan.colsA * plan.dimW1;
+                const stripBY = startY + widthA;
+                const widthB = plan.colsB * plan.dimW2;
+
+                while (item.remaining > 0 && totalWgt + sku.Wt <= maxWgt) {
+                    const canA = (plan.colsA > 0) && (curX_A + plan.dimL1 <= effContL);
+                    const canB = (plan.colsB > 0) && (curX_B + plan.dimL2 <= effContL);
+                    if (!canA && !canB) break;
+
+                    let chooseA = canA && (!canB || curX_A <= curX_B);
+
+                    if (chooseA) {
+                        const isNearDoor = isContainer && (curX_A + plan.dimL1 >= doorZoneX);
+                        const rowMaxL = isNearDoor ? plan.maxDoorLayers : plan.physMaxLayers;
+                        let rowB = Math.min(plan.colsA * rowMaxL, item.remaining);
+                        rowB = Math.min(rowB, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                        if (rowB <= 0) break;
+                        let rowL = Math.max(1, Math.ceil(rowB / plan.colsA));
+                        let rowW = rowB * sku.Wt;
+
+                        placedItems.push({
+                            id: sku.name, stripTag: 'A',
+                            x: curX_A, y: stripAY, z: 0,
+                            l: plan.dimL1, w: widthA, h: rowL * sku.H,
+                            boxes: rowB, wgt: rowW, color: item.color,
+                            cols: plan.colsA, rows: 1, layers: rowL,
+                            singleBoxL: plan.dimL1, singleBoxW: plan.dimW1, singleBoxH: sku.H,
+                            isRound: (sku.shape === 'round'),
+                            blockName: item.blockName || `${sku.name} Bloğu`
+                        });
+
+                        totalWgt += rowW;
+                        totalBoxes += rowB;
+                        item.remaining -= rowB;
+                        curX_A += plan.dimL1;
+                    } else {
+                        const isNearDoor = isContainer && (curX_B + plan.dimL2 >= doorZoneX);
+                        const rowMaxL = isNearDoor ? plan.maxDoorLayers : plan.physMaxLayers;
+                        let rowB = Math.min(plan.colsB * rowMaxL, item.remaining);
+                        rowB = Math.min(rowB, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                        if (rowB <= 0) break;
+                        let rowL = Math.max(1, Math.ceil(rowB / plan.colsB));
+                        let rowW = rowB * sku.Wt;
+
+                        placedItems.push({
+                            id: sku.name, stripTag: 'B',
+                            x: curX_B, y: stripBY, z: 0,
+                            l: plan.dimL2, w: widthB, h: rowL * sku.H,
+                            boxes: rowB, wgt: rowW, color: item.color,
+                            cols: plan.colsB, rows: 1, layers: rowL,
+                            singleBoxL: plan.dimL2, singleBoxW: plan.dimW2, singleBoxH: sku.H,
+                            isRound: false,
+                            blockName: item.blockName || `${sku.name} Bloğu`
+                        });
+
+                        totalWgt += rowW;
+                        totalBoxes += rowB;
+                        item.remaining -= rowB;
+                        curX_B += plan.dimL2;
+                    }
                 }
             }
-            currentX = Math.max(curX_A, curX_B);
+
+            currentX = placedItems.reduce((max, it) => Math.max(max, it.x + it.l), 0);
         }
 
         const maxReachX = placedItems.reduce((max, it) => Math.max(max, it.x + it.l), 0);
@@ -823,7 +927,7 @@
                     <strong class="text-sky-300 font-bold">${u.skuName}</strong>: 
                     <span class="text-slate-300">Kalan boşluğa <strong>+${u.addCount} adet</strong></span>
                 </div>
-                <button onclick="applyAdvisorUpgradeAndFill('${upgradeTargetVeh}', ${u.itemStateIndex}, ${u.addCount})" class="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black px-3 py-1.5 rounded-lg text-xs shadow-md transition whitespace-nowrap">
+                <button onclick="applyAdvisorUpgradeAndFill('${upgradeTargetVeh}', ${u.itemStateIndex}, ${u.addCount})" class="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black px-2.5 py-1 rounded text-[11px] shadow-sm transition whitespace-nowrap">
                     🚀 Geç & +${u.addCount} Ekle
                 </button>
             </div>
@@ -839,7 +943,7 @@
                         <strong class="text-emerald-300 font-bold">${item.sku.name}</strong>: 
                         <span class="text-slate-300">Boş alana <strong>+${addCount} adet</strong></span>
                     </div>
-                    <button onclick="applyAdvisorFillSecond(${item.itemStateIndex}, ${addCount})" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-3 py-1.5 rounded-lg text-xs shadow-md transition whitespace-nowrap">
+                    <button onclick="applyAdvisorFillSecond(${item.itemStateIndex}, ${addCount})" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-2.5 py-1 rounded text-[11px] shadow-md transition whitespace-nowrap">
                         +${addCount} Ekle & Doldur
                     </button>
                 </div>
@@ -1057,7 +1161,7 @@
         performRender(lastRenderData);
     }
 
-    // 🎨 3D İZOMETRİK ÇİZİM
+    // 🎨 3D İZOMETRİK ÇİZİM (RENKLİ ÇİZGİLER VE OKLAR TEMİZLENDİ)
     function performRender(data) {
         if (!data) return;
         const { placedItems, contL, contW, contH, optFrontCurve, cogX } = data;
