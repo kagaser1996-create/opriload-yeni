@@ -517,6 +517,25 @@
     let authMode = 'login';
     let currentReviewTalepId = null;
 
+    // --- PENCERE (MODAL) YARDIMCI FONKSİYONLARI ---
+    function openModal(id) { 
+        const el = document.getElementById(id); 
+        if (el) el.classList.remove('hidden'); 
+    }
+    function closeModal(id) { 
+        const el = document.getElementById(id); 
+        if (el) el.classList.add('hidden'); 
+    }
+    function closeDashboard() { 
+        const el = document.getElementById('adminDashboardModal'); 
+        if (el) el.classList.add('hidden'); 
+    }
+    function exitReviewMode() { 
+        const el = document.getElementById('activeReviewBar'); 
+        if (el) el.classList.add('hidden'); 
+        currentReviewTalepId = null; 
+    }
+
     function escapeHtml(str) {
         if (str === null || str === undefined) return '';
         return String(str)
@@ -762,7 +781,7 @@
 
                 let remainingToDistribute = boxesForThisTruck;
 
-                // Strip A (Düz Sıralar)
+                // Strip A
                 if (plan.colsA > 0 && totalRowsA > 0) {
                     const stripAY = startY;
                     const widthA = plan.colsA * plan.dimW1;
@@ -804,7 +823,7 @@
                     }
                 }
 
-                // Strip B (Çevrilmiş Sıralar)
+                // Strip B
                 if (plan.colsB > 0 && totalRowsB > 0) {
                     const stripBY = startY + (plan.colsA * plan.dimW1);
                     const widthB = plan.colsB * plan.dimW2;
@@ -1362,6 +1381,336 @@
     function resetView() { panX = 0; panY = 0; zoomLevel = 1; if (lastRenderData) performRender(lastRenderData); }
 
     // =========================================================================
+    // FORM VE MODAL AKSİYONLARI
+    // =========================================================================
+    function populateSelects() {
+        const select = document.getElementById('skuSelect');
+        if (!select) return;
+        select.innerHTML = "";
+        skuDatabase.forEach((sku, idx) => {
+            select.options.add(new Option(`${sku.shape === 'round' ? '⚪' : '⏹'} ${sku.name} (${sku.W}x${sku.L}x${sku.H})`, idx));
+        });
+    }
+
+    function populateSKU() {
+        const idx = parseInt(document.getElementById('skuSelect')?.value) || 0;
+        const sku = skuDatabase[idx];
+        if (!sku) return;
+        const boxLEl = document.getElementById('boxL'); if (boxLEl) boxLEl.value = sku.L;
+        const boxWEl = document.getElementById('boxW'); if (boxWEl) boxWEl.value = sku.W;
+        const boxHEl = document.getElementById('boxH'); if (boxHEl) boxHEl.value = sku.H;
+        const boxWtEl = document.getElementById('boxWt'); if (boxWtEl) boxWtEl.value = sku.Wt;
+
+        setElText('lblBoxW', sku.shape === 'round' ? 'Çap (mm)' : 'En (mm)');
+        setElText('lblBoxL', sku.shape === 'round' ? 'Çap (mm)' : 'Boy (mm)');
+    }
+
+    function updateVehicleDims() {
+        const vType = document.getElementById('vehicleType')?.value || '20DC';
+        const vSpec = VEHICLE_SPECS[vType] || VEHICLE_SPECS['20DC'];
+        const mWEl = document.getElementById('maxWgt'); if (mWEl) mWEl.value = vSpec.maxWgt;
+        syncOrderTitleToPrint();
+    }
+
+    function autoSyncSingleTargetCapacity() {
+        const vType = document.getElementById('vehicleType')?.value || '20DC';
+        const vSpec = VEHICLE_SPECS[vType] || VEHICLE_SPECS['20DC'];
+        const sku = skuDatabase[parseInt(document.getElementById('skuSelect')?.value) || 0];
+        if (!sku) return;
+
+        const maxWgt = parseInt(document.getElementById('maxWgt')?.value) || vSpec.maxWgt;
+        let effL = vSpec.L - 10 - 80;
+        let effW = vSpec.W - 10;
+        if (vType === 'TIR' && document.getElementById('optFrontCurve')?.checked) effL -= 100;
+        if (document.getElementById('optAirbag')?.checked) effW -= 80;
+        if (document.getElementById('optLashing')?.checked) effL -= 150;
+
+        const plan = findOptimalFloorPlan(effW, effL, vSpec.H, vSpec.doorH, sku, maxWgt, vSpec.isContainer);
+        const totalMax = plan ? plan.maxBoxes : Math.floor(maxWgt / sku.Wt);
+
+        const targetEl = document.getElementById('targetBoxes');
+        if (!isUserDefinedTarget || targetEl?.value === '') {
+            if (targetEl) targetEl.value = totalMax;
+        }
+        setElText('capacityHintBadge', `Kapasite: ${totalMax} Adet`);
+    }
+
+    function switchTab(mode) {
+        currentMode = mode;
+        const tabS = document.getElementById('tab-single'); if (tabS) tabS.className = mode === 'single' ? 'tab-btn active text-center' : 'tab-btn text-slate-500 text-center';
+        const tabM = document.getElementById('tab-mixed'); if (tabM) tabM.className = mode === 'mixed' ? 'tab-btn active text-center' : 'tab-btn text-slate-500 text-center';
+        const panS = document.getElementById('panel-single'); if (panS) panS.style.display = mode === 'single' ? 'block' : 'none';
+        const panM = document.getElementById('panel-mixed'); if (panM) panM.style.display = mode === 'mixed' ? 'block' : 'none';
+        if (mode === 'single') autoSyncSingleTargetCapacity();
+        debouncedRunEngine();
+    }
+
+    function syncOrderTitleToPrint() {
+        const titleVal = document.getElementById('orderTitle')?.value.trim() || 'İsimsiz Sevk';
+    }
+
+    function onVehicleChange() {
+        isUserDefinedTarget = false;
+        const targetEl = document.getElementById('targetBoxes');
+        if (targetEl) targetEl.value = '';
+        updateVehicleDims();
+        autoSyncSingleTargetCapacity();
+        debouncedRunEngine();
+    }
+
+    function onSkuSelectChanged() {
+        isUserDefinedTarget = false;
+        const targetEl = document.getElementById('targetBoxes');
+        if (targetEl) targetEl.value = '';
+        populateSKU();
+        autoSyncSingleTargetCapacity();
+        debouncedRunEngine();
+    }
+
+    let draggedIndex = null;
+
+    function renderMixedList() {
+        const list = document.getElementById('mixedList');
+        if (!list) return;
+        list.innerHTML = '';
+
+        mixedItemsState.forEach((item, idx) => {
+            const row = document.createElement('div');
+            row.className = "mixed-row p-2.5 bg-white border border-slate-200/80 rounded-xl shadow-2xs flex flex-col gap-2 transition hover:border-slate-400 select-none cursor-default";
+            row.draggable = true;
+            row.dataset.index = idx;
+
+            let options = skuDatabase.map((s, i) => `<option value="${i}" ${i === item.skuIdx ? 'selected' : ''}>${s.shape === 'round' ? '⚪' : '⏹'} ${escapeHtml(s.name)} (${s.W}x${s.L}x${s.H})</option>`).join('');
+            const badgeText = idx === 0 ? "1. Blok (Ön Duvar / Ayna)" : `${idx + 1}. Blok`;
+
+            row.innerHTML = `
+                <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-1.5">
+                    <div class="flex items-center gap-1.5">
+                        <span class="drag-handle text-slate-400 hover:text-slate-800 font-bold px-1 text-base cursor-grab active:cursor-grabbing">⋮⋮</span>
+                        <span class="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">${badgeText}</span>
+                    </div>
+                    <button onclick="removeMixedRow(${idx})" class="text-rose-400 hover:text-rose-600 font-bold px-1.5 text-xs">✕</button>
+                </div>
+                <div class="flex gap-2 items-center">
+                    <select class="w-[62%] p-1.5 border rounded-lg text-xs font-semibold bg-slate-50" onchange="onMixedSkuChange(${idx}, this.value)">${options}</select>
+                    <input type="number" class="w-[38%] p-1.5 border rounded-lg text-xs font-bold text-slate-900 bg-slate-50 font-mono" placeholder="Adet" value="${item.count}" oninput="onMixedCountChange(${idx}, this.value)">
+                </div>
+            `;
+
+            row.addEventListener('dragstart', (e) => { draggedIndex = idx; e.dataTransfer.effectAllowed = 'move'; });
+            row.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
+            row.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const targetIndex = parseInt(row.dataset.index);
+                if (draggedIndex !== null && draggedIndex !== targetIndex) {
+                    const movedItem = mixedItemsState.splice(draggedIndex, 1)[0];
+                    mixedItemsState.splice(targetIndex, 0, movedItem);
+                    renderMixedList();
+                    debouncedRunEngine();
+                }
+            });
+            list.appendChild(row);
+        });
+    }
+
+    function addNewMixedRow() {
+        mixedItemsState.push({ skuIdx: 0, count: 100 });
+        renderMixedList();
+        debouncedRunEngine();
+    }
+
+    function removeMixedRow(idx) {
+        if (mixedItemsState.length > 1) {
+            mixedItemsState.splice(idx, 1);
+            renderMixedList();
+            debouncedRunEngine();
+        } else {
+            alert("Karma yük için en az bir ürün satırı bulunmalıdır.");
+        }
+    }
+
+    function onMixedSkuChange(idx, val) {
+        mixedItemsState[idx].skuIdx = parseInt(val) || 0;
+        debouncedRunEngine();
+    }
+
+    function onMixedCountChange(idx, val) {
+        mixedItemsState[idx].count = Math.max(0, parseInt(val) || 0);
+        debouncedRunEngine();
+    }
+
+    // =========================================================================
+    // 📥 VERİTABANI İŞLEMLERİ (ONAYA GÖNDERME & DASHBOARD YÖNETİMİ)
+    // =========================================================================
+    async function saveSimulation(status = 'bekliyor') {
+        if (!supabaseClient || !currentUser) return alert("Lütfen önce giriş yapın.");
+        const orderTitle = document.getElementById('orderTitle')?.value.trim() || 'İsimsiz Sevk';
+        const vehicleType = document.getElementById('vehicleType')?.value || '20DC';
+        
+        let totalBoxes = globalFleet.reduce((sum, v) => sum + v.totalBoxes, 0);
+        let totalWeight = globalFleet.reduce((sum, v) => sum + v.totalWgt, 0);
+
+        try {
+            const { error } = await supabaseClient.from('sevk_talepleri').insert([{
+                user_id: currentUser.id,
+                order_title: orderTitle,
+                vehicle_type: vehicleType,
+                total_boxes: totalBoxes,
+                total_weight: totalWeight,
+                load_manifest: currentMode === 'single' 
+                    ? [{ skuIdx: parseInt(document.getElementById('skuSelect')?.value) || 0, count: totalBoxes }]
+                    : mixedItemsState,
+                status: status
+            }]);
+
+            if (error) throw error;
+            alert("✓ Sevk talebi başarıyla Lojistik Ekibine iletildi!");
+        } catch (e) {
+            alert("Kayıt hatası: " + (e.message || "Talep kaydedilemedi."));
+        }
+    }
+
+    async function openDashboard() {
+        openModal('adminDashboardModal');
+        const table = document.getElementById('dashboardTable');
+        const loading = document.getElementById('dashboardLoading');
+        const tbody = document.getElementById('dashboardTableBody');
+        
+        table.classList.add('hidden');
+        loading.classList.remove('hidden');
+        tbody.innerHTML = '';
+
+        if (!supabaseClient) {
+            loading.textContent = "Veritabanı bağlantısı yok.";
+            return;
+        }
+
+        try {
+            const role = currentUserProfile?.role || 'sales';
+            let query = supabaseClient.from('sevk_talepleri').select(`
+                *,
+                profiles:user_id (full_name, role)
+            `).order('created_at', { ascending: false });
+
+            if (role === 'sales') {
+                query = query.eq('user_id', currentUser.id);
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+
+            if (!data || data.length === 0) {
+                loading.textContent = "Henüz sevk talebi kaydı bulunmuyor.";
+                return;
+            }
+
+            loading.classList.add('hidden');
+            table.classList.remove('hidden');
+
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition";
+                
+                let badgeClass = "bg-amber-100 text-amber-800";
+                let statusLabel = "Bekliyor";
+                if (item.status === 'onaylandi') { badgeClass = "bg-emerald-100 text-emerald-800"; statusLabel = "Onaylandı"; }
+                else if (item.status === 'duzeltme_istendi') { badgeClass = "bg-purple-100 text-purple-800"; statusLabel = "Düzeltme İstendi"; }
+                else if (item.status === 'reddedildi') { badgeClass = "bg-rose-100 text-rose-800"; statusLabel = "Reddedildi"; }
+
+                const safeTitle = escapeHtml(item.order_title);
+                const safeName = escapeHtml(item.profiles?.full_name || 'Bilinmiyor');
+                const safeNotes = escapeHtml(item.reviewer_notes || '-');
+                const dateStr = new Date(item.created_at).toLocaleDateString('tr-TR');
+
+                tr.innerHTML = `
+                    <td class="p-3 text-slate-500 font-mono">${dateStr}</td>
+                    <td class="p-3 font-bold text-slate-900">${safeTitle}</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${badgeClass}">${statusLabel}</span></td>
+                    <td class="p-3 text-slate-700">${safeName}</td>
+                    <td class="p-3 font-mono">${item.vehicle_type} &bull; ${item.total_boxes} Koli</td>
+                    <td class="p-3 text-slate-500">${safeNotes}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="loadTalepIntoWorkspace(${item.id})" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-2.5 py-1 rounded-lg transition text-[11px]">
+                            🔍 İncele
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+        } catch (e) {
+            loading.textContent = "Talepler yüklenemedi: " + (e.message || "");
+        }
+    }
+
+    async function loadTalepIntoWorkspace(talepId) {
+        closeDashboard();
+        try {
+            const { data, error } = await supabaseClient.from('sevk_talepleri').select('*').eq('id', talepId).single();
+            if (error || !data) return alert("Talep bulunamadı.");
+
+            currentReviewTalepId = data.id;
+            document.getElementById('orderTitle').value = data.order_title;
+            document.getElementById('vehicleType').value = data.vehicle_type;
+
+            if (data.load_manifest && Array.isArray(data.load_manifest)) {
+                if (data.load_manifest.length === 1 && !data.load_manifest[0].blockName) {
+                    switchTab('single');
+                    document.getElementById('skuSelect').value = data.load_manifest[0].skuIdx || 0;
+                    document.getElementById('targetBoxes').value = data.load_manifest[0].count;
+                } else {
+                    switchTab('mixed');
+                    mixedItemsState = data.load_manifest;
+                    renderMixedList();
+                }
+            }
+
+            onVehicleChange();
+
+            const role = currentUserProfile?.role || 'sales';
+            if (role === 'logistics' || role === 'admin') {
+                const bar = document.getElementById('activeReviewBar');
+                const meta = document.getElementById('reviewBarTalepMeta');
+                meta.textContent = `Talep #${data.id} - ${data.order_title}`;
+                bar.classList.remove('hidden');
+            }
+
+        } catch (e) {
+            alert("Yükleme hatası: " + e.message);
+        }
+    }
+
+    function decideReviewAction(actionType) {
+        if (!currentReviewTalepId) return;
+        document.getElementById('pendingActionType').value = actionType;
+        const modalTitle = document.getElementById('reviewReasonModalTitle');
+        modalTitle.textContent = actionType === 'onaylandi' ? "Sevk Onayı" : (actionType === 'duzeltme_istendi' ? "Düzeltme Talebi" : "Sevk Reddi");
+        openModal('reviewReasonModal');
+    }
+
+    async function executeFinalDecision() {
+        const actionType = document.getElementById('pendingActionType').value;
+        const notes = document.getElementById('reviewReasonInput').value.trim();
+        closeModal('reviewReasonModal');
+
+        if (!currentReviewTalepId || !supabaseClient) return;
+
+        try {
+            const { error } = await supabaseClient.from('sevk_talepleri').update({
+                status: actionType,
+                reviewer_notes: notes,
+                updated_at: new Date().toISOString()
+            }).eq('id', currentReviewTalepId);
+
+            if (error) throw error;
+            alert("✓ Sevk durumu güncellendi: " + actionType);
+            exitReviewMode();
+        } catch (e) {
+            alert("Güncelleme yetki hatası: " + (e.message || "İşlem yapılamadı."));
+        }
+    }
+
+    // =========================================================================
     // 👑 ADMİN KULLANICI & ROL YÖNETİM MODAL FONKSİYONLARI (out_ UYUMLU)
     // =========================================================================
     async function openAdminUsersModal() {
@@ -1396,7 +1745,6 @@
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 transition";
                 
-                // Hem 'out_' hem de standart anahtar desteği
                 const uId = user.out_user_id || user.user_id;
                 const uEmail = user.out_email || user.email;
                 const uName = user.out_full_name || user.full_name;
@@ -1606,177 +1954,6 @@
             try { await supabaseClient.auth.signOut(); } catch(e){}
         }
         handleAuthChange(null);
-    }
-
-    // =========================================================================
-    // 📥 VERİTABANI İŞLEMLERİ (ONAYA GÖNDERME & DASHBOARD YÖNETİMİ)
-    // =========================================================================
-    async function saveSimulation(status = 'bekliyor') {
-        if (!supabaseClient || !currentUser) return alert("Lütfen önce giriş yapın.");
-        const orderTitle = document.getElementById('orderTitle')?.value.trim() || 'İsimsiz Sevk';
-        const vehicleType = document.getElementById('vehicleType')?.value || '20DC';
-        
-        let totalBoxes = globalFleet.reduce((sum, v) => sum + v.totalBoxes, 0);
-        let totalWeight = globalFleet.reduce((sum, v) => sum + v.totalWgt, 0);
-
-        try {
-            const { error } = await supabaseClient.from('sevk_talepleri').insert([{
-                user_id: currentUser.id,
-                order_title: orderTitle,
-                vehicle_type: vehicleType,
-                total_boxes: totalBoxes,
-                total_weight: totalWeight,
-                load_manifest: currentMode === 'single' 
-                    ? [{ skuIdx: parseInt(document.getElementById('skuSelect')?.value) || 0, count: totalBoxes }]
-                    : mixedItemsState,
-                status: status
-            }]);
-
-            if (error) throw error;
-            alert("✓ Sevk talebi başarıyla Lojistik Ekibine iletildi!");
-        } catch (e) {
-            alert("Kayıt hatası: " + (e.message || "Talep kaydedilemedi."));
-        }
-    }
-
-    async function openDashboard() {
-        openModal('adminDashboardModal');
-        const table = document.getElementById('dashboardTable');
-        const loading = document.getElementById('dashboardLoading');
-        const tbody = document.getElementById('dashboardTableBody');
-        
-        table.classList.add('hidden');
-        loading.classList.remove('hidden');
-        tbody.innerHTML = '';
-
-        if (!supabaseClient) {
-            loading.textContent = "Veritabanı bağlantısı yok.";
-            return;
-        }
-
-        try {
-            const role = currentUserProfile?.role || 'sales';
-            let query = supabaseClient.from('sevk_talepleri').select(`
-                *,
-                profiles:user_id (full_name, role)
-            `).order('created_at', { ascending: false });
-
-            if (role === 'sales') {
-                query = query.eq('user_id', currentUser.id);
-            }
-
-            const { data, error } = await query;
-            if (error) throw error;
-
-            if (!data || data.length === 0) {
-                loading.textContent = "Henüz sevk talebi kaydı bulunmuyor.";
-                return;
-            }
-
-            loading.classList.add('hidden');
-            table.classList.remove('hidden');
-
-            data.forEach(item => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 transition";
-                
-                let badgeClass = "bg-amber-100 text-amber-800";
-                let statusLabel = "Bekliyor";
-                if (item.status === 'onaylandi') { badgeClass = "bg-emerald-100 text-emerald-800"; statusLabel = "Onaylandı"; }
-                else if (item.status === 'duzeltme_istendi') { badgeClass = "bg-purple-100 text-purple-800"; statusLabel = "Düzeltme İstendi"; }
-                else if (item.status === 'reddedildi') { badgeClass = "bg-rose-100 text-rose-800"; statusLabel = "Reddedildi"; }
-
-                const safeTitle = escapeHtml(item.order_title);
-                const safeName = escapeHtml(item.profiles?.full_name || 'Bilinmiyor');
-                const safeNotes = escapeHtml(item.reviewer_notes || '-');
-                const dateStr = new Date(item.created_at).toLocaleDateString('tr-TR');
-
-                tr.innerHTML = `
-                    <td class="p-3 text-slate-500 font-mono">${dateStr}</td>
-                    <td class="p-3 font-bold text-slate-900">${safeTitle}</td>
-                    <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${badgeClass}">${statusLabel}</span></td>
-                    <td class="p-3 text-slate-700">${safeName}</td>
-                    <td class="p-3 font-mono">${item.vehicle_type} &bull; ${item.total_boxes} Koli</td>
-                    <td class="p-3 text-slate-500">${safeNotes}</td>
-                    <td class="p-3 text-center">
-                        <button onclick="loadTalepIntoWorkspace(${item.id})" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-2.5 py-1 rounded-lg transition text-[11px]">
-                            🔍 İncele
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-
-        } catch (e) {
-            loading.textContent = "Talepler yüklenemedi: " + (e.message || "");
-        }
-    }
-
-    async function loadTalepIntoWorkspace(talepId) {
-        closeDashboard();
-        try {
-            const { data, error } = await supabaseClient.from('sevk_talepleri').select('*').eq('id', talepId).single();
-            if (error || !data) return alert("Talep bulunamadı.");
-
-            currentReviewTalepId = data.id;
-            document.getElementById('orderTitle').value = data.order_title;
-            document.getElementById('vehicleType').value = data.vehicle_type;
-
-            if (data.load_manifest && Array.isArray(data.load_manifest)) {
-                if (data.load_manifest.length === 1 && !data.load_manifest[0].blockName) {
-                    switchTab('single');
-                    document.getElementById('skuSelect').value = data.load_manifest[0].skuIdx || 0;
-                    document.getElementById('targetBoxes').value = data.load_manifest[0].count;
-                } else {
-                    switchTab('mixed');
-                    mixedItemsState = data.load_manifest;
-                    renderMixedList();
-                }
-            }
-
-            onVehicleChange();
-
-            const role = currentUserProfile?.role || 'sales';
-            if (role === 'logistics' || role === 'admin') {
-                const bar = document.getElementById('activeReviewBar');
-                const meta = document.getElementById('reviewBarTalepMeta');
-                meta.textContent = `Talep #${data.id} - ${data.order_title}`;
-                bar.classList.remove('hidden');
-            }
-
-        } catch (e) {
-            alert("Yükleme hatası: " + e.message);
-        }
-    }
-
-    function decideReviewAction(actionType) {
-        if (!currentReviewTalepId) return;
-        document.getElementById('pendingActionType').value = actionType;
-        const modalTitle = document.getElementById('reviewReasonModalTitle');
-        modalTitle.textContent = actionType === 'onaylandi' ? "Sevk Onayı" : (actionType === 'duzeltme_istendi' ? "Düzeltme Talebi" : "Sevk Reddi");
-        openModal('reviewReasonModal');
-    }
-
-    async function executeFinalDecision() {
-        const actionType = document.getElementById('pendingActionType').value;
-        const notes = document.getElementById('reviewReasonInput').value.trim();
-        closeModal('reviewReasonModal');
-
-        if (!currentReviewTalepId || !supabaseClient) return;
-
-        try {
-            const { error } = await supabaseClient.from('sevk_talepleri').update({
-                status: actionType,
-                reviewer_notes: notes,
-                updated_at: new Date().toISOString()
-            }).eq('id', currentReviewTalepId);
-
-            if (error) throw error;
-            alert("✓ Sevk durumu güncellendi: " + actionType);
-            exitReviewMode();
-        } catch (e) {
-            alert("Güncelleme yetki hatası: " + (e.message || "İşlem yapılamadı."));
-        }
     }
 
     function exportCSV() {
