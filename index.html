@@ -1362,171 +1362,7 @@
     function resetView() { panX = 0; panY = 0; zoomLevel = 1; if (lastRenderData) performRender(lastRenderData); }
 
     // =========================================================================
-    // FORM VE MODAL AKSİYONLARI
-    // =========================================================================
-    function populateSelects() {
-        const select = document.getElementById('skuSelect');
-        if (!select) return;
-        select.innerHTML = "";
-        skuDatabase.forEach((sku, idx) => {
-            select.options.add(new Option(`${sku.shape === 'round' ? '⚪' : '⏹'} ${sku.name} (${sku.W}x${sku.L}x${sku.H})`, idx));
-        });
-    }
-
-    function populateSKU() {
-        const idx = parseInt(document.getElementById('skuSelect')?.value) || 0;
-        const sku = skuDatabase[idx];
-        if (!sku) return;
-        const boxLEl = document.getElementById('boxL'); if (boxLEl) boxLEl.value = sku.L;
-        const boxWEl = document.getElementById('boxW'); if (boxWEl) boxWEl.value = sku.W;
-        const boxHEl = document.getElementById('boxH'); if (boxHEl) boxHEl.value = sku.H;
-        const boxWtEl = document.getElementById('boxWt'); if (boxWtEl) boxWtEl.value = sku.Wt;
-
-        setElText('lblBoxW', sku.shape === 'round' ? 'Çap (mm)' : 'En (mm)');
-        setElText('lblBoxL', sku.shape === 'round' ? 'Çap (mm)' : 'Boy (mm)');
-    }
-
-    function updateVehicleDims() {
-        const vType = document.getElementById('vehicleType')?.value || '20DC';
-        const vSpec = VEHICLE_SPECS[vType] || VEHICLE_SPECS['20DC'];
-        const mWEl = document.getElementById('maxWgt'); if (mWEl) mWEl.value = vSpec.maxWgt;
-        syncOrderTitleToPrint();
-    }
-
-    function autoSyncSingleTargetCapacity() {
-        const vType = document.getElementById('vehicleType')?.value || '20DC';
-        const vSpec = VEHICLE_SPECS[vType] || VEHICLE_SPECS['20DC'];
-        const sku = skuDatabase[parseInt(document.getElementById('skuSelect')?.value) || 0];
-        if (!sku) return;
-
-        const maxWgt = parseInt(document.getElementById('maxWgt')?.value) || vSpec.maxWgt;
-        let effL = vSpec.L - 10 - 80;
-        let effW = vSpec.W - 10;
-        if (vType === 'TIR' && document.getElementById('optFrontCurve')?.checked) effL -= 100;
-        if (document.getElementById('optAirbag')?.checked) effW -= 80;
-        if (document.getElementById('optLashing')?.checked) effL -= 150;
-
-        const plan = findOptimalFloorPlan(effW, effL, vSpec.H, vSpec.doorH, sku, maxWgt, vSpec.isContainer);
-        const totalMax = plan ? plan.maxBoxes : Math.floor(maxWgt / sku.Wt);
-
-        const targetEl = document.getElementById('targetBoxes');
-        if (!isUserDefinedTarget || targetEl?.value === '') {
-            if (targetEl) targetEl.value = totalMax;
-        }
-        setElText('capacityHintBadge', `Kapasite: ${totalMax} Adet`);
-    }
-
-    function switchTab(mode) {
-        currentMode = mode;
-        const tabS = document.getElementById('tab-single'); if (tabS) tabS.className = mode === 'single' ? 'tab-btn active text-center' : 'tab-btn text-slate-500 text-center';
-        const tabM = document.getElementById('tab-mixed'); if (tabM) tabM.className = mode === 'mixed' ? 'tab-btn active text-center' : 'tab-btn text-slate-500 text-center';
-        const panS = document.getElementById('panel-single'); if (panS) panS.style.display = mode === 'single' ? 'block' : 'none';
-        const panM = document.getElementById('panel-mixed'); if (panM) panM.style.display = mode === 'mixed' ? 'block' : 'none';
-        if (mode === 'single') autoSyncSingleTargetCapacity();
-        debouncedRunEngine();
-    }
-
-    function syncOrderTitleToPrint() {
-        const titleVal = document.getElementById('orderTitle')?.value.trim() || 'İsimsiz Sevk';
-    }
-
-    function onVehicleChange() {
-        isUserDefinedTarget = false;
-        const targetEl = document.getElementById('targetBoxes');
-        if (targetEl) targetEl.value = '';
-        updateVehicleDims();
-        autoSyncSingleTargetCapacity();
-        debouncedRunEngine();
-    }
-
-    function onSkuSelectChanged() {
-        isUserDefinedTarget = false;
-        const targetEl = document.getElementById('targetBoxes');
-        if (targetEl) targetEl.value = '';
-        populateSKU();
-        autoSyncSingleTargetCapacity();
-        debouncedRunEngine();
-    }
-
-    let draggedIndex = null;
-
-    function renderMixedList() {
-        const list = document.getElementById('mixedList');
-        if (!list) return;
-        list.innerHTML = '';
-
-        mixedItemsState.forEach((item, idx) => {
-            const row = document.createElement('div');
-            row.className = "mixed-row p-2.5 bg-white border border-slate-200/80 rounded-xl shadow-2xs flex flex-col gap-2 transition hover:border-slate-400 select-none cursor-default";
-            row.draggable = true;
-            row.dataset.index = idx;
-
-            let options = skuDatabase.map((s, i) => `<option value="${i}" ${i === item.skuIdx ? 'selected' : ''}>${s.shape === 'round' ? '⚪' : '⏹'} ${escapeHtml(s.name)} (${s.W}x${s.L}x${s.H})</option>`).join('');
-            const badgeText = idx === 0 ? "1. Blok (Ön Duvar / Ayna)" : `${idx + 1}. Blok`;
-
-            row.innerHTML = `
-                <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-1.5">
-                    <div class="flex items-center gap-1.5">
-                        <span class="drag-handle text-slate-400 hover:text-slate-800 font-bold px-1 text-base cursor-grab active:cursor-grabbing">⋮⋮</span>
-                        <span class="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">${badgeText}</span>
-                    </div>
-                    <button onclick="removeMixedRow(${idx})" class="text-rose-400 hover:text-rose-600 font-bold px-1.5 text-xs">✕</button>
-                </div>
-                <div class="flex gap-2 items-center">
-                    <select class="w-[62%] p-1.5 border rounded-lg text-xs font-semibold bg-slate-50" onchange="onMixedSkuChange(${idx}, this.value)">${options}</select>
-                    <input type="number" class="w-[38%] p-1.5 border rounded-lg text-xs font-bold text-slate-900 bg-slate-50 font-mono" placeholder="Adet" value="${item.count}" oninput="onMixedCountChange(${idx}, this.value)">
-                </div>
-            `;
-
-            row.addEventListener('dragstart', (e) => { draggedIndex = idx; e.dataTransfer.effectAllowed = 'move'; });
-            row.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
-            row.addEventListener('drop', (e) => {
-                e.preventDefault();
-                const targetIndex = parseInt(row.dataset.index);
-                if (draggedIndex !== null && draggedIndex !== targetIndex) {
-                    const movedItem = mixedItemsState.splice(draggedIndex, 1)[0];
-                    mixedItemsState.splice(targetIndex, 0, movedItem);
-                    renderMixedList();
-                    debouncedRunEngine();
-                }
-            });
-            list.appendChild(row);
-        });
-    }
-
-    function addNewMixedRow() {
-        mixedItemsState.push({ skuIdx: 0, count: 100 });
-        renderMixedList();
-        debouncedRunEngine();
-    }
-
-    function removeMixedRow(idx) {
-        if (mixedItemsState.length > 1) {
-            mixedItemsState.splice(idx, 1);
-            renderMixedList();
-            debouncedRunEngine();
-        } else {
-            alert("Karma yük için en az bir ürün satırı bulunmalıdır.");
-        }
-    }
-
-    function onMixedSkuChange(idx, val) {
-        mixedItemsState[idx].skuIdx = parseInt(val) || 0;
-        debouncedRunEngine();
-    }
-
-    function onMixedCountChange(idx, val) {
-        mixedItemsState[idx].count = Math.max(0, parseInt(val) || 0);
-        debouncedRunEngine();
-    }
-
-    function openModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('hidden'); }
-    function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.add('hidden'); }
-    function closeDashboard() { const el = document.getElementById('adminDashboardModal'); if (el) el.classList.add('hidden'); }
-    function exitReviewMode() { const el = document.getElementById('activeReviewBar'); if (el) el.classList.add('hidden'); currentReviewTalepId = null; }
-
-    // =========================================================================
-    // 👑 ADMİN KULLANICI & ROL YÖNETİM MODAL FONKSİYONLARI
+    // 👑 ADMİN KULLANICI & ROL YÖNETİM MODAL FONKSİYONLARI (out_ UYUMLU)
     // =========================================================================
     async function openAdminUsersModal() {
         openModal('adminUsersModal');
@@ -1545,7 +1381,6 @@
         }
 
         try {
-            // Sunucuda tanımladığımız güvenli admin listeleme fonksiyonunu çağır
             const { data, error } = await supabaseClient.rpc('admin_list_users');
             if (error) throw error;
 
@@ -1560,20 +1395,28 @@
             data.forEach(user => {
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 transition";
-                const isCurrentSelf = (user.user_id === currentUser.id);
-                const safeName = escapeHtml(user.full_name);
-                const safeEmail = escapeHtml(user.email);
-                const dateStr = user.created_at ? new Date(user.created_at).toLocaleDateString('tr-TR') : '-';
+                
+                // Hem 'out_' hem de standart anahtar desteği
+                const uId = user.out_user_id || user.user_id;
+                const uEmail = user.out_email || user.email;
+                const uName = user.out_full_name || user.full_name;
+                const uRole = user.out_role || user.role;
+                const uDate = user.out_created_at || user.created_at;
+
+                const isCurrentSelf = (uId === currentUser.id);
+                const safeName = escapeHtml(uName);
+                const safeEmail = escapeHtml(uEmail);
+                const dateStr = uDate ? new Date(uDate).toLocaleDateString('tr-TR') : '-';
 
                 tr.innerHTML = `
                     <td class="p-3 font-bold text-slate-900">${safeName}</td>
                     <td class="p-3 font-mono text-slate-600">${safeEmail}</td>
                     <td class="p-3 text-slate-500 font-mono">${dateStr}</td>
                     <td class="p-3 text-center">
-                        <select onchange="updateUserRole('${user.user_id}', this.value)" class="p-1.5 border rounded-lg text-xs font-bold ${user.role === 'admin' ? 'bg-purple-50 text-purple-900 border-purple-300' : (user.role === 'logistics' ? 'bg-indigo-50 text-indigo-900 border-indigo-300' : 'bg-slate-50 text-slate-800 border-slate-300')}">
-                            <option value="sales" ${user.role === 'sales' ? 'selected' : ''}>Satış Ekibi</option>
-                            <option value="logistics" ${user.role === 'logistics' ? 'selected' : ''}>Lojistik & Saha</option>
-                            <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Yönetici (Admin)</option>
+                        <select onchange="updateUserRole('${uId}', this.value)" class="p-1.5 border rounded-lg text-xs font-bold ${uRole === 'admin' ? 'bg-purple-50 text-purple-900 border-purple-300' : (uRole === 'logistics' ? 'bg-indigo-50 text-indigo-900 border-indigo-300' : 'bg-slate-50 text-slate-800 border-slate-300')}">
+                            <option value="sales" ${uRole === 'sales' ? 'selected' : ''}>Satış Ekibi</option>
+                            <option value="logistics" ${uRole === 'logistics' ? 'selected' : ''}>Lojistik & Saha</option>
+                            <option value="admin" ${uRole === 'admin' ? 'selected' : ''}>Yönetici (Admin)</option>
                         </select>
                         ${isCurrentSelf ? '<span class="text-[9px] text-slate-400 block font-semibold mt-0.5">(Siz)</span>' : ''}
                     </td>
@@ -1595,7 +1438,7 @@
             });
             if (error) throw error;
             alert("✓ Rol başarıyla güncellendi: " + newRole);
-            openAdminUsersModal(); // Listeyi yenile
+            openAdminUsersModal();
         } catch (e) {
             alert("Rol güncelleme hatası: " + (e.message || "Yetki yetersiz."));
         }
@@ -1725,7 +1568,6 @@
 
         setElText('userEmailLabel', currentUserProfile?.full_name || currentUser?.email || 'Kullanıcı');
 
-        // Yöneticiler için özel buton görünümü
         if (role === 'admin') {
             if (roleBadge) {
                 roleBadge.innerText = "YÖNETİCİ";
