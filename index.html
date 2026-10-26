@@ -113,8 +113,8 @@
         </div>
         
         <div class="flex p-1 bg-slate-100/80 rounded-xl my-6 border border-slate-200/60">
-            <button id="authTabLogin" onclick="switchAuthTab('login')" class="flex-1 py-2 font-bold text-xs rounded-lg transition-all bg-white text-slate-900 shadow-sm">Giriş Yap</button>
-            <button id="authTabRegister" onclick="switchAuthTab('register')" class="flex-1 py-2 font-bold text-xs rounded-lg text-slate-500 hover:text-slate-900 transition-all">Hesap Oluştur</button>
+            <button type="button" id="authTabLogin" onclick="switchAuthTab('login')" class="flex-1 py-2 font-bold text-xs rounded-lg transition-all bg-white text-slate-900 shadow-sm cursor-pointer">Giriş Yap</button>
+            <button type="button" id="authTabRegister" onclick="switchAuthTab('register')" class="flex-1 py-2 font-bold text-xs rounded-lg text-slate-500 hover:text-slate-900 transition-all cursor-pointer">Hesap Oluştur</button>
         </div>
 
         <div id="registerFields" class="hidden space-y-3 mb-3">
@@ -127,15 +127,15 @@
         <div class="space-y-3">
             <div>
                 <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Kurumsal E-Posta</label>
-                <input type="email" id="authEmail" class="w-full p-2.5 border rounded-xl bg-slate-50/50 text-xs focus:border-sky-500 outline-none transition" placeholder="admin96@admin.com" onkeydown="if(event.key==='Enter') handleAuthSubmit()">
+                <input type="email" id="authEmail" class="w-full p-2.5 border rounded-xl bg-slate-50/50 text-xs focus:border-sky-500 outline-none transition" placeholder="admin96@admin.com" value="admin96@admin.com">
             </div>
             <div>
                 <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Şifre</label>
-                <input type="password" id="authPassword" class="w-full p-2.5 border rounded-xl bg-slate-50/50 text-xs focus:border-sky-500 outline-none transition" placeholder="••••••••" onkeydown="if(event.key==='Enter') handleAuthSubmit()">
+                <input type="password" id="authPassword" class="w-full p-2.5 border rounded-xl bg-slate-50/50 text-xs focus:border-sky-500 outline-none transition" placeholder="••••••••">
             </div>
         </div>
 
-        <button id="authSubmitBtn" onclick="handleAuthSubmit()" class="w-full bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-sky-600/25 mt-6 text-xs uppercase tracking-wider">Giriş Yap</button>
+        <button type="button" id="authSubmitBtn" onclick="handleAuthSubmit()" class="w-full bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-sky-600/25 mt-6 text-xs uppercase tracking-wider cursor-pointer">Giriş Yap</button>
         
         <p id="authErrorMsg" class="text-rose-600 text-xs font-bold text-center mt-3 hidden p-2.5 bg-rose-50 rounded-xl border border-rose-200"></p>
         <p id="authSuccessMsg" class="text-emerald-700 text-xs font-bold text-center mt-3 hidden p-2.5 bg-emerald-50 rounded-xl border border-emerald-200"></p>
@@ -158,9 +158,9 @@
 
             <div class="flex items-center gap-1.5 w-full md:w-auto justify-center md:justify-end flex-wrap">
                 <div class="bg-slate-800/80 p-0.5 rounded-lg border border-slate-700/80 flex items-center gap-1">
-                    <button onclick="exportCSV()" class="hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1">📊 CSV</button>
-                    <button onclick="exportPDF()" class="hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1">📄 PDF</button>
-                    <button onclick="window.print()" class="hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1">🖨 Yazdır</button>
+                    <button type="button" onclick="exportCSV()" class="hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1">📊 CSV</button>
+                    <button type="button" onclick="exportPDF()" class="hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1">📄 PDF</button>
+                    <button type="button" onclick="window.print()" class="hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1">🖨 Yazdır</button>
                 </div>
 
                 <div class="h-4 w-px bg-slate-700 mx-1 hidden sm:block"></div>
@@ -171,19 +171,19 @@
                         <span id="userEmailLabel" class="text-slate-300 font-semibold text-[11px] hidden sm:inline">user@mail.com</span>
                     </div>
 
-                    <button id="btnAdminUsers" onclick="openAdminUsersModal()" class="hidden bg-purple-600 hover:bg-purple-500 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold shadow-md transition items-center gap-1">
+                    <button type="button" id="btnAdminUsers" onclick="openAdminUsersModal()" class="hidden bg-purple-600 hover:bg-purple-500 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold shadow-md transition items-center gap-1">
                         👥 Kullanıcılar & Roller
                     </button>
                     
-                    <button id="btnDashboard" onclick="openDashboard()" class="relative bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 shadow-sm">
+                    <button type="button" id="btnDashboard" onclick="openDashboard()" class="relative bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 shadow-sm">
                         <span id="dashboardBtnText">📥 Talepler</span>
                         <span id="pendingBadgeBubble" class="hidden absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full shadow-md animate-pulse">0</span>
                     </button>
 
-                    <button id="btnSubmitSales" onclick="saveSimulation('bekliyor')" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold shadow-md transition items-center gap-1">
+                    <button type="button" id="btnSubmitSales" onclick="saveSimulation('bekliyor')" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold shadow-md transition items-center gap-1">
                         ↗ Onaya Gönder
                     </button>
-                    <button onclick="handleLogout()" class="text-[11px] text-slate-400 hover:text-rose-400 font-semibold ml-1 transition">Çıkış</button>
+                    <button type="button" onclick="handleLogout()" class="text-[11px] text-slate-400 hover:text-rose-400 font-semibold ml-1 transition cursor-pointer">Çıkış</button>
                 </div>
             </div>
         </div>
@@ -202,10 +202,10 @@
             </div>
         </div>
         <div class="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
-            <button onclick="decideReviewAction('onaylandi')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition">✓ Onayla</button>
-            <button onclick="decideReviewAction('duzeltme_istendi')" class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition">↺ Düzeltme İste</button>
-            <button onclick="decideReviewAction('reddedildi')" class="bg-rose-600 hover:bg-rose-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition">✕ Reddet</button>
-            <button onclick="exitReviewMode()" class="text-slate-400 hover:text-white px-2 py-1 text-xs font-bold">Kapat</button>
+            <button type="button" onclick="decideReviewAction('onaylandi')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition">✓ Onayla</button>
+            <button type="button" onclick="decideReviewAction('duzeltme_istendi')" class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition">↺ Düzeltme İste</button>
+            <button type="button" onclick="decideReviewAction('reddedildi')" class="bg-rose-600 hover:bg-rose-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition">✕ Reddet</button>
+            <button type="button" onclick="exitReviewMode()" class="text-slate-400 hover:text-white px-2 py-1 text-xs font-bold">Kapat</button>
         </div>
     </div>
 
@@ -293,10 +293,10 @@
                     </div>
 
                     <div id="mixedList" class="space-y-1.5 mb-2.5"></div>
-                    <button onclick="addNewMixedRow()" class="w-full bg-slate-100 text-slate-700 text-xs font-bold py-2 rounded-xl border border-slate-200 hover:bg-slate-200/80 transition shadow-2xs">+ Yeni Ürün Satırı Ekle</button>
+                    <button type="button" onclick="addNewMixedRow()" class="w-full bg-slate-100 text-slate-700 text-xs font-bold py-2 rounded-xl border border-slate-200 hover:bg-slate-200/80 transition shadow-2xs cursor-pointer">+ Yeni Ürün Satırı Ekle</button>
                 </div>
                 
-                <!-- 🌟 TAŞIMA TABANI (97x115 DAHİL TÜM SEÇENEKLER) -->
+                <!-- TAŞIMA TABANI -->
                 <div class="section-header">Yükleme Tabanı & Taşıma Yöntemi</div>
                 <div class="input-group mb-2.5">
                     <select id="baseType" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();">
@@ -330,7 +330,6 @@
         <!-- SAĞ PANEL: METRİKLER, 3D SİMÜLASYON VE DANIŞMAN -->
         <div class="flex-grow flex flex-col gap-2.5 lg:overflow-y-auto print-full-width custom-scrollbar lg:pr-1" id="printArea">
             
-            <!-- 🌟 DİNAMİK FİLO VE ENTEGRE SATIŞ DANIŞMANI BANNERI -->
             <div id="salesAdvisorContainer" class="hidden no-print"></div>
 
             <div id="fleetPaginationContainer" class="no-print"></div>
@@ -397,7 +396,7 @@
                 
                 <div class="flex-grow flex items-center justify-center p-2 md:p-4 bg-gradient-to-b from-slate-900 to-slate-950 relative overflow-hidden min-h-[350px]">
                     <div class="absolute top-3 right-3 z-20 flex gap-2 no-print">
-                        <button onclick="resetView()" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-xl shadow-lg border border-slate-700/80 font-bold text-xs flex items-center gap-1.5 transition backdrop-blur-md">
+                        <button type="button" onclick="resetView()" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-xl shadow-lg border border-slate-700/80 font-bold text-xs flex items-center gap-1.5 transition backdrop-blur-md cursor-pointer">
                             <span class="text-sm leading-none">⟲</span> Merkeze Al
                         </button>
                     </div>
@@ -414,10 +413,8 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- MODALLER: DASHBOARD & İNCELEME GEREKÇESİ & KULLANICI ROL YÖNETİMİ         -->
+<!-- MODALLER                                                                  -->
 <!-- ========================================================================= -->
-
-<!-- 👑 1. ADMİN KULLANICI & ROL YÖNETİM MODALI -->
 <div id="adminUsersModal" class="hidden fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 no-print backdrop-blur-sm">
     <div class="bg-white rounded-3xl shadow-2xl max-w-[850px] w-full max-h-[85vh] flex flex-col overflow-hidden border border-purple-200">
         <div class="bg-purple-950 text-white px-6 py-4 flex justify-between items-center border-b border-purple-800">
@@ -428,7 +425,7 @@
                     <p class="text-[10px] text-purple-300">Personel yetkilerini doğrudan bu ekrandan değiştirebilirsiniz.</p>
                 </div>
             </div>
-            <button onclick="closeModal('adminUsersModal')" class="text-purple-300 hover:text-white font-black text-lg">✕</button>
+            <button type="button" onclick="closeModal('adminUsersModal')" class="text-purple-300 hover:text-white font-black text-lg cursor-pointer">✕</button>
         </div>
         <div class="p-4 md:p-6 overflow-y-auto flex-grow custom-scrollbar">
             <div id="adminUsersLoading" class="text-center text-slate-400 py-8 font-semibold">Kullanıcı listesi yükleniyor...</div>
@@ -449,7 +446,6 @@
     </div>
 </div>
 
-<!-- 2. SEVK TALEPLERİ DASHBOARD MODALI -->
 <div id="adminDashboardModal" class="hidden fixed inset-0 bg-slate-900/80 z-40 flex items-center justify-center p-4 no-print backdrop-blur-sm">
     <div class="bg-white rounded-3xl shadow-2xl max-w-[1150px] w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-200">
         <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
@@ -457,7 +453,7 @@
                 <span class="text-lg">📥</span>
                 <h3 class="font-bold text-sm tracking-wide uppercase" id="dashboardModalHeader">Sevk Talepleri & Onay Paneli</h3>
             </div>
-            <button onclick="closeDashboard()" class="text-slate-400 hover:text-white font-black text-lg">✕</button>
+            <button type="button" onclick="closeDashboard()" class="text-slate-400 hover:text-white font-black text-lg cursor-pointer">✕</button>
         </div>
         <div class="p-4 md:p-6 overflow-y-auto flex-grow custom-scrollbar">
             <div id="dashboardLoading" class="text-center text-slate-400 py-8 font-semibold">Talepler yükleniyor, lütfen bekleyin...</div>
@@ -481,12 +477,11 @@
     </div>
 </div>
 
-<!-- 3. KARAR GEREKÇESİ MODALI -->
 <div id="reviewReasonModal" class="hidden fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 no-print backdrop-blur-sm">
     <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border-t-8 border-indigo-600">
         <div class="flex justify-between items-start mb-3">
             <h3 class="text-sm font-black text-slate-900 uppercase" id="reviewReasonModalTitle">Karar Gerekçesi</h3>
-            <button onclick="closeModal('reviewReasonModal')" class="text-slate-400 hover:text-rose-500 font-bold">✕</button>
+            <button type="button" onclick="closeModal('reviewReasonModal')" class="text-slate-400 hover:text-rose-500 font-bold cursor-pointer">✕</button>
         </div>
         <input type="hidden" id="pendingActionType">
         <div class="mb-4">
@@ -494,8 +489,8 @@
             <textarea id="reviewReasonInput" rows="3" class="w-full p-2.5 border rounded-xl bg-slate-50 text-xs focus:border-indigo-500 outline-none" placeholder="Açıklama veya talep edilen düzeltmeyi yazın..."></textarea>
         </div>
         <div class="flex gap-2">
-            <button onclick="closeModal('reviewReasonModal')" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition">İptal</button>
-            <button onclick="executeFinalDecision()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md">Kaydet & Bildir</button>
+            <button type="button" onclick="closeModal('reviewReasonModal')" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition cursor-pointer">İptal</button>
+            <button type="button" onclick="executeFinalDecision()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md cursor-pointer">Kaydet & Bildir</button>
         </div>
     </div>
 </div>
@@ -527,6 +522,8 @@
     let currentUserProfile = null;
     let authMode = 'login';
     let currentReviewTalepId = null;
+    let debounceTimer = null;
+    let isUserDefinedTarget = false;
 
     function openModal(id) { 
         const el = document.getElementById(id); 
@@ -600,8 +597,6 @@
     let globalFleet = [];
     let currentVehicleIdx = 0;
     let globalEngineContext = {};
-    let debounceTimer;
-    let isUserDefinedTarget = false;
 
     let panX = 0, panY = 0, zoomLevel = 1;
     let isDragging = false, startX = 0, startY = 0;
@@ -613,7 +608,7 @@
     }
 
     // =========================================================================
-    // 📐 KOMBİNE ENLEME GEOMETRİ MOTORU (TABAN YÜKSEKLİĞİ DAHİL)
+    // 📐 KOMBİNE ENLEME GEOMETRİ MOTORU
     // =========================================================================
     function findOptimalFloorPlan(effW, effL, contH, doorH, sku, maxWgt, isContainer, baseH = 0) {
         const boxW = Math.max(1, sku.W);
@@ -681,9 +676,6 @@
         return bestPlan;
     }
 
-    // =========================================================================
-    // 🚚 YÜKLEME VE YERLEŞTİRME MOTORU
-    // =========================================================================
     function runEngine() {
         const vType = document.getElementById('vehicleType')?.value || '20DC';
         const vSpec = VEHICLE_SPECS[vType] || VEHICLE_SPECS['20DC'];
@@ -797,7 +789,6 @@
 
                 let remainingToDistribute = boxesForThisTruck;
 
-                // Strip A
                 if (plan.colsA > 0 && totalRowsA > 0) {
                     const stripAY = startY;
                     const widthA = plan.colsA * plan.dimW1;
@@ -839,7 +830,6 @@
                     }
                 }
 
-                // Strip B
                 if (plan.colsB > 0 && totalRowsB > 0) {
                     const stripBY = startY + (plan.colsA * plan.dimW1);
                     const widthB = plan.colsB * plan.dimW2;
@@ -961,9 +951,6 @@
         };
     }
 
-    // =========================================================================
-    // 💡 DRY-RUN TEST: SİMÜLASYONLU FİLO SAYISI HESAPLAYICI
-    // =========================================================================
     function simulateTotalContainers(simQueue, vType, baseType) {
         const vSpec = VEHICLE_SPECS[vType];
         let effL = vSpec.L - 90;
@@ -978,9 +965,6 @@
         return count;
     }
 
-    // =========================================================================
-    // 💡 DİNAMİK FİLO VE ENTEGRE SATIŞ DANIŞMANI
-    // =========================================================================
     function evaluateSalesAdvisor(queue, vType, baseType) {
         const container = document.getElementById('salesAdvisorContainer');
         if (!container) return;
@@ -1027,7 +1011,7 @@
                             <span class="text-slate-300">${item.target} ➔ <strong class="text-white">${exactFitQty} adet</strong></span>
                             <span class="text-[10px] text-emerald-400 block font-semibold mt-0.5">✓ 2. Konteyner iptal olur, tek navlunda kalır</span>
                         </div>
-                        <button onclick="applyAdvisorFitOne(${item.itemStateIndex}, ${exactFitQty})" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-3 py-1.5 rounded-lg text-xs shadow-md transition whitespace-nowrap">
+                        <button type="button" onclick="applyAdvisorFitOne(${item.itemStateIndex}, ${exactFitQty})" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-3 py-1.5 rounded-lg text-xs shadow-md transition whitespace-nowrap cursor-pointer">
                             🎯 Sığdır (-${removeCount})
                         </button>
                     </div>
@@ -1070,7 +1054,7 @@
                     <strong class="text-sky-300 font-bold">${escapeHtml(u.skuName)}</strong>: 
                     <span class="text-slate-300">Kalan boşluğa <strong>+${u.addCount} adet</strong></span>
                 </div>
-                <button onclick="applyAdvisorUpgradeAndFill('${upgradeTargetVeh}', ${u.itemStateIndex}, ${u.addCount})" class="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black px-2.5 py-1 rounded-lg text-xs shadow-md transition whitespace-nowrap">
+                <button type="button" onclick="applyAdvisorUpgradeAndFill('${upgradeTargetVeh}', ${u.itemStateIndex}, ${u.addCount})" class="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black px-2.5 py-1 rounded-lg text-xs shadow-md transition whitespace-nowrap cursor-pointer">
                     🚀 Geç & +${u.addCount} Ekle
                 </button>
             </div>
@@ -1086,7 +1070,7 @@
                         <strong class="text-emerald-300 font-bold">${escapeHtml(item.sku.name)}</strong>: 
                         <span class="text-slate-300">Boş alana <strong>+${addCount} adet</strong></span>
                     </div>
-                    <button onclick="applyAdvisorFillSecond(${item.itemStateIndex}, ${addCount})" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-2.5 py-1 rounded-lg text-xs shadow-md transition whitespace-nowrap">
+                    <button type="button" onclick="applyAdvisorFillSecond(${item.itemStateIndex}, ${addCount})" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-2.5 py-1 rounded-lg text-xs shadow-md transition whitespace-nowrap cursor-pointer">
                         +${addCount} Ekle & Doldur
                     </button>
                 </div>
@@ -1128,7 +1112,7 @@
                                 Siparişinizi <strong>${dryTrucks} adet ${escapeHtml(upgradeVehName)}</strong> konteynere taşıyıp boş kalan alana ek ürün alarak koli başı navlunu düşürün:
                             </p>
                             <div class="space-y-1.5 pt-1">
-                                <button onclick="applyAdvisorUpgradeVehicle('${upgradeTargetVeh}')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2 rounded-xl text-xs transition mb-2 border border-slate-700">
+                                <button type="button" onclick="applyAdvisorUpgradeVehicle('${upgradeTargetVeh}')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2 rounded-xl text-xs transition mb-2 border border-slate-700 cursor-pointer">
                                     Sadece ${escapeHtml(upgradeVehName)}'ye Geçiş Yap ➔
                                 </button>
                                 ${bigContainerActionsHtml}
@@ -1198,9 +1182,6 @@
         debouncedRunEngine();
     }
 
-    // =========================================================================
-    // 📊 METRİKLER VE ŞEFFAF MATEMATİKSEL TEYİT RAPORU
-    // =========================================================================
     function updateFleetUI() {
         let pagContainer = document.getElementById('fleetPaginationContainer');
         if (pagContainer) {
@@ -1208,7 +1189,7 @@
                 let pagHtml = `<div class="flex gap-1.5 mb-2.5 p-1.5 bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-x-auto">`;
                 globalFleet.forEach((v, idx) => {
                     let activeClass = idx === currentVehicleIdx ? 'bg-slate-900 text-white shadow-sm' : 'bg-slate-50 text-slate-600 hover:bg-slate-100';
-                    pagHtml += `<button onclick="currentVehicleIdx = ${idx}; updateFleetUI();" class="px-3.5 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap transition ${activeClass}">🚚 Konteyner #${idx + 1} (${v.totalBoxes} Koli)</button>`;
+                    pagHtml += `<button type="button" onclick="currentVehicleIdx = ${idx}; updateFleetUI();" class="px-3.5 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap transition cursor-pointer ${activeClass}">🚚 Konteyner #${idx + 1} (${v.totalBoxes} Koli)</button>`;
                 });
                 pagHtml += `</div>`;
                 pagContainer.innerHTML = pagHtml;
@@ -1305,7 +1286,6 @@
         performRender(lastRenderData);
     }
 
-    // 🎨 3D İZOMETRİK ÇİZİM
     function performRender(data) {
         if (!data) return;
         const { placedItems, contL, contW, contH, optFrontCurve, cogX, baseH = 0 } = data;
@@ -1403,7 +1383,7 @@
     function resetView() { panX = 0; panY = 0; zoomLevel = 1; if (lastRenderData) performRender(lastRenderData); }
 
     // =========================================================================
-    // 👑 ADMİN KULLANICI & ROL YÖNETİM MODAL FONKSİYONLARI (out_ UYUMLU)
+    // 👑 ADMİN KULLANICI & ROL YÖNETİM MODAL FONKSİYONLARI
     // =========================================================================
     async function openAdminUsersModal() {
         openModal('adminUsersModal');
@@ -1411,13 +1391,15 @@
         const loading = document.getElementById('adminUsersLoading');
         const tbody = document.getElementById('adminUsersTableBody');
 
-        table.classList.add('hidden');
-        loading.classList.remove('hidden');
-        loading.textContent = "Kullanıcı listesi yükleniyor...";
-        tbody.innerHTML = '';
+        if (table) table.classList.add('hidden');
+        if (loading) {
+            loading.classList.remove('hidden');
+            loading.textContent = "Kullanıcı listesi yükleniyor...";
+        }
+        if (tbody) tbody.innerHTML = '';
 
         if (!supabaseClient) {
-            loading.textContent = "Veritabanı bağlantısı yok.";
+            if (loading) loading.textContent = "Veritabanı bağlantısı yok.";
             return;
         }
 
@@ -1426,12 +1408,12 @@
             if (error) throw error;
 
             if (!data || data.length === 0) {
-                loading.textContent = "Kayıtlı kullanıcı bulunamadı.";
+                if (loading) loading.textContent = "Kayıtlı kullanıcı bulunamadı.";
                 return;
             }
 
-            loading.classList.add('hidden');
-            table.classList.remove('hidden');
+            if (loading) loading.classList.add('hidden');
+            if (table) table.classList.remove('hidden');
 
             data.forEach(user => {
                 const tr = document.createElement('tr');
@@ -1465,7 +1447,7 @@
             });
 
         } catch (e) {
-            loading.textContent = "Kullanıcılar getirilemedi: " + (e.message || "");
+            if (loading) loading.textContent = "Kullanıcılar getirilemedi: " + (e.message || "");
         }
     }
 
@@ -1485,7 +1467,7 @@
     }
 
     // =========================================================================
-    // 🔐 GÜÇLENDİRİLMİŞ SUPABASE OTURUM & GİRİŞ YÖNETİMİ
+    // 🔐 GİRİŞ & OTURUM YÖNETİMİ
     // =========================================================================
     function switchAuthTab(mode) {
         authMode = mode;
@@ -1499,13 +1481,13 @@
         if (scs) scs.classList.add('hidden');
 
         if (mode === 'login') {
-            if (btnLogin) btnLogin.className = "flex-1 py-2 font-bold text-xs rounded-lg transition-all bg-white text-slate-900 shadow-sm";
-            if (btnReg) btnReg.className = "flex-1 py-2 font-bold text-xs rounded-lg text-slate-500 hover:text-slate-900 transition-all";
+            if (btnLogin) btnLogin.className = "flex-1 py-2 font-bold text-xs rounded-lg transition-all bg-white text-slate-900 shadow-sm cursor-pointer";
+            if (btnReg) btnReg.className = "flex-1 py-2 font-bold text-xs rounded-lg text-slate-500 hover:text-slate-900 transition-all cursor-pointer";
             if (regFields) regFields.classList.add('hidden');
             if (submitBtn) submitBtn.innerText = "Giriş Yap";
         } else {
-            if (btnReg) btnReg.className = "flex-1 py-2 font-bold text-xs rounded-lg transition-all bg-white text-slate-900 shadow-sm";
-            if (btnLogin) btnLogin.className = "flex-1 py-2 font-bold text-xs rounded-lg text-slate-500 hover:text-slate-900 transition-all";
+            if (btnReg) btnReg.className = "flex-1 py-2 font-bold text-xs rounded-lg transition-all bg-white text-slate-900 shadow-sm cursor-pointer";
+            if (btnLogin) btnLogin.className = "flex-1 py-2 font-bold text-xs rounded-lg text-slate-500 hover:text-slate-900 transition-all cursor-pointer";
             if (regFields) regFields.classList.remove('hidden');
             if (submitBtn) submitBtn.innerText = "Hesap Oluştur";
         }
@@ -1584,7 +1566,7 @@
             if (landingPage) landingPage.classList.add('hidden');
             if (protectedApp) protectedApp.classList.remove('hidden');
             await loadUserProfile(user.id);
-            runEngine();
+            try { runEngine(); } catch(e){}
         } else {
             if (landingPage) landingPage.classList.remove('hidden');
             if (protectedApp) protectedApp.classList.add('hidden');
@@ -1790,7 +1772,7 @@
                         <span class="drag-handle text-slate-400 hover:text-slate-800 font-bold px-1 text-base cursor-grab active:cursor-grabbing">⋮⋮</span>
                         <span class="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">${badgeText}</span>
                     </div>
-                    <button onclick="removeMixedRow(${idx})" class="text-rose-400 hover:text-rose-600 font-bold px-1.5 text-xs">✕</button>
+                    <button type="button" onclick="removeMixedRow(${idx})" class="text-rose-400 hover:text-rose-600 font-bold px-1.5 text-xs cursor-pointer">✕</button>
                 </div>
                 <div class="flex gap-2 items-center">
                     <select class="w-[62%] p-1.5 border rounded-lg text-xs font-semibold bg-slate-50" onchange="onMixedSkuChange(${idx}, this.value)">${options}</select>
@@ -1841,7 +1823,7 @@
     }
 
     // =========================================================================
-    // 📥 VERİTABANI İŞLEMLERİ (ONAYA GÖNDERME & DASHBOARD YÖNETİMİ)
+    // 📥 SEVK TALEPLERİ VE OPERASYON FONKSİYONLARI
     // =========================================================================
     async function saveSimulation(status = 'bekliyor') {
         if (!supabaseClient || !currentUser) return alert("Lütfen önce giriş yapın.");
@@ -1934,7 +1916,7 @@
                     <td class="p-3 font-mono">${item.vehicle_type} • ${item.total_boxes} Koli</td>
                     <td class="p-3 text-slate-500">${safeNotes}</td>
                     <td class="p-3 text-center">
-                        <button onclick="loadTalepIntoWorkspace(${item.id})" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-2.5 py-1 rounded-lg transition text-[11px]">
+                        <button type="button" onclick="loadTalepIntoWorkspace(${item.id})" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-2.5 py-1 rounded-lg transition text-[11px] cursor-pointer">
                             🔍 İncele
                         </button>
                     </td>
@@ -2019,25 +2001,36 @@
         }
     }
 
+    function debouncedRunEngine() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(runEngine, 50);
+    }
+
     // =========================================================================
-    // 🚀 BAŞLATICI YAŞAM DÖNGÜSÜ
+    // 🚀 SAĞLAM BAŞLATICI YAŞAM DÖNGÜSÜ
     // =========================================================================
     async function initApp() {
-        skuDatabase = [...defaultSkuDatabase];
-        populateSelects();
-        
-        const skuSel = document.getElementById('skuSelect');
-        if (skuSel) skuSel.value = "5"; 
-        populateSKU();
+        try {
+            skuDatabase = [...defaultSkuDatabase];
+            populateSelects();
+            
+            const skuSel = document.getElementById('skuSelect');
+            if (skuSel) skuSel.value = "5"; 
+            populateSKU();
 
-        renderMixedList();
-        updateVehicleDims();
-        initCanvasInteractions();
-        autoSyncSingleTargetCapacity();
-        syncOrderTitleToPrint();
+            renderMixedList();
+            updateVehicleDims();
+            initCanvasInteractions();
+            autoSyncSingleTargetCapacity();
+            syncOrderTitleToPrint();
 
-        if (window.supabase) {
-            try {
+            // Klavye Enter ile giriş desteği
+            const emailInput = document.getElementById('authEmail');
+            const passInput = document.getElementById('authPassword');
+            if (emailInput) emailInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') handleAuthSubmit(); });
+            if (passInput) passInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') handleAuthSubmit(); });
+
+            if (window.supabase) {
                 supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                 const { data: { session } } = await supabaseClient.auth.getSession();
                 await handleAuthChange(session?.user || null);
@@ -2045,11 +2038,11 @@
                 supabaseClient.auth.onAuthStateChange(async (_event, session) => {
                     await handleAuthChange(session?.user || null);
                 });
-            } catch (e) {
-                console.error("Supabase başlatma hatası:", e);
+            } else {
                 await handleAuthChange(null);
             }
-        } else {
+        } catch (err) {
+            console.error("Uygulama başlatma hatası:", err);
             await handleAuthChange(null);
         }
     }
@@ -2058,11 +2051,6 @@
         document.addEventListener('DOMContentLoaded', initApp);
     } else {
         initApp();
-    }
-
-    function debouncedRunEngine() {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(runEngine, 50);
     }
 </script>
 </body>
