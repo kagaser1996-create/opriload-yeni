@@ -113,29 +113,27 @@
         </div>
         
         <div class="flex p-1 bg-slate-100/80 rounded-xl my-6 border border-slate-200/60">
-            <button type="button" id="authTabLogin" onclick="switchAuthTab('login')" class="flex-1 py-2 font-bold text-xs rounded-lg transition-all bg-white text-slate-900 shadow-sm cursor-pointer">Giriş Yap</button>
-            <button type="button" id="authTabRegister" onclick="switchAuthTab('register')" class="flex-1 py-2 font-bold text-xs rounded-lg text-slate-500 hover:text-slate-900 transition-all cursor-pointer">Hesap Oluştur</button>
+            <button type="button" id="authTabLogin" class="flex-1 py-2 font-bold text-xs rounded-lg transition-all bg-white text-slate-900 shadow-sm cursor-pointer">Giriş Yap</button>
+            <button type="button" id="authTabRegister" class="flex-1 py-2 font-bold text-xs rounded-lg text-slate-500 hover:text-slate-900 transition-all cursor-pointer">Hesap Oluştur</button>
         </div>
 
-        <div id="registerFields" class="hidden space-y-3 mb-3">
-            <div>
+        <form id="authForm" onsubmit="return false;" class="space-y-3">
+            <div id="registerFields" class="hidden">
                 <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Ad Soyad</label>
                 <input type="text" id="regFullName" maxlength="70" class="w-full p-2.5 border rounded-xl bg-slate-50/50 text-xs focus:border-sky-500 outline-none" placeholder="Adınız Soyadınız">
             </div>
-        </div>
 
-        <div class="space-y-3">
             <div>
                 <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Kurumsal E-Posta</label>
-                <input type="email" id="authEmail" class="w-full p-2.5 border rounded-xl bg-slate-50/50 text-xs focus:border-sky-500 outline-none transition" placeholder="admin96@admin.com" value="admin96@admin.com">
+                <input type="email" id="authEmail" required class="w-full p-2.5 border rounded-xl bg-slate-50/50 text-xs focus:border-sky-500 outline-none transition" placeholder="admin96@admin.com">
             </div>
             <div>
                 <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Şifre</label>
-                <input type="password" id="authPassword" class="w-full p-2.5 border rounded-xl bg-slate-50/50 text-xs focus:border-sky-500 outline-none transition" placeholder="••••••••">
+                <input type="password" id="authPassword" required class="w-full p-2.5 border rounded-xl bg-slate-50/50 text-xs focus:border-sky-500 outline-none transition" placeholder="••••••••">
             </div>
-        </div>
 
-        <button type="button" id="authSubmitBtn" onclick="handleAuthSubmit()" class="w-full bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-sky-600/25 mt-6 text-xs uppercase tracking-wider cursor-pointer">Giriş Yap</button>
+            <button type="button" id="authSubmitBtn" class="w-full bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-sky-600/25 mt-4 text-xs uppercase tracking-wider cursor-pointer">Giriş Yap</button>
+        </form>
         
         <p id="authErrorMsg" class="text-rose-600 text-xs font-bold text-center mt-3 hidden p-2.5 bg-rose-50 rounded-xl border border-rose-200"></p>
         <p id="authSuccessMsg" class="text-emerald-700 text-xs font-bold text-center mt-3 hidden p-2.5 bg-emerald-50 rounded-xl border border-emerald-200"></p>
@@ -225,7 +223,7 @@
                 
                 <div class="mb-3 bg-slate-50/80 border border-slate-200/80 p-2.5 rounded-xl">
                     <label class="text-[9px] font-bold text-slate-500 uppercase mb-1 block">Sipariş / Sevk Referansı</label>
-                    <input type="text" id="orderTitle" maxlength="100" placeholder="Örn: Sipariş #1042 - ABC Dağıtım" class="w-full p-2 border border-slate-200 rounded-lg bg-white text-xs font-bold text-slate-800 focus:outline-none focus:border-sky-500 transition" oninput="syncOrderTitleToPrint();">
+                    <input type="text" id="orderTitle" maxlength="100" placeholder="Örn: Sipariş #1042 - ABC Dağıtım" class="w-full p-2 border border-slate-200 rounded-lg bg-white text-xs font-bold text-slate-800 focus:outline-none focus:border-sky-500 transition">
                 </div>
 
                 <div class="section-header mt-1">Araç & Güvenlik Kısıtları</div>
@@ -381,7 +379,6 @@
                 </div>
             </div>
 
-            <!-- DETAYLI SAHA OPERASYON VE YÜKLEME TALİMATI -->
             <div id="layerOptimizationInfo"><div id="optimizationDetailsList"></div></div>
 
             <!-- 3D İZOMETRİK SİMÜLASYON CANVASI -->
@@ -608,13 +605,244 @@
     }
 
     // =========================================================================
-    // 📐 KOMBİNE ENLEME GEOMETRİ MOTORU
+    // 🔐 GİRİŞ & OTURUM YÖNETİMİ (KESİNLİKLE HATA VERMEZ)
+    // =========================================================================
+    function switchAuthTab(mode) {
+        authMode = mode;
+        const btnLogin = document.getElementById('authTabLogin');
+        const btnReg = document.getElementById('authTabRegister');
+        const regFields = document.getElementById('registerFields');
+        const submitBtn = document.getElementById('authSubmitBtn');
+        const err = document.getElementById('authErrorMsg');
+        const scs = document.getElementById('authSuccessMsg');
+        if (err) err.classList.add('hidden');
+        if (scs) scs.classList.add('hidden');
+
+        if (mode === 'login') {
+            if (btnLogin) btnLogin.className = "flex-1 py-2 font-bold text-xs rounded-lg transition-all bg-white text-slate-900 shadow-sm cursor-pointer";
+            if (btnReg) btnReg.className = "flex-1 py-2 font-bold text-xs rounded-lg text-slate-500 hover:text-slate-900 transition-all cursor-pointer";
+            if (regFields) regFields.classList.add('hidden');
+            if (submitBtn) submitBtn.innerText = "Giriş Yap";
+        } else {
+            if (btnReg) btnReg.className = "flex-1 py-2 font-bold text-xs rounded-lg transition-all bg-white text-slate-900 shadow-sm cursor-pointer";
+            if (btnLogin) btnLogin.className = "flex-1 py-2 font-bold text-xs rounded-lg text-slate-500 hover:text-slate-900 transition-all cursor-pointer";
+            if (regFields) regFields.classList.remove('hidden');
+            if (submitBtn) submitBtn.innerText = "Hesap Oluştur";
+        }
+    }
+
+    async function handleAuthSubmit() {
+        const errLabel = document.getElementById('authErrorMsg');
+        const scsLabel = document.getElementById('authSuccessMsg');
+        if (errLabel) errLabel.classList.add('hidden');
+        if (scsLabel) scsLabel.classList.add('hidden');
+
+        if (!supabaseClient) {
+            if (errLabel) {
+                errLabel.textContent = "Veritabanı bağlantısı henüz hazır değil, lütfen 2 saniye sonra tekrar deneyin.";
+                errLabel.classList.remove('hidden');
+            }
+            return;
+        }
+
+        const email = document.getElementById('authEmail')?.value.trim();
+        const password = document.getElementById('authPassword')?.value;
+        if (!email || !password) {
+            if (errLabel) {
+                errLabel.textContent = "Lütfen e-posta ve şifrenizi eksiksiz girin.";
+                errLabel.classList.remove('hidden');
+            }
+            return;
+        }
+
+        const btn = document.getElementById('authSubmitBtn');
+        if (btn) {
+            btn.innerText = "Giriş yapılıyor...";
+            btn.disabled = true;
+        }
+
+        try {
+            if (authMode === 'login') {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                if (error) throw error;
+                await handleAuthChange(data.user);
+            } else {
+                const fullName = document.getElementById('regFullName')?.value.trim() || 'Kullanıcı';
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email, password, options: { data: { full_name: fullName, role: 'sales' } }
+                });
+                if (error) throw error;
+                if (data?.session) {
+                    await handleAuthChange(data.user);
+                } else {
+                    if (scsLabel) {
+                        scsLabel.textContent = "Hesabınız başarıyla oluşturuldu! Şimdi giriş yapabilirsiniz.";
+                        scsLabel.classList.remove('hidden');
+                    }
+                    switchAuthTab('login');
+                }
+            }
+        } catch (e) {
+            if (errLabel) {
+                errLabel.textContent = "Giriş Hatası: " + (e.message || "E-posta veya şifre hatalı.");
+                errLabel.classList.remove('hidden');
+            }
+        } finally {
+            if (btn) {
+                btn.innerText = authMode === 'login' ? "Giriş Yap" : "Hesap Oluştur";
+                btn.disabled = false;
+            }
+        }
+    }
+
+    async function handleAuthChange(user) {
+        currentUser = user;
+        const landingPage = document.getElementById('authLandingPage');
+        const protectedApp = document.getElementById('protectedApp');
+
+        if (user) {
+            if (landingPage) landingPage.classList.add('hidden');
+            if (protectedApp) protectedApp.classList.remove('hidden');
+            await loadUserProfile(user.id);
+            initWorkspaceAfterLogin();
+        } else {
+            if (landingPage) landingPage.classList.remove('hidden');
+            if (protectedApp) protectedApp.classList.add('hidden');
+            currentUserProfile = null;
+        }
+    }
+
+    async function loadUserProfile(userId) {
+        if (!currentUser) return;
+        try {
+            const { data, error } = await supabaseClient.from('profiles').select('role, full_name').eq('id', userId).single();
+            if (!error && data) {
+                currentUserProfile = data;
+            } else {
+                const metaRole = currentUser.user_metadata?.role || 'admin';
+                const metaName = currentUser.user_metadata?.full_name || currentUser.email;
+                currentUserProfile = { role: metaRole, full_name: metaName };
+            }
+        } catch (e) {
+            currentUserProfile = { 
+                role: currentUser.user_metadata?.role || 'admin', 
+                full_name: currentUser.email 
+            };
+        }
+        applyRolePermissions();
+    }
+
+    function applyRolePermissions() {
+        const role = currentUserProfile?.role || 'sales';
+        const roleBadge = document.getElementById('userRoleBadge');
+        const btnSales = document.getElementById('btnSubmitSales');
+        const btnAdminUsers = document.getElementById('btnAdminUsers');
+
+        setElText('userEmailLabel', currentUserProfile?.full_name || currentUser?.email || 'Kullanıcı');
+
+        if (role === 'admin') {
+            if (roleBadge) {
+                roleBadge.innerText = "YÖNETİCİ";
+                roleBadge.className = "px-2 py-0.5 rounded-full font-black text-[9px] bg-purple-500/20 text-purple-400 border border-purple-500/30 uppercase tracking-wider";
+            }
+            if (btnAdminUsers) {
+                btnAdminUsers.classList.remove('hidden');
+                btnAdminUsers.classList.add('flex');
+            }
+            setElText('dashboardBtnText', "📥 Sevk Talepleri");
+            if (btnSales) btnSales.classList.add('hidden');
+        } else if (role === 'logistics') {
+            if (roleBadge) {
+                roleBadge.innerText = "LOJİSTİK & SAHA";
+                roleBadge.className = "px-2 py-0.5 rounded-full font-black text-[9px] bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 uppercase tracking-wider";
+            }
+            if (btnAdminUsers) btnAdminUsers.classList.add('hidden');
+            setElText('dashboardBtnText', "📥 Gelen Sevk Talepleri");
+            if (btnSales) btnSales.classList.add('hidden');
+        } else {
+            if (roleBadge) {
+                roleBadge.innerText = "SATIŞ EKİBİ";
+                roleBadge.className = "px-2 py-0.5 rounded-full font-black text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase tracking-wider";
+            }
+            if (btnAdminUsers) btnAdminUsers.classList.add('hidden');
+            setElText('dashboardBtnText', "📥 Sevk Taleplerim");
+            if (btnSales) {
+                btnSales.classList.remove('hidden');
+                btnSales.classList.add('flex');
+            }
+        }
+    }
+
+    async function handleLogout() {
+        if (supabaseClient) {
+            try { await supabaseClient.auth.signOut(); } catch(e){}
+        }
+        await handleAuthChange(null);
+    }
+
+    // =========================================================================
+    // 🛠️ ÇALIŞMA ALANI BAŞLATICI (SADECE GİRİŞ YAPILDIKTAN SONRA ÇALIŞIR)
+    // =========================================================================
+    function initWorkspaceAfterLogin() {
+        try {
+            skuDatabase = [...defaultSkuDatabase];
+            populateSelects();
+            const skuSel = document.getElementById('skuSelect');
+            if (skuSel) skuSel.value = "5"; 
+            populateSKU();
+
+            renderMixedList();
+            updateVehicleDims();
+            initCanvasInteractions();
+            autoSyncSingleTargetCapacity();
+            runEngine();
+        } catch (e) {
+            console.error("Workspace başlatma hatası:", e);
+        }
+    }
+
+    // =========================================================================
+    // 🚀 ANA YAŞAM DÖNGÜSÜ (AUTH ODAKLI & KİLİTLENMEYEN)
+    // =========================================================================
+    document.addEventListener('DOMContentLoaded', async () => {
+        // Form ve buton dinleyicilerini bağla
+        document.getElementById('authTabLogin')?.addEventListener('click', () => switchAuthTab('login'));
+        document.getElementById('authTabRegister')?.addEventListener('click', () => switchAuthTab('register'));
+        document.getElementById('authSubmitBtn')?.addEventListener('click', handleAuthSubmit);
+
+        const emailInput = document.getElementById('authEmail');
+        const passInput = document.getElementById('authPassword');
+        if (emailInput) emailInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') handleAuthSubmit(); });
+        if (passInput) passInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') handleAuthSubmit(); });
+
+        if (window.supabase) {
+            try {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (session?.user) {
+                    await handleAuthChange(session.user);
+                } else {
+                    await handleAuthChange(null);
+                }
+
+                supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+                    await handleAuthChange(session?.user || null);
+                });
+            } catch (err) {
+                console.error("Supabase bağlantı hatası:", err);
+            }
+        }
+    });
+
+    // =========================================================================
+    // 📐 MOTOR & RAPOR FONKSİYONLARI
     // =========================================================================
     function findOptimalFloorPlan(effW, effL, contH, doorH, sku, maxWgt, isContainer, baseH = 0) {
-        const boxW = Math.max(1, sku.W);
-        const boxL = Math.max(1, sku.L);
-        const boxH = Math.max(1, sku.H);
-        const boxWt = Math.max(0.01, sku.Wt);
+        if (!sku) return null;
+        const boxW = Math.max(1, sku.W || 1);
+        const boxL = Math.max(1, sku.L || 1);
+        const boxH = Math.max(1, sku.H || 1);
+        const boxWt = Math.max(0.01, sku.Wt || 1);
 
         const netContH = Math.max(boxH, contH - baseH - 15);
         const netDoorH = Math.max(boxH, doorH - baseH - 20);
@@ -746,7 +974,6 @@
         currentVehicleIdx = 0;
         updateFleetUI();
         evaluateSalesAdvisor(queue, vType, baseType);
-        syncOrderTitleToPrint();
     }
 
     function packSingleVehicle(queue, effContL, effContW, contH, doorH, maxWgt, baseType, optFrontCurve, isContainer, loadStrategy) {
@@ -1095,12 +1322,8 @@
                         <div class="space-y-2 mb-3">
                             <span class="bg-amber-500/10 text-amber-300 font-black px-2 py-0.5 rounded-md text-[9px] uppercase border border-amber-500/20">Seçenek 1: Navlun Tasarrufu</span>
                             <strong class="text-white text-xs block font-black">Siparişi ${targetMaxContainers} Konteynere Tam Sığdır</strong>
-                            <p class="text-[11px] text-slate-300 leading-relaxed">
-                                Son konteyneri tamamen iptal edip tek navlunda kalmak için gereken kusursuz düşürme miktarları:
-                            </p>
-                            <div class="space-y-1.5 pt-1">
-                                ${downscaleButtonsHtml}
-                            </div>
+                            <p class="text-[11px] text-slate-300 leading-relaxed">Son konteyneri tamamen iptal edip tek navlunda kalmak için gereken kusursuz düşürme miktarları:</p>
+                            <div class="space-y-1.5 pt-1">${downscaleButtonsHtml}</div>
                         </div>
                     </div>
 
@@ -1108,9 +1331,7 @@
                         <div class="space-y-2 mb-3">
                             <span class="bg-sky-500/10 text-sky-300 font-black px-2 py-0.5 rounded-md text-[9px] uppercase border border-sky-500/20">Seçenek 2: Büyük Araç & Upsell</span>
                             <strong class="text-white text-xs block font-black">${dryTrucks}x ${escapeHtml(upgradeVehName)}'ye Geç & Doldur</strong>
-                            <p class="text-[11px] text-slate-300 leading-relaxed">
-                                Siparişinizi <strong>${dryTrucks} adet ${escapeHtml(upgradeVehName)}</strong> konteynere taşıyıp boş kalan alana ek ürün alarak koli başı navlunu düşürün:
-                            </p>
+                            <p class="text-[11px] text-slate-300 leading-relaxed">Siparişinizi <strong>${dryTrucks} adet ${escapeHtml(upgradeVehName)}</strong> konteynere taşıyıp boş kalan alana ek ürün alarak koli başı navlunu düşürün:</p>
                             <div class="space-y-1.5 pt-1">
                                 <button type="button" onclick="applyAdvisorUpgradeVehicle('${upgradeTargetVeh}')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2 rounded-xl text-xs transition mb-2 border border-slate-700 cursor-pointer">
                                     Sadece ${escapeHtml(upgradeVehName)}'ye Geçiş Yap ➔
@@ -1124,12 +1345,8 @@
                         <div class="space-y-2 mb-3">
                             <span class="bg-emerald-500/10 text-emerald-300 font-black px-2 py-0.5 rounded-md text-[9px] uppercase border border-emerald-500/20">Seçenek 3: Ciro Artırma</span>
                             <strong class="text-white text-xs block font-black">Son ${N}. Konteyneri Tam Doldur</strong>
-                            <p class="text-[11px] text-slate-300 leading-relaxed">
-                                Son konteynerdeki boş alana müşteriden ilave sipariş alarak aracı %100 doldurun:
-                            </p>
-                            <div class="space-y-1.5 pt-1">
-                                ${upsellButtonsHtml}
-                            </div>
+                            <p class="text-[11px] text-slate-300 leading-relaxed">Son konteynerdeki boş alana müşteriden ilave sipariş alarak aracı %100 doldurun:</p>
+                            <div class="space-y-1.5 pt-1">${upsellButtonsHtml}</div>
                         </div>
                     </div>
                 </div>
@@ -1382,288 +1599,6 @@
 
     function resetView() { panX = 0; panY = 0; zoomLevel = 1; if (lastRenderData) performRender(lastRenderData); }
 
-    // =========================================================================
-    // 👑 ADMİN KULLANICI & ROL YÖNETİM MODAL FONKSİYONLARI
-    // =========================================================================
-    async function openAdminUsersModal() {
-        openModal('adminUsersModal');
-        const table = document.getElementById('adminUsersTable');
-        const loading = document.getElementById('adminUsersLoading');
-        const tbody = document.getElementById('adminUsersTableBody');
-
-        if (table) table.classList.add('hidden');
-        if (loading) {
-            loading.classList.remove('hidden');
-            loading.textContent = "Kullanıcı listesi yükleniyor...";
-        }
-        if (tbody) tbody.innerHTML = '';
-
-        if (!supabaseClient) {
-            if (loading) loading.textContent = "Veritabanı bağlantısı yok.";
-            return;
-        }
-
-        try {
-            const { data, error } = await supabaseClient.rpc('admin_list_users');
-            if (error) throw error;
-
-            if (!data || data.length === 0) {
-                if (loading) loading.textContent = "Kayıtlı kullanıcı bulunamadı.";
-                return;
-            }
-
-            if (loading) loading.classList.add('hidden');
-            if (table) table.classList.remove('hidden');
-
-            data.forEach(user => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 transition";
-                
-                const uId = user.out_user_id || user.user_id;
-                const uEmail = user.out_email || user.email;
-                const uName = user.out_full_name || user.full_name;
-                const uRole = user.out_role || user.role;
-                const uDate = user.out_created_at || user.created_at;
-
-                const isCurrentSelf = (uId === currentUser?.id);
-                const safeName = escapeHtml(uName);
-                const safeEmail = escapeHtml(uEmail);
-                const dateStr = uDate ? new Date(uDate).toLocaleDateString('tr-TR') : '-';
-
-                tr.innerHTML = `
-                    <td class="p-3 font-bold text-slate-900">${safeName}</td>
-                    <td class="p-3 font-mono text-slate-600">${safeEmail}</td>
-                    <td class="p-3 text-slate-500 font-mono">${dateStr}</td>
-                    <td class="p-3 text-center">
-                        <select onchange="updateUserRole('${uId}', this.value)" class="p-1.5 border rounded-lg text-xs font-bold ${uRole === 'admin' ? 'bg-purple-50 text-purple-900 border-purple-300' : (uRole === 'logistics' ? 'bg-indigo-50 text-indigo-900 border-indigo-300' : 'bg-slate-50 text-slate-800 border-slate-300')}">
-                            <option value="sales" ${uRole === 'sales' ? 'selected' : ''}>Satış Ekibi</option>
-                            <option value="logistics" ${uRole === 'logistics' ? 'selected' : ''}>Lojistik & Saha</option>
-                            <option value="admin" ${uRole === 'admin' ? 'selected' : ''}>Yönetici (Admin)</option>
-                        </select>
-                        ${isCurrentSelf ? '<span class="text-[9px] text-slate-400 block font-semibold mt-0.5">(Siz)</span>' : ''}
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-
-        } catch (e) {
-            if (loading) loading.textContent = "Kullanıcılar getirilemedi: " + (e.message || "");
-        }
-    }
-
-    async function updateUserRole(targetUserId, newRole) {
-        if (!supabaseClient) return;
-        try {
-            const { data, error } = await supabaseClient.rpc('admin_set_user_role', {
-                target_user_id: targetUserId,
-                new_role: newRole
-            });
-            if (error) throw error;
-            alert("✓ Rol başarıyla güncellendi: " + newRole);
-            openAdminUsersModal();
-        } catch (e) {
-            alert("Rol güncelleme hatası: " + (e.message || "Yetki yetersiz."));
-        }
-    }
-
-    // =========================================================================
-    // 🔐 GİRİŞ & OTURUM YÖNETİMİ
-    // =========================================================================
-    function switchAuthTab(mode) {
-        authMode = mode;
-        const btnLogin = document.getElementById('authTabLogin');
-        const btnReg = document.getElementById('authTabRegister');
-        const regFields = document.getElementById('registerFields');
-        const submitBtn = document.getElementById('authSubmitBtn');
-        const err = document.getElementById('authErrorMsg');
-        const scs = document.getElementById('authSuccessMsg');
-        if (err) err.classList.add('hidden');
-        if (scs) scs.classList.add('hidden');
-
-        if (mode === 'login') {
-            if (btnLogin) btnLogin.className = "flex-1 py-2 font-bold text-xs rounded-lg transition-all bg-white text-slate-900 shadow-sm cursor-pointer";
-            if (btnReg) btnReg.className = "flex-1 py-2 font-bold text-xs rounded-lg text-slate-500 hover:text-slate-900 transition-all cursor-pointer";
-            if (regFields) regFields.classList.add('hidden');
-            if (submitBtn) submitBtn.innerText = "Giriş Yap";
-        } else {
-            if (btnReg) btnReg.className = "flex-1 py-2 font-bold text-xs rounded-lg transition-all bg-white text-slate-900 shadow-sm cursor-pointer";
-            if (btnLogin) btnLogin.className = "flex-1 py-2 font-bold text-xs rounded-lg text-slate-500 hover:text-slate-900 transition-all cursor-pointer";
-            if (regFields) regFields.classList.remove('hidden');
-            if (submitBtn) submitBtn.innerText = "Hesap Oluştur";
-        }
-    }
-
-    async function handleAuthSubmit() {
-        const errLabel = document.getElementById('authErrorMsg');
-        const scsLabel = document.getElementById('authSuccessMsg');
-        if (errLabel) errLabel.classList.add('hidden');
-        if (scsLabel) scsLabel.classList.add('hidden');
-
-        if (!supabaseClient) {
-            if (errLabel) {
-                errLabel.textContent = "Veritabanı bağlantısı kurulamadı.";
-                errLabel.classList.remove('hidden');
-            }
-            return;
-        }
-
-        const email = document.getElementById('authEmail')?.value.trim();
-        const password = document.getElementById('authPassword')?.value;
-        if (!email || !password) {
-            if (errLabel) {
-                errLabel.textContent = "Lütfen kurumsal e-posta ve şifrenizi girin.";
-                errLabel.classList.remove('hidden');
-            }
-            return;
-        }
-
-        const btn = document.getElementById('authSubmitBtn');
-        if (btn) {
-            btn.innerText = "Giriş yapılıyor...";
-            btn.disabled = true;
-        }
-
-        try {
-            if (authMode === 'login') {
-                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-                if (error) throw error;
-                await handleAuthChange(data.user);
-            } else {
-                const fullName = document.getElementById('regFullName')?.value.trim() || 'Kullanıcı';
-                const { data, error } = await supabaseClient.auth.signUp({
-                    email, password, options: { data: { full_name: fullName, role: 'sales' } }
-                });
-                if (error) throw error;
-                if (data?.session) {
-                    await handleAuthChange(data.user);
-                } else {
-                    if (scsLabel) {
-                        scsLabel.textContent = "Hesabınız başarıyla oluşturuldu! Şimdi giriş yapabilirsiniz.";
-                        scsLabel.classList.remove('hidden');
-                    }
-                    switchAuthTab('login');
-                }
-            }
-        } catch (e) {
-            if (errLabel) {
-                errLabel.textContent = "Hata: " + (e.message || "Giriş işlemi başarısız.");
-                errLabel.classList.remove('hidden');
-            }
-        } finally {
-            if (btn) {
-                btn.innerText = authMode === 'login' ? "Giriş Yap" : "Hesap Oluştur";
-                btn.disabled = false;
-            }
-        }
-    }
-
-    async function handleAuthChange(user) {
-        currentUser = user;
-        const landingPage = document.getElementById('authLandingPage');
-        const protectedApp = document.getElementById('protectedApp');
-
-        if (user) {
-            if (landingPage) landingPage.classList.add('hidden');
-            if (protectedApp) protectedApp.classList.remove('hidden');
-            await loadUserProfile(user.id);
-            try { runEngine(); } catch(e){}
-        } else {
-            if (landingPage) landingPage.classList.remove('hidden');
-            if (protectedApp) protectedApp.classList.add('hidden');
-            currentUserProfile = null;
-        }
-    }
-
-    async function loadUserProfile(userId) {
-        if (!currentUser) return;
-        try {
-            const { data, error } = await supabaseClient.from('profiles').select('role, full_name').eq('id', userId).single();
-            if (!error && data) {
-                currentUserProfile = data;
-            } else {
-                const metaRole = currentUser.user_metadata?.role || 'admin';
-                const metaName = currentUser.user_metadata?.full_name || currentUser.email;
-                currentUserProfile = { role: metaRole, full_name: metaName };
-            }
-        } catch (e) {
-            currentUserProfile = { 
-                role: currentUser.user_metadata?.role || 'admin', 
-                full_name: currentUser.email 
-            };
-        }
-        applyRolePermissions();
-    }
-
-    function applyRolePermissions() {
-        const role = currentUserProfile?.role || 'sales';
-        const roleBadge = document.getElementById('userRoleBadge');
-        const btnSales = document.getElementById('btnSubmitSales');
-        const btnAdminUsers = document.getElementById('btnAdminUsers');
-
-        setElText('userEmailLabel', currentUserProfile?.full_name || currentUser?.email || 'Kullanıcı');
-
-        if (role === 'admin') {
-            if (roleBadge) {
-                roleBadge.innerText = "YÖNETİCİ";
-                roleBadge.className = "px-2 py-0.5 rounded-full font-black text-[9px] bg-purple-500/20 text-purple-400 border border-purple-500/30 uppercase tracking-wider";
-            }
-            if (btnAdminUsers) {
-                btnAdminUsers.classList.remove('hidden');
-                btnAdminUsers.classList.add('flex');
-            }
-            setElText('dashboardBtnText', "📥 Sevk Talepleri");
-            if (btnSales) btnSales.classList.add('hidden');
-        } else if (role === 'logistics') {
-            if (roleBadge) {
-                roleBadge.innerText = "LOJİSTİK & SAHA";
-                roleBadge.className = "px-2 py-0.5 rounded-full font-black text-[9px] bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 uppercase tracking-wider";
-            }
-            if (btnAdminUsers) btnAdminUsers.classList.add('hidden');
-            setElText('dashboardBtnText', "📥 Gelen Sevk Talepleri");
-            if (btnSales) btnSales.classList.add('hidden');
-        } else {
-            if (roleBadge) {
-                roleBadge.innerText = "SATIŞ EKİBİ";
-                roleBadge.className = "px-2 py-0.5 rounded-full font-black text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase tracking-wider";
-            }
-            if (btnAdminUsers) btnAdminUsers.classList.add('hidden');
-            setElText('dashboardBtnText', "📥 Sevk Taleplerim");
-            if (btnSales) {
-                btnSales.classList.remove('hidden');
-                btnSales.classList.add('flex');
-            }
-        }
-    }
-
-    async function handleLogout() {
-        if (supabaseClient) {
-            try { await supabaseClient.auth.signOut(); } catch(e){}
-        }
-        await handleAuthChange(null);
-    }
-
-    function exportCSV() {
-        if (!globalFleet || !globalFleet[0] || globalFleet[0].placedItems.length === 0) return alert("Dışa aktarılacak aktif yük verisi bulunamadı.");
-        let orderRaw = document.getElementById('orderTitle')?.value || 'Isimsiz';
-        let safeOrder = orderRaw.replace(/^[=+\-@]/, "'$&").replace(/"/g, '""');
-        
-        let csv = "\uFEFFArac_No,Siparis_Basligi,SKU_Adi,Koli_Adedi,Agirlik_kg\n";
-        globalFleet.forEach((f, i) => {
-            f.placedItems.forEach(it => { 
-                let safeSku = (it.id || '').replace(/^[=+\-@]/, "'$&").replace(/"/g, '""');
-                csv += `${i+1},"${safeOrder}","${safeSku}",${it.boxes},${it.wgt}\n`; 
-            });
-        });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-        a.download = `Elita_Yukleme_Manifestosu.csv`;
-        a.click();
-    }
-
-    function exportPDF() {
-        html2pdf().set({ margin: 10, filename: 'Elita_Yukleme_Manifestosu.pdf', html2canvas: { scale: 2 }, jsPDF: { orientation: 'landscape' } }).from(document.getElementById('printArea')).save();
-    }
-
     function populateSelects() {
         const select = document.getElementById('skuSelect');
         if (!select) return;
@@ -1690,7 +1625,6 @@
         const vType = document.getElementById('vehicleType')?.value || '20DC';
         const vSpec = VEHICLE_SPECS[vType] || VEHICLE_SPECS['20DC'];
         const mWEl = document.getElementById('maxWgt'); if (mWEl) mWEl.value = vSpec.maxWgt;
-        syncOrderTitleToPrint();
     }
 
     function autoSyncSingleTargetCapacity() {
@@ -1726,10 +1660,6 @@
         const panM = document.getElementById('panel-mixed'); if (panM) panM.style.display = mode === 'mixed' ? 'block' : 'none';
         if (mode === 'single') autoSyncSingleTargetCapacity();
         debouncedRunEngine();
-    }
-
-    function syncOrderTitleToPrint() {
-        const titleVal = document.getElementById('orderTitle')?.value.trim() || 'İsimsiz Sevk';
     }
 
     function onVehicleChange() {
@@ -1822,9 +1752,87 @@
         debouncedRunEngine();
     }
 
-    // =========================================================================
-    // 📥 SEVK TALEPLERİ VE OPERASYON FONKSİYONLARI
-    // =========================================================================
+    async function openAdminUsersModal() {
+        openModal('adminUsersModal');
+        const table = document.getElementById('adminUsersTable');
+        const loading = document.getElementById('adminUsersLoading');
+        const tbody = document.getElementById('adminUsersTableBody');
+
+        if (table) table.classList.add('hidden');
+        if (loading) {
+            loading.classList.remove('hidden');
+            loading.textContent = "Kullanıcı listesi yükleniyor...";
+        }
+        if (tbody) tbody.innerHTML = '';
+
+        if (!supabaseClient) {
+            if (loading) loading.textContent = "Veritabanı bağlantısı yok.";
+            return;
+        }
+
+        try {
+            const { data, error } = await supabaseClient.rpc('admin_list_users');
+            if (error) throw error;
+
+            if (!data || data.length === 0) {
+                if (loading) loading.textContent = "Kayıtlı kullanıcı bulunamadı.";
+                return;
+            }
+
+            if (loading) loading.classList.add('hidden');
+            if (table) table.classList.remove('hidden');
+
+            data.forEach(user => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition";
+                
+                const uId = user.out_user_id || user.user_id;
+                const uEmail = user.out_email || user.email;
+                const uName = user.out_full_name || user.full_name;
+                const uRole = user.out_role || user.role;
+                const uDate = user.out_created_at || user.created_at;
+
+                const isCurrentSelf = (uId === currentUser?.id);
+                const safeName = escapeHtml(uName);
+                const safeEmail = escapeHtml(uEmail);
+                const dateStr = uDate ? new Date(uDate).toLocaleDateString('tr-TR') : '-';
+
+                tr.innerHTML = `
+                    <td class="p-3 font-bold text-slate-900">${safeName}</td>
+                    <td class="p-3 font-mono text-slate-600">${safeEmail}</td>
+                    <td class="p-3 text-slate-500 font-mono">${dateStr}</td>
+                    <td class="p-3 text-center">
+                        <select onchange="updateUserRole('${uId}', this.value)" class="p-1.5 border rounded-lg text-xs font-bold ${uRole === 'admin' ? 'bg-purple-50 text-purple-900 border-purple-300' : (uRole === 'logistics' ? 'bg-indigo-50 text-indigo-900 border-indigo-300' : 'bg-slate-50 text-slate-800 border-slate-300')}">
+                            <option value="sales" ${uRole === 'sales' ? 'selected' : ''}>Satış Ekibi</option>
+                            <option value="logistics" ${uRole === 'logistics' ? 'selected' : ''}>Lojistik & Saha</option>
+                            <option value="admin" ${uRole === 'admin' ? 'selected' : ''}>Yönetici (Admin)</option>
+                        </select>
+                        ${isCurrentSelf ? '<span class="text-[9px] text-slate-400 block font-semibold mt-0.5">(Siz)</span>' : ''}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+        } catch (e) {
+            if (loading) loading.textContent = "Kullanıcılar getirilemedi: " + (e.message || "");
+        }
+    }
+
+    async function updateUserRole(targetUserId, newRole) {
+        if (!supabaseClient) return;
+        try {
+            const { data, error } = await supabaseClient.rpc('admin_set_user_role', {
+                target_user_id: targetUserId,
+                new_role: newRole
+            });
+            if (error) throw error;
+            alert("✓ Rol başarıyla güncellendi: " + newRole);
+            openAdminUsersModal();
+        } catch (e) {
+            alert("Rol güncelleme hatası: " + (e.message || "Yetki yetersiz."));
+        }
+    }
+
     async function saveSimulation(status = 'bekliyor') {
         if (!supabaseClient || !currentUser) return alert("Lütfen önce giriş yapın.");
         const orderTitle = document.getElementById('orderTitle')?.value.trim() || 'İsimsiz Sevk';
@@ -2004,53 +2012,6 @@
     function debouncedRunEngine() {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(runEngine, 50);
-    }
-
-    // =========================================================================
-    // 🚀 SAĞLAM BAŞLATICI YAŞAM DÖNGÜSÜ
-    // =========================================================================
-    async function initApp() {
-        try {
-            skuDatabase = [...defaultSkuDatabase];
-            populateSelects();
-            
-            const skuSel = document.getElementById('skuSelect');
-            if (skuSel) skuSel.value = "5"; 
-            populateSKU();
-
-            renderMixedList();
-            updateVehicleDims();
-            initCanvasInteractions();
-            autoSyncSingleTargetCapacity();
-            syncOrderTitleToPrint();
-
-            // Klavye Enter ile giriş desteği
-            const emailInput = document.getElementById('authEmail');
-            const passInput = document.getElementById('authPassword');
-            if (emailInput) emailInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') handleAuthSubmit(); });
-            if (passInput) passInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') handleAuthSubmit(); });
-
-            if (window.supabase) {
-                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-                const { data: { session } } = await supabaseClient.auth.getSession();
-                await handleAuthChange(session?.user || null);
-
-                supabaseClient.auth.onAuthStateChange(async (_event, session) => {
-                    await handleAuthChange(session?.user || null);
-                });
-            } else {
-                await handleAuthChange(null);
-            }
-        } catch (err) {
-            console.error("Uygulama başlatma hatası:", err);
-            await handleAuthChange(null);
-        }
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initApp);
-    } else {
-        initApp();
     }
 </script>
 </body>
