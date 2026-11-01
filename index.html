@@ -533,14 +533,14 @@
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-center">
-                    <div class="lg:col-span-5 grid grid-cols-2 gap-2 bg-slate-900 p-2.5 rounded-xl border border-slate-800">
-                        <div class="flex flex-col items-center">
-                            <span class="text-[9px] text-slate-400 font-bold uppercase mb-1">1 Kat Kuşbakışı Plan</span>
-                            <canvas id="palletTopCanvas" width="180" height="150" class="w-full h-[130px] object-contain"></canvas>
+                    <div class="lg:col-span-5 grid grid-cols-2 gap-2 bg-slate-900 p-3 rounded-xl border border-slate-800">
+                        <div class="flex flex-col items-center justify-center">
+                            <span class="text-[9px] text-slate-400 font-bold uppercase mb-1.5">1 Kat Kuşbakışı Plan</span>
+                            <canvas id="palletTopCanvas" width="200" height="160" class="w-full h-[140px] object-contain"></canvas>
                         </div>
-                        <div class="flex flex-col items-center border-l border-slate-800 pl-2">
-                            <span class="text-[9px] text-amber-400 font-bold uppercase mb-1">3D Tekil Palet İstifi</span>
-                            <canvas id="pallet3DCanvas" width="180" height="150" class="w-full h-[130px] object-contain"></canvas>
+                        <div class="flex flex-col items-center justify-center border-l border-slate-800 pl-2">
+                            <span class="text-[9px] text-amber-400 font-bold uppercase mb-1.5">3D Tekil Palet İstifi</span>
+                            <canvas id="pallet3DCanvas" width="200" height="160" class="w-full h-[140px] object-contain"></canvas>
                         </div>
                     </div>
 
@@ -649,7 +649,7 @@
     </div>
 </div>
 
-<!-- ⚡ BÖLÜM 2: 3D SİMÜLASYON, TEKİL PALET ŞEMASI & KADEME TAMAMLAMA MOTORU -->
+<!-- ⚡ BÖLÜM 2: 3D SİMÜLASYON, TAM MERKEZLENMİŞ TEKİL PALET ŞEMASI & KADEME TAMAMLAMA MOTORU -->
 <script>
     window.VEHICLE_SPECS = {
         'TIR':  { name: 'TIR Dorse', L: 13600, W: 2420, H: 2600, maxWgt: 25000, doorH: 2550, isContainer: false },
@@ -714,7 +714,7 @@
 
     window.escapeHtml = function(str) {
         if (str === null || str === undefined) return '';
-        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        return String(str).replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"').replace(/'/g, ''');
     };
     window.setElText = function(id, text) { var el = document.getElementById(id); if (el) el.textContent = text; };
     window.openModal = function(id) { var el = document.getElementById(id); if (el) el.classList.remove('hidden'); };
@@ -745,6 +745,9 @@
         }
     };
 
+    // =========================================================================
+    // 🪵 TAM MERKEZLENMİŞ TEKİL PALET DİZİLİM HESAPLAYICI
+    // =========================================================================
     window.calculateSinglePalletLayout = function(sku, baseSpec, contH, doorH) {
         if (!sku || !baseSpec || !baseSpec.palletW) return null;
         var pW = baseSpec.palletW, pL = baseSpec.palletL;
@@ -767,20 +770,46 @@
 
                 if (totalInLayer > maxLayerBoxes) {
                     maxLayerBoxes = totalInLayer;
+                    var totalUsedW = (a * ori.w1) + (b * ori.w2);
+                    var usedLA = rowsA * ori.l1;
+                    var usedLB = rowsB * ori.l2;
+                    var totalUsedL = Math.max(usedLA, usedLB);
+
+                    // Palet kenarlarından eşit boşluk bırakarak tam merkeze hizala
+                    var marginY = Math.max(0, (pW - totalUsedW) / 2);
+                    var marginXA = Math.max(0, (pL - usedLA) / 2);
+                    var marginXB = Math.max(0, (pL - usedLB) / 2);
+
                     var boxesCoords = [];
                     for (var cA = 0; cA < a; cA++) {
                         for (var rA = 0; rA < rowsA; rA++) {
-                            boxesCoords.push({ x: rA * ori.l1, y: cA * ori.w1, l: ori.l1, w: ori.w1, rotated: false });
+                            boxesCoords.push({
+                                x: marginXA + (rA * ori.l1),
+                                y: marginY + (cA * ori.w1),
+                                l: ori.l1,
+                                w: ori.w1,
+                                rotated: false
+                            });
                         }
                     }
-                    var offsetW = a * ori.w1;
+                    var offsetW = marginY + (a * ori.w1);
                     for (var cB = 0; cB < b; cB++) {
                         for (var rB = 0; rB < rowsB; rB++) {
-                            boxesCoords.push({ x: rB * ori.l2, y: offsetW + (cB * ori.w2), l: ori.l2, w: ori.w2, rotated: true });
+                            boxesCoords.push({
+                                x: marginXB + (rB * ori.l2),
+                                y: offsetW + (cB * ori.w2),
+                                l: ori.l2,
+                                w: ori.w2,
+                                rotated: true
+                            });
                         }
                     }
+
                     bestLayout = {
                         palletW: pW, palletL: pL,
+                        usedW: totalUsedW, usedL: totalUsedL,
+                        marginX: Math.max(0, (pL - totalUsedL) / 2),
+                        marginY: marginY,
                         colsA: a, rowsA: rowsA, colsB: b, rowsB: rowsB,
                         boxesPerLayer: totalInLayer,
                         layers: maxLayers,
@@ -825,56 +854,115 @@
             noteEl.innerHTML = '🚚 <strong>Araç İçi Palet Özeti:</strong> Bu araca toplam <strong>' + palletsInVehicle + ' adet ' + baseSpec.name + '</strong> yüklenir. (1 Palet = ' + palLayout.boxesPerLayer + ' koli/kat × ' + palLayout.layers + ' kat = <strong>' + palLayout.boxesPerPallet + ' koli</strong>).';
         }
 
+        // 1. 2D KUŞBAKIŞI PLAN (TAM MERKEZLENMİŞ)
         var topCanvas = document.getElementById('palletTopCanvas');
         if (topCanvas) {
             var tCtx = topCanvas.getContext('2d');
             tCtx.clearRect(0, 0, topCanvas.width, topCanvas.height);
-            var pad = 10;
+            var pad = 14;
             var sc = Math.min((topCanvas.width - pad * 2) / palLayout.palletL, (topCanvas.height - pad * 2) / palLayout.palletW);
             var ox = (topCanvas.width - palLayout.palletL * sc) / 2;
             var oy = (topCanvas.height - palLayout.palletW * sc) / 2;
 
+            // Ahşap palet tabanı
             tCtx.fillStyle = '#78350f';
             tCtx.fillRect(ox, oy, palLayout.palletL * sc, palLayout.palletW * sc);
+
+            // Palet tahta çizgileri (simetrik görünüm için)
+            tCtx.fillStyle = '#92400e';
+            for (var slat = 0; slat < 5; slat++) {
+                var slatY = oy + (slat * (palLayout.palletW * sc) / 4.2);
+                tCtx.fillRect(ox, slatY, palLayout.palletL * sc, Math.max(2, (palLayout.palletW * sc) * 0.12));
+            }
+
             tCtx.strokeStyle = '#fbbf24'; tCtx.lineWidth = 1.5;
             tCtx.strokeRect(ox, oy, palLayout.palletL * sc, palLayout.palletW * sc);
 
+            // Palet üzerine ortalanmış koliler
             palLayout.boxesCoords.forEach(function(b) {
-                tCtx.fillStyle = b.rotated ? '#38bdf8' : '#0284c7';
+                tCtx.fillStyle = b.rotated ? '#38bdf8' : '#0ea5e9';
                 tCtx.fillRect(ox + b.x * sc + 1, oy + b.y * sc + 1, b.l * sc - 2, b.w * sc - 2);
-                tCtx.strokeStyle = '#0f172a'; tCtx.lineWidth = 1;
+                tCtx.strokeStyle = '#0f172a'; tCtx.lineWidth = 1.2;
                 tCtx.strokeRect(ox + b.x * sc + 1, oy + b.y * sc + 1, b.l * sc - 2, b.w * sc - 2);
             });
         }
 
+        // 2. 3D İZOMETRİK TEKİL PALET İSTİFİ (TAM MERKEZLENMİŞ & KAT ÇİZGİLİ)
         var isoCanvas = document.getElementById('pallet3DCanvas');
         if (isoCanvas) {
             var iCtx = isoCanvas.getContext('2d');
             iCtx.clearRect(0, 0, isoCanvas.width, isoCanvas.height);
             var cosA = Math.cos(0.523599), sinA = Math.sin(0.523599);
-            var pL = palLayout.palletL, pW = palLayout.palletW, pH = palLayout.totalHeight;
-            var sc3 = Math.min((isoCanvas.width - 24) / ((pL + pW) * cosA), (isoCanvas.height - 24) / ((pL + pW) * sinA + pH));
-            var cx = isoCanvas.width / 2, cy = isoCanvas.height - 16;
+            var pL = palLayout.palletL, pW = palLayout.palletW;
+            var bH = Math.max(100, baseSpec.baseH);
+            var cargoH = palLayout.layers * sku.H;
+            var totalH = bH + cargoH;
 
-            function proj(x, y, z) { return { x: cx + (x - y) * cosA * sc3, y: cy - ((x + y) * sinA * sc3) * 0.35 - (z * sc3 * 0.75) }; }
-            function poly(pts, fill) {
+            // İzometrik sınır kutusunu hesapla ve tuvalin tam ortasına yerleştir
+            var isoSpanX = (pL + pW) * cosA;
+            var isoSpanY = (pL + pW) * sinA + totalH;
+            var sc3 = Math.min((isoCanvas.width - 24) / isoSpanX, (isoCanvas.height - 20) / isoSpanY);
+
+            var minIsoX = -pW * cosA * sc3;
+            var maxIsoX = pL * cosA * sc3;
+            var minIsoY = -totalH * sc3;
+            var maxIsoY = (pL + pW) * sinA * sc3;
+
+            var cx = (isoCanvas.width / 2) - ((minIsoX + maxIsoX) / 2);
+            var cy = (isoCanvas.height / 2) - ((minIsoY + maxIsoY) / 2);
+
+            function proj(x, y, z) {
+                return {
+                    x: cx + (x - y) * cosA * sc3,
+                    y: cy + (x + y) * sinA * sc3 - (z * sc3)
+                };
+            }
+            function poly(pts, fill, stroke, lw) {
                 iCtx.beginPath(); iCtx.moveTo(pts[0].x, pts[0].y);
                 for (var i = 1; i < pts.length; i++) iCtx.lineTo(pts[i].x, pts[i].y);
-                iCtx.closePath(); iCtx.fillStyle = fill; iCtx.fill();
-                iCtx.strokeStyle = 'rgba(0,0,0,0.4)'; iCtx.lineWidth = 0.8; iCtx.stroke();
+                iCtx.closePath();
+                if (fill) { iCtx.fillStyle = fill; iCtx.fill(); }
+                iCtx.strokeStyle = stroke || 'rgba(15,23,42,0.55)';
+                iCtx.lineWidth = lw || 1;
+                iCtx.stroke();
+            }
+            function line(p1, p2, stroke) {
+                iCtx.beginPath(); iCtx.moveTo(p1.x, p1.y); iCtx.lineTo(p2.x, p2.y);
+                iCtx.strokeStyle = stroke || 'rgba(15,23,42,0.45)';
+                iCtx.lineWidth = 0.9;
+                iCtx.stroke();
             }
 
-            var bH = Math.max(25, baseSpec.baseH);
-            poly([proj(0,0,bH), proj(pL,0,bH), proj(pL,pW,bH), proj(0,pW,bH)], '#b45309');
-            poly([proj(0,0,0), proj(pL,0,0), proj(pL,0,bH), proj(0,0,bH)], '#92400e');
-            poly([proj(0,0,0), proj(0,pW,0), proj(0,pW,bH), proj(0,0,bH)], '#78350f');
+            // 1. Ahşap Palet Tabanı (Ön Sağ, Ön Sol ve Üst Yüzey)
+            poly([proj(pL,0,0), proj(pL,pW,0), proj(pL,pW,bH), proj(pL,0,bH)], '#78350f', '#fbbf24', 1);
+            poly([proj(0,pW,0), proj(pL,pW,0), proj(pL,pW,bH), proj(0,pW,bH)], '#92400e', '#fbbf24', 1);
+            poly([proj(0,0,bH), proj(pL,0,bH), proj(pL,pW,bH), proj(0,pW,bH)], '#b45309', '#fbbf24', 1);
 
-            var z0 = bH, z1 = bH + palLayout.layers * sku.H;
-            var usedL = palLayout.boxesCoords.reduce(function(m, c) { return Math.max(m, c.x + c.l); }, 0) || pL;
-            var usedW = palLayout.boxesCoords.reduce(function(m, c) { return Math.max(m, c.y + c.w); }, 0) || pW;
-            poly([proj(0,0,z1), proj(usedL,0,z1), proj(usedL,usedW,z1), proj(0,usedW,z1)], '#38bdf8');
-            poly([proj(0,0,z0), proj(usedL,0,z0), proj(usedL,0,z1), proj(0,0,z1)], '#0284c7');
-            poly([proj(0,0,z0), proj(0,usedW,z0), proj(0,usedW,z1), proj(0,0,z1)], '#0369a1');
+            // 2. Palet Üzerinde Tam Ortalanmış Koli İstifi Bloğu
+            var x0 = palLayout.marginX;
+            var x1 = x0 + palLayout.usedL;
+            var y0 = palLayout.marginY;
+            var y1 = y0 + palLayout.usedW;
+            var z0 = bH;
+            var z1 = bH + cargoH;
+
+            // Sağ Ön Yüz, Sol Ön Yüz ve Üst Yüz
+            poly([proj(x1,y0,z0), proj(x1,y1,z0), proj(x1,y1,z1), proj(x1,y0,z1)], '#0369a1');
+            poly([proj(x0,y1,z0), proj(x1,y1,z0), proj(x1,y1,z1), proj(x0,y1,z1)], '#0284c7');
+            poly([proj(x0,y0,z1), proj(x1,y0,z1), proj(x1,y1,z1), proj(x0,y1,z1)], '#38bdf8');
+
+            // 3. Kat Çizgileri (Yatay Katmanlar)
+            for (var l = 1; l < palLayout.layers; l++) {
+                var zLayer = z0 + (l * sku.H);
+                line(proj(x1, y0, zLayer), proj(x1, y1, zLayer));
+                line(proj(x0, y1, zLayer), proj(x1, y1, zLayer));
+            }
+
+            // 4. Üst Yüzeydeki Koli Izgarası (Tam Merkezlenmiş Koli Sınırları)
+            palLayout.boxesCoords.forEach(function(b) {
+                var bx0 = b.x, bx1 = b.x + b.l, by0 = b.y, by1 = b.y + b.w;
+                poly([proj(bx0,by0,z1), proj(bx1,by0,z1), proj(bx1,by1,z1), proj(bx0,by1,z1)], b.rotated ? '#7dd3fc' : '#38bdf8', 'rgba(15,23,42,0.6)', 0.9);
+            });
         }
     };
 
@@ -1325,7 +1413,7 @@
                         : (s.isStepOver ? ('🔼 Kademe Üstü Tamamlama (' + window.escapeHtml(s.underSkuName) + ' Üstü)') : (k === 'B' ? 'Şerit B (Enine Çevrilmiş)' : 'Şerit A (Boyuna Düz)'));
                     return '<div class="bg-white p-2.5 rounded-xl border ' + (s.isStepOver ? 'border-amber-300 bg-amber-50/30' : '') + ' text-center font-mono"><span class="text-[10px] ' + (s.isStepOver ? 'text-amber-800' : 'text-slate-500') + ' font-bold block mb-1">' + headerLabel + '</span><div class="grid grid-cols-4 gap-1 text-xs"><div><small class="block text-[9px] text-slate-400">En</small><b>' + s.cols + '</b></div><div><small class="block text-[9px] text-slate-400">' + (k === 'PALET' ? 'Palet' : 'Sıra') + '</small><b>' + s.rows + '</b></div><div><small class="block text-[9px] text-slate-400">Kat</small><b>' + s.layers + ' Kat</b></div><div class="text-emerald-700"><small class="block text-[9px]">Toplam</small><b>' + s.boxes + '</b></div></div></div>';
                 }).join('');
-                return '<div class="p-3 bg-slate-50 rounded-xl border space-y-2"><div class="flex justify-between items-center"><b class="text-xs">' + (idx + 1) + '. Blok: ' + window.escapeHtml(g.name) + '</b><span class="text-xs font-mono font-bold text-emerald-700">' + g.totalBoxes + ' Adet &bull; ' + g.totalWgt.toFixed(1) + ' kg</span></div><div class="grid grid-cols-1 md:grid-cols-2 gap-2">' + stHtml + '</div></div>';
+                return '<div class="p-3 bg-slate-50 rounded-xl border space-y-2"><div class="flex justify-between items-center"><b class="text-xs">' + (idx + 1) + '. Blok: ' + window.escapeHtml(g.name) + '</b><span class="text-xs font-mono font-bold text-emerald-700">' + g.totalBoxes + ' Adet • ' + g.totalWgt.toFixed(1) + ' kg</span></div><div class="grid grid-cols-1 md:grid-cols-2 gap-2">' + stHtml + '</div></div>';
             }).join('');
             optListEl.innerHTML = '<div class="bg-white p-3.5 rounded-2xl border text-xs space-y-2"><div class="flex justify-between border-b pb-1.5"><b class="uppercase">🚚 ' + baseSpec.name + ' Yerleşim Planı (Araç ' + (window.currentVehicleIdx + 1) + '/' + window.globalFleet.length + ')</b></div>' + blocksHtml + '</div>';
         }
@@ -1528,7 +1616,7 @@
         var container = document.getElementById('skuManagerList');
         if (!container) return;
         container.innerHTML = window.skuDatabase.map(function(s, idx) {
-            return '<div class="flex items-center justify-between p-2 bg-slate-50 border rounded-lg"><div><strong class="text-slate-800">' + window.escapeHtml(s.name) + '</strong><span class="text-[10px] text-slate-500 font-mono ml-1">(' + s.W + 'x' + s.L + 'x' + s.H + ' mm &bull; ' + s.Wt + ' kg)</span></div>' + (idx >= window.defaultSkuDatabase.length ? '<button type="button" onclick="window.skuDatabase.splice(' + idx + ',1);window.renderSkuManagerList();window.runEngine();" class="text-rose-500 font-bold px-2 cursor-pointer">Sil</button>' : '<span class="text-[10px] text-slate-400">Standart</span>') + '</div>';
+            return '<div class="flex items-center justify-between p-2 bg-slate-50 border rounded-lg"><div><strong class="text-slate-800">' + window.escapeHtml(s.name) + '</strong><span class="text-[10px] text-slate-500 font-mono ml-1">(' + s.W + 'x' + s.L + 'x' + s.H + ' mm • ' + s.Wt + ' kg)</span></div>' + (idx >= window.defaultSkuDatabase.length ? '<button type="button" onclick="window.skuDatabase.splice(' + idx + ',1);window.renderSkuManagerList();window.runEngine();" class="text-rose-500 font-bold px-2 cursor-pointer">Sil</button>' : '<span class="text-[10px] text-slate-400">Standart</span>') + '</div>';
         }).join('');
     };
 
