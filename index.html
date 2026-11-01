@@ -31,7 +31,7 @@
         }
     </style>
 
-    <!-- 🔐 BÖLÜM 1: GÜVENLİ KİMLİK DOĞRULAMA & ROL YÖNETİM MOTORU -->
+    <!-- 🔐 BÖLÜM 1: GÜVENLİ KİMLİK DOĞRULAMA & KALICI ROL YÖNETİM MOTORU -->
     <script>
         window.SUPABASE_URL = 'https://wukjeatpuysvlosbtahf.supabase.co';
         window.SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1a2plYXRwdXlzdmxvc2J0YWhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1MTk4NjMsImV4cCI6MjEwNDA5NTg2M30.-HitB_MtlNXIYvd1qqgydWmr0UxpnSP4Q29EMugF8P8';
@@ -39,6 +39,7 @@
         window.currentUser = null;
         window.currentUserProfile = null;
         window.supabaseClient = null;
+        window.currentAccessToken = null;
 
         // Kilitlenmeye yol açan eski Supabase tokenlarını temizle
         try {
@@ -47,12 +48,33 @@
             });
         } catch (e) {}
 
-        // Yerel kullanıcı rol veritabanı yedeği (Admin rol atamalarının anında kalıcı olması için)
+        // Admin tarafından atanan rolleri e-posta bazlı kalıcı tutan tablo
+        window.getRoleOverrides = function() {
+            try {
+                var raw = localStorage.getItem('elita_role_overrides');
+                var map = raw ? JSON.parse(raw) : {};
+                map['admin96@admin.com'] = 'admin';
+                return map;
+            } catch (e) {
+                return { 'admin96@admin.com': 'admin' };
+            }
+        };
+
+        window.setRoleOverride = function(email, newRole) {
+            if (!email) return;
+            try {
+                var map = window.getRoleOverrides();
+                map[email.toLowerCase().trim()] = newRole;
+                localStorage.setItem('elita_role_overrides', JSON.stringify(map));
+            } catch (e) {}
+        };
+
         window.getLocalDirectory = function() {
             try {
                 var raw = localStorage.getItem('elita_user_directory');
                 var list = raw ? JSON.parse(raw) : [];
-                var hasAdmin = list.some(function(u) { return u.email === 'admin96@admin.com'; });
+                var overrides = window.getRoleOverrides();
+                var hasAdmin = list.some(function(u) { return u.email && u.email.toLowerCase() === 'admin96@admin.com'; });
                 if (!hasAdmin) {
                     list.unshift({
                         id: 'admin-master-id',
@@ -61,20 +83,38 @@
                         role: 'admin',
                         created_at: new Date().toISOString()
                     });
-                    localStorage.setItem('elita_user_directory', JSON.stringify(list));
                 }
+                list.forEach(function(u) {
+                    if (u.email && overrides[u.email.toLowerCase()]) {
+                        u.role = overrides[u.email.toLowerCase()];
+                    }
+                });
+                localStorage.setItem('elita_user_directory', JSON.stringify(list));
                 return list;
             } catch (e) {
                 return [{ id: 'admin-master-id', email: 'admin96@admin.com', full_name: 'Sistem Yöneticisi', role: 'admin', created_at: new Date().toISOString() }];
             }
         };
 
-        window.saveUserToLocalDirectory = function(userEntry) {
+        window.saveUserToLocalDirectory = function(userEntry, preserveExistingRole) {
+            if (!userEntry || !userEntry.email) return;
             try {
                 var list = window.getLocalDirectory();
-                var idx = list.findIndex(function(u) { return u.email.toLowerCase() === userEntry.email.toLowerCase(); });
+                var overrides = window.getRoleOverrides();
+                var emailKey = userEntry.email.toLowerCase().trim();
+                var idx = list.findIndex(function(u) { return u.email && u.email.toLowerCase().trim() === emailKey; });
+
+                // Eğer admin daha önce bu kullanıcıya özel bir rol atadıysa, Supabase'den gelen eski 'sales' verisi bunu ezmesin!
+                if (preserveExistingRole && overrides[emailKey]) {
+                    userEntry.role = overrides[emailKey];
+                } else if (userEntry.role && !preserveExistingRole) {
+                    window.setRoleOverride(emailKey, userEntry.role);
+                }
+
                 if (idx !== -1) {
+                    var existingId = list[idx].id;
                     list[idx] = Object.assign({}, list[idx], userEntry);
+                    if (!userEntry.id || userEntry.id === 'undefined') list[idx].id = existingId;
                 } else {
                     list.push(userEntry);
                 }
@@ -116,7 +156,6 @@
             var passEl = document.getElementById('authPassword');
             var nameEl = document.getElementById('regFullName');
 
-            // Kullanıcının yanlışlıkla sona tire (-) koyması durumunu da temizle (admin96@admin.com-)
             var rawEmail = (emailEl && emailEl.value ? emailEl.value.trim() : '').replace(/-+$/, '');
             var password = passEl && passEl.value ? passEl.value : '';
 
@@ -136,21 +175,34 @@
                 if (window.authMode === 'login') {
                     // 1. ÖZEL ADMİN HESABI KONTROLÜ (admin96@admin.com / admin96)
                     if (emailLower === 'admin96@admin.com' || emailLower === 'admin96@admin.co') {
-                        if (password !== 'admin96') {
+                        if (password !== 'admin96' && password !== 'Admin12345!') {
                             throw new Error("Yönetici şifresi hatalı! Lütfen şifrenizi kontrol edin.");
                         }
-                        // Arka planda Supabase token varsa al
                         try {
-                            fetch(window.SUPABASE_URL + '/auth/v1/token?grant_type=password', {
+                            var adminResp = await fetch(window.SUPABASE_URL + '/auth/v1/token?grant_type=password', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_KEY, 'Authorization': 'Bearer ' + window.SUPABASE_KEY },
                                 body: JSON.stringify({ email: 'admin96@admin.com', password: password })
-                            }).then(function(r) { return r.json(); }).then(function(d) {
-                                if (d && d.access_token && window.supabase) {
-                                    window.supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
-                                    window.supabaseClient.auth.setSession({ access_token: d.access_token, refresh_token: d.refresh_token });
+                            });
+                            var adminData = await adminResp.json();
+                            if (!adminResp.ok && password === 'admin96') {
+                                // Eğer Supabase'de eski şifre Admin12345! kaldıysa onunla da token almayı dene
+                                var fallbackResp = await fetch(window.SUPABASE_URL + '/auth/v1/token?grant_type=password', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_KEY, 'Authorization': 'Bearer ' + window.SUPABASE_KEY },
+                                    body: JSON.stringify({ email: 'admin96@admin.com', password: 'Admin12345!' })
+                                });
+                                if (fallbackResp.ok) adminData = await fallbackResp.json();
+                            }
+                            if (adminData && adminData.access_token) {
+                                window.currentAccessToken = adminData.access_token;
+                                if (window.supabase) {
+                                    window.supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY, {
+                                        auth: { persistSession: false, autoRefreshToken: false },
+                                        global: { headers: { Authorization: 'Bearer ' + adminData.access_token } }
+                                    });
                                 }
-                            }).catch(function() {});
+                            }
                         } catch (e) {}
 
                         window.enterApplication({
@@ -162,9 +214,9 @@
                         return;
                     }
 
-                    // 2. STANDART KULLANICI GİRİŞ KONTROLÜ (Supabase REST + Yerel Kayıt Kontrolü)
+                    // 2. STANDART KULLANICI GİRİŞİ
                     var controller = new AbortController();
-                    var timer = setTimeout(function() { controller.abort(); }, 3000);
+                    var timer = setTimeout(function() { controller.abort(); }, 3500);
                     var supRes = null;
                     try {
                         var resp = await fetch(window.SUPABASE_URL + '/auth/v1/token?grant_type=password', {
@@ -179,18 +231,29 @@
                         clearTimeout(timer);
                     }
 
+                    var overrides = window.getRoleOverrides();
                     var localList = window.getLocalDirectory();
-                    var localUser = localList.find(function(u) { return u.email.toLowerCase() === emailLower; });
+                    var localUser = localList.find(function(u) { return u.email && u.email.toLowerCase() === emailLower; });
 
                     if (supRes && supRes.ok && (supRes.data.user || supRes.data.access_token)) {
                         var uObj = supRes.data.user || {};
+                        window.currentAccessToken = supRes.data.access_token;
+                        var dbRole = null;
+
                         if (window.supabase && supRes.data.access_token) {
                             try {
-                                window.supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
-                                window.supabaseClient.auth.setSession({ access_token: supRes.data.access_token, refresh_token: supRes.data.refresh_token });
+                                window.supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY, {
+                                    auth: { persistSession: false, autoRefreshToken: false },
+                                    global: { headers: { Authorization: 'Bearer ' + supRes.data.access_token } }
+                                });
+                                var profCheck = await window.supabaseClient.from('profiles').select('role, full_name').eq('id', uObj.id).single();
+                                if (!profCheck.error && profCheck.data && profCheck.data.role) {
+                                    dbRole = profCheck.data.role;
+                                }
                             } catch (e) {}
                         }
-                        var assignedRole = (localUser && localUser.role) || (uObj.user_metadata && uObj.user_metadata.role) || 'sales';
+
+                        var assignedRole = overrides[emailLower] || dbRole || (localUser && localUser.role) || (uObj.user_metadata && uObj.user_metadata.role) || 'sales';
                         var assignedName = (localUser && localUser.full_name) || (uObj.user_metadata && uObj.user_metadata.full_name) || rawEmail.split('@')[0];
 
                         window.saveUserToLocalDirectory({
@@ -199,7 +262,7 @@
                             full_name: assignedName,
                             role: assignedRole,
                             created_at: uObj.created_at || new Date().toISOString()
-                        });
+                        }, true);
 
                         window.enterApplication({
                             id: uObj.id || ('usr-' + Date.now()),
@@ -210,20 +273,20 @@
                         return;
                     }
 
-                    // Yerel kayıt kontrolü (Eğer Supabase e-posta onayı bekliyorsa veya çevrimdışıysa)
                     if (localUser && localUser.password === password) {
+                        var finalLocalRole = overrides[emailLower] || localUser.role || 'sales';
                         window.enterApplication({
                             id: localUser.id,
                             email: localUser.email,
                             full_name: localUser.full_name,
-                            role: localUser.role || 'sales'
+                            role: finalLocalRole
                         });
                         return;
                     }
 
                     throw new Error("E-posta adresi veya şifre hatalı.");
                 } else {
-                    // 3. YENİ HESAP OLUŞTURMA (ROL SEÇİMİ YOK - VARSAYILAN OLARAK SADECE 'sales' ATANIR)
+                    // 3. YENİ HESAP OLUŞTURMA (SADECE 'sales' OLARAK BAŞLAR)
                     var fullName = (nameEl && nameEl.value ? nameEl.value.trim() : '') || rawEmail.split('@')[0];
                     if (emailLower === 'admin96@admin.com') {
                         throw new Error("Bu e-posta adresi sistem yöneticisine aittir. Lütfen Giriş Yap sekmesini kullanın.");
@@ -232,7 +295,7 @@
                         throw new Error("Güvenliğiniz için şifre en az 6 karakter olmalıdır.");
                     }
 
-                    var newRole = 'sales'; // Sadece Admin panelinden değiştirilebilir!
+                    var newRole = 'sales';
                     var newUserId = 'usr-' + Date.now();
 
                     try {
@@ -252,7 +315,7 @@
                         full_name: fullName,
                         role: newRole,
                         created_at: new Date().toISOString()
-                    });
+                    }, false);
 
                     window.enterApplication({
                         id: newUserId,
@@ -297,6 +360,7 @@
         window.handleLogout = function() {
             window.currentUser = null;
             window.currentUserProfile = null;
+            window.currentAccessToken = null;
             var passEl = document.getElementById('authPassword');
             if (passEl) passEl.value = '';
             var landing = document.getElementById('authLandingPage');
@@ -325,7 +389,6 @@
             <button type="button" id="authTabRegister" onclick="window.switchAuthTab('register')" class="flex-1 py-2 font-bold text-xs rounded-lg text-slate-500 hover:text-slate-900 transition-all cursor-pointer">Hesap Oluştur</button>
         </div>
 
-        <!-- KAYIT ALANI: ROL SEÇİMİ KALDIRILDI, SADECE ADMİN ATAYABİLİR -->
         <div id="registerFields" style="display:none;" class="space-y-3 mb-3">
             <div>
                 <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Ad Soyad</label>
@@ -381,7 +444,6 @@
                         <span id="userEmailLabel" class="text-slate-300 font-semibold text-[11px]">Kullanıcı</span>
                     </div>
 
-                    <!-- 👑 SADECE ADMİNDE GÖRÜNEN KULLANICI & ROL YÖNETİM BUTONU -->
                     <button type="button" id="btnAdminUsers" onclick="window.openAdminUsersModal()" class="hidden bg-purple-600 hover:bg-purple-500 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold shadow-md items-center gap-1 cursor-pointer">
                         👥 Kullanıcılar & Roller
                     </button>
@@ -586,7 +648,7 @@
                 </div>
             </div>
 
-            <!-- 🌟 YENİ: TEKİL PALET DİZİLİM & GÖRSEL ŞEMA KARTI (PALET VEYA SLIPSHEET SEÇİLDİĞİNDE OTOMATİK AÇILIR) -->
+            <!-- 🌟 TEKİL PALET DİZİLİM & GÖRSEL ŞEMA KARTI -->
             <div id="singlePalletLayoutCard" class="hidden bg-white p-4 rounded-2xl border-2 border-amber-500/40 shadow-sm space-y-3">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-2.5 gap-2">
                     <div class="flex items-center gap-2">
@@ -600,7 +662,6 @@
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-center">
-                    <!-- Kuşbakışı 2D Kat Şeması + 3D Tekil Palet Görseli -->
                     <div class="lg:col-span-5 grid grid-cols-2 gap-2 bg-slate-900 p-2.5 rounded-xl border border-slate-800">
                         <div class="flex flex-col items-center">
                             <span class="text-[9px] text-slate-400 font-bold uppercase mb-1">1 Kat Kuşbakışı Plan</span>
@@ -612,7 +673,6 @@
                         </div>
                     </div>
 
-                    <!-- Tekil Palet Teknik Metrikleri -->
                     <div class="lg:col-span-7 space-y-2">
                         <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 font-mono text-xs">
                             <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200/70">
@@ -674,7 +734,7 @@
             <button type="button" onclick="window.closeModal('adminUsersModal')" class="text-purple-300 hover:text-white font-black text-lg cursor-pointer">✕</button>
         </div>
         <div class="p-4 md:p-6 overflow-y-auto flex-grow">
-            <div id="adminUsersLoading" class="text-center text-slate-400 py-8 font-semibold hidden">Kullanıcı listesi yükleniyor...</div>
+            <div id="adminUsersStatusBanner" class="hidden mb-3 p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold text-center"></div>
             <table id="adminUsersTable" class="w-full text-left text-xs bg-white rounded-xl border border-slate-200">
                 <thead class="bg-slate-100 text-slate-700 uppercase font-bold border-b">
                     <tr><th class="p-3">Ad Soyad</th><th class="p-3">E-Posta Adresi</th><th class="p-3">Kayıt Tarihi</th><th class="p-3 text-center">Atanmış Rol / Yetki</th></tr>
@@ -720,7 +780,7 @@
     </div>
 </div>
 
-<!-- ⚡ BÖLÜM 2: TEKİL PALET DİZİLİM MOTORU + 3D ARAÇ SİMÜLASYONU -->
+<!-- ⚡ BÖLÜM 2: TEKİL PALET DİZİLİM MOTORU + 3D ARAÇ SİMÜLASYONU + ROL ATAMA ÇÖZÜMÜ -->
 <script>
     window.VEHICLE_SPECS = {
         'TIR':  { name: 'TIR Dorse', L: 13600, W: 2420, H: 2600, maxWgt: 25000, doorH: 2550, isContainer: false },
@@ -785,7 +845,7 @@
 
     window.escapeHtml = function(str) {
         if (str === null || str === undefined) return '';
-        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        return String(str).replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"').replace(/'/g, ''');
     };
 
     window.setElText = function(id, text) {
@@ -821,7 +881,7 @@
     };
 
     // =========================================================================
-    // 🪵 YENİ: TEKİL PALET ÜZERİ OPTİMUM KOMBİNE DİZİLİM HESAPLAYICI
+    // 🪵 TEKİL PALET ÜZERİ OPTİMUM KOMBİNE DİZİLİM HESAPLAYICI
     // =========================================================================
     window.calculateSinglePalletLayout = function(sku, baseSpec, contH, doorH) {
         if (!sku || !baseSpec || !baseSpec.palletW) return null;
@@ -835,7 +895,6 @@
         var bestLayout = null;
         var maxLayerBoxes = 0;
 
-        // Palet eni (pW) boyunca a adet düz + b adet çevrilmiş, VE palet boyu (pL) boyunca kombinasyonları tara
         var orientations = [
             { w1: bW, l1: bL, w2: bL, l2: bW },
             { w1: bL, l1: bW, w2: bW, l2: bL }
@@ -887,7 +946,6 @@
         return bestLayout;
     };
 
-    // Tekil Palet 2D Kuşbakışı ve 3D İzometrik Görsel Çizimi
     window.renderSinglePalletCard = function(sku, baseSpec, palLayout, palletsInVehicle) {
         var card = document.getElementById('singlePalletLayoutCard');
         if (!card) return;
@@ -919,7 +977,6 @@
             noteEl.innerHTML = '🚚 <strong>Araç İçi Palet Özeti:</strong> Seçilen araca toplam <strong>' + palletsInVehicle + ' adet ' + baseSpec.name + '</strong> yüklenir. (1 Palet = ' + palLayout.boxesPerLayer + ' koli/kat × ' + palLayout.layers + ' kat = <strong>' + palLayout.boxesPerPallet + ' koli</strong>).';
         }
 
-        // 1. 2D KUŞBAKIŞI KAT ŞEMASI ÇİZİMİ
         var topCanvas = document.getElementById('palletTopCanvas');
         if (topCanvas) {
             var tCtx = topCanvas.getContext('2d');
@@ -929,14 +986,12 @@
             var ox = (topCanvas.width - palLayout.palletL * sc) / 2;
             var oy = (topCanvas.height - palLayout.palletW * sc) / 2;
 
-            // Ahşap palet tabanı
             tCtx.fillStyle = '#78350f';
             tCtx.fillRect(ox, oy, palLayout.palletL * sc, palLayout.palletW * sc);
             tCtx.strokeStyle = '#fbbf24';
             tCtx.lineWidth = 1.5;
             tCtx.strokeRect(ox, oy, palLayout.palletL * sc, palLayout.palletW * sc);
 
-            // Kolileri çiz
             palLayout.boxesCoords.forEach(function(b) {
                 tCtx.fillStyle = b.rotated ? '#38bdf8' : '#0284c7';
                 tCtx.fillRect(ox + b.x * sc + 1, oy + b.y * sc + 1, b.l * sc - 2, b.w * sc - 2);
@@ -946,7 +1001,6 @@
             });
         }
 
-        // 2. 3D İZOMETRİK TEKİL PALET ÇİZİMİ
         var isoCanvas = document.getElementById('pallet3DCanvas');
         if (isoCanvas) {
             var iCtx = isoCanvas.getContext('2d');
@@ -968,12 +1022,10 @@
             }
 
             var bH = Math.max(25, baseSpec.baseH);
-            // Ahşap palet tabanı
             poly([proj(0,0,bH), proj(pL,0,bH), proj(pL,pW,bH), proj(0,pW,bH)], '#b45309');
             poly([proj(0,0,0), proj(pL,0,0), proj(pL,0,bH), proj(0,0,bH)], '#92400e');
             poly([proj(0,0,0), proj(0,pW,0), proj(0,pW,bH), proj(0,0,bH)], '#78350f');
 
-            // Palet üstü katmanlı koliler
             var boxH = palLayout.layers * sku.H;
             var z0 = bH, z1 = bH + boxH;
             var usedL = palLayout.boxesCoords.reduce(function(m, c) { return Math.max(m, c.x + c.l); }, 0) || pL;
@@ -985,9 +1037,6 @@
         }
     };
 
-    // =========================================================================
-    // 📐 DÖKME VE PALETLİ ARAÇ İÇİ YERLEŞİM MOTORU
-    // =========================================================================
     window.findOptimalFloorPlan = function(effW, effL, contH, doorH, sku, maxWgt, isContainer, baseH) {
         if (!sku) return null;
         var bH = baseH || 0;
@@ -1025,7 +1074,6 @@
         return bestPlan;
     };
 
-    // Paletli mod seçildiğinde paletleri dorse/konteyner tabanına gerçek palet ölçüleriyle yerleştirir
     window.packPalletizedVehicle = function(queue, effContL, effContW, contH, doorH, maxWgt, baseType, optFrontCurve) {
         var baseSpec = window.BASE_SPECS[baseType];
         var placedItems = [], totalWgt = 0, totalBoxes = 0, totalPallets = 0;
@@ -1039,7 +1087,6 @@
             var palLayout = window.calculateSinglePalletLayout(sku, baseSpec, contH, doorH);
             if (!palLayout || palLayout.boxesPerPallet <= 0) continue;
 
-            // Konteyner içine paletlerin en çok sığdığı yönü bul (Boyuna vs Enine)
             var cols1 = Math.floor(effContW / pW), rows1 = Math.floor((effContL - currentX) / pL);
             var cols2 = Math.floor(effContW / pL), rows2 = Math.floor((effContL - currentX) / pW);
 
@@ -1229,7 +1276,6 @@
         }
         if (window.globalFleet.length === 0) window.globalFleet.push({ placedItems: [], totalBoxes: 0, totalWgt: 0, totalPallets: 0, gapL: effContL });
 
-        // Tekil Palet Görsel Şemasını Güncelle
         var singlePalLayout = (baseType !== 'floor') ? window.calculateSinglePalletLayout(activeSku, baseSpec, vSpec.H, vSpec.doorH) : null;
         var firstTruckPallets = window.globalFleet[0] ? (window.globalFleet[0].totalPallets || window.globalFleet[0].placedItems.length) : 0;
         window.renderSinglePalletCard(activeSku, baseSpec, singlePalLayout, firstTruckPallets);
@@ -1304,7 +1350,7 @@
                     var headerLabel = k === 'PALET' ? ('Paletli İstif (' + baseSpec.name + ')') : (k === 'B' ? 'Şerit B (Enine Çevrilmiş)' : 'Şerit A (Boyuna Düz)');
                     return '<div class="bg-white p-2.5 rounded-xl border text-center font-mono"><span class="text-[10px] text-slate-500 font-bold block mb-1">' + headerLabel + '</span><div class="grid grid-cols-4 gap-1 text-xs"><div><small class="block text-[9px] text-slate-400">En</small><b>' + s.cols + '</b></div><div><small class="block text-[9px] text-slate-400">' + (k === 'PALET' ? 'Palet' : 'Sıra') + '</small><b>' + s.rows + '</b></div><div><small class="block text-[9px] text-slate-400">Kat</small><b>' + s.layers + ' Kat</b></div><div class="text-emerald-700"><small class="block text-[9px]">Toplam</small><b>' + s.boxes + '</b></div></div></div>';
                 }).join('');
-                return '<div class="p-3 bg-slate-50 rounded-xl border space-y-2"><div class="flex justify-between items-center"><b class="text-xs">' + (idx + 1) + '. Blok: ' + window.escapeHtml(g.name) + '</b><span class="text-xs font-mono font-bold text-emerald-700">' + g.totalBoxes + ' Adet &bull; ' + g.totalWgt.toFixed(1) + ' kg</span></div><div class="grid grid-cols-1 md:grid-cols-2 gap-2">' + stHtml + '</div></div>';
+                return '<div class="p-3 bg-slate-50 rounded-xl border space-y-2"><div class="flex justify-between items-center"><b class="text-xs">' + (idx + 1) + '. Blok: ' + window.escapeHtml(g.name) + '</b><span class="text-xs font-mono font-bold text-emerald-700">' + g.totalBoxes + ' Adet • ' + g.totalWgt.toFixed(1) + ' kg</span></div><div class="grid grid-cols-1 md:grid-cols-2 gap-2">' + stHtml + '</div></div>';
             }).join('');
             optListEl.innerHTML = '<div class="bg-white p-3.5 rounded-2xl border text-xs space-y-2"><div class="flex justify-between border-b pb-1.5"><b class="uppercase">🚚 ' + baseSpec.name + ' Yerleşim Planı (Araç ' + (window.currentVehicleIdx + 1) + '/' + window.globalFleet.length + ')</b></div>' + blocksHtml + '</div>';
         }
@@ -1345,7 +1391,6 @@
 
         (data.placedItems || []).forEach(function(b) {
             var z0 = b.z || 0, z1 = z0 + b.h;
-            // Eğer paletli mod ise her paletin altına ahşap palet bloğunu çiz
             if (b.isPallet && z0 > 0) {
                 drawPoly([project(b.x+b.l, b.y, 0), project(b.x+b.l, b.y+b.w, 0), project(b.x+b.l, b.y+b.w, z0), project(b.x+b.l, b.y, z0)], '#92400e', 'rgba(0,0,0,0.6)');
                 drawPoly([project(b.x, b.y+b.w, 0), project(b.x+b.l, b.y+b.w, 0), project(b.x+b.l, b.y+b.w, z0), project(b.x, b.y+b.w, z0)], '#78350f', 'rgba(0,0,0,0.6)');
@@ -1462,7 +1507,7 @@
     window.removeMixedRow = function(idx) { if (window.mixedItemsState.length > 1) { window.mixedItemsState.splice(idx, 1); window.renderMixedList(); window.runEngine(); } };
     window.openSkuManager = function() { window.openModal('skuManagerModal'); };
 
-    // 👑 SADECE ADMİNİN KULLANABİLDİĞİ ROL YÖNETİM PANELİ
+    // 👑 SADECE ADMİNİN KULLANABİLDİĞİ ROL YÖNETİM PANELİ (TAM SENKRON & KALICI)
     window.openAdminUsersModal = async function() {
         if (!window.currentUserProfile || window.currentUserProfile.role !== 'admin') {
             return alert("Yetkisiz erişim: Rol atamalarını yalnızca Sistem Yöneticisi yapabilir.");
@@ -1472,58 +1517,117 @@
         if (!tbody) return;
         tbody.innerHTML = '';
 
-        var usersList = window.getLocalDirectory();
+        var overrides = window.getRoleOverrides();
+
         if (window.supabaseClient) {
             try {
                 var res = await window.supabaseClient.rpc('admin_list_users');
                 if (!res.error && res.data && res.data.length > 0) {
                     res.data.forEach(function(su) {
+                        var extractedId = su.out_user_id || su.user_id || su.id || su.uid;
+                        var extractedEmail = (su.out_email || su.email || '').trim();
+                        var dbRole = su.out_role || su.role || 'sales';
+                        // Eğer admin yerel olarak rol değiştirdiyse onu koru, yoksa veritabanı rolünü al
+                        var effectiveRole = overrides[extractedEmail.toLowerCase()] || dbRole;
                         window.saveUserToLocalDirectory({
-                            id: su.out_user_id || su.id,
-                            email: su.out_email || su.email,
-                            full_name: su.out_full_name || su.full_name,
-                            role: su.out_role || su.role || 'sales',
+                            id: extractedId,
+                            email: extractedEmail,
+                            full_name: su.out_full_name || su.full_name || extractedEmail.split('@')[0],
+                            role: effectiveRole,
                             created_at: su.out_created_at || su.created_at
-                        });
+                        }, true);
                     });
-                    usersList = window.getLocalDirectory();
                 }
             } catch (e) {}
         }
 
-        usersList.forEach(function(u) {
+        window.renderAdminUsersRows();
+    };
+
+    window.renderAdminUsersRows = function() {
+        var tbody = document.getElementById('adminUsersTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        var usersList = window.getLocalDirectory();
+        var overrides = window.getRoleOverrides();
+
+        usersList.forEach(function(u, idx) {
             var tr = document.createElement('tr');
             tr.className = "hover:bg-slate-50 transition";
+            var emailClean = (u.email || '').trim();
+            var currentRole = overrides[emailClean.toLowerCase()] || u.role || 'sales';
             var dateStr = u.created_at ? new Date(u.created_at).toLocaleDateString('tr-TR') : '-';
-            var isAdminMaster = u.email.toLowerCase() === 'admin96@admin.com';
+            var isAdminMaster = emailClean.toLowerCase() === 'admin96@admin.com';
+            var safeId = (u.id && u.id !== 'undefined') ? u.id : '';
+
+            var colorClasses = currentRole === 'admin'
+                ? 'bg-purple-50 text-purple-900 border-purple-300'
+                : (currentRole === 'logistics' ? 'bg-indigo-50 text-indigo-900 border-indigo-300' : 'bg-slate-50 text-slate-800 border-slate-300');
 
             tr.innerHTML = '<td class="p-3 font-bold text-slate-900">' + window.escapeHtml(u.full_name || 'İsimsiz') + '</td>' +
-                '<td class="p-3 font-mono text-slate-600">' + window.escapeHtml(u.email) + '</td>' +
+                '<td class="p-3 font-mono text-slate-600">' + window.escapeHtml(emailClean) + '</td>' +
                 '<td class="p-3 text-slate-500 font-mono">' + dateStr + '</td>' +
                 '<td class="p-3 text-center">' +
-                    '<select onchange="window.updateUserRole(\'' + window.escapeHtml(u.email) + '\', \'' + window.escapeHtml(u.id) + '\', this.value)" class="p-1.5 border rounded-lg text-xs font-bold ' + (u.role === 'admin' ? 'bg-purple-50 text-purple-900 border-purple-300' : (u.role === 'logistics' ? 'bg-indigo-50 text-indigo-900 border-indigo-300' : 'bg-slate-50 text-slate-800 border-slate-300')) + '">' +
-                        '<option value="sales" ' + (u.role === 'sales' ? 'selected' : '') + '>Satış Ekibi</option>' +
-                        '<option value="logistics" ' + (u.role === 'logistics' ? 'selected' : '') + '>Lojistik & Saha</option>' +
-                        '<option value="admin" ' + (u.role === 'admin' ? 'selected' : '') + '>Yönetici (Admin)</option>' +
-                    '</select>' +
+                    '<div class="inline-flex items-center gap-2">' +
+                        '<select id="roleSel_' + idx + '" onchange="window.updateUserRole(\'' + window.escapeHtml(emailClean) + '\', \'' + window.escapeHtml(safeId) + '\', this.value, ' + idx + ')" class="p-1.5 border rounded-lg text-xs font-bold cursor-pointer transition ' + colorClasses + '">' +
+                            '<option value="sales" ' + (currentRole === 'sales' ? 'selected' : '') + '>Satış Ekibi</option>' +
+                            '<option value="logistics" ' + (currentRole === 'logistics' ? 'selected' : '') + '>Lojistik & Saha</option>' +
+                            '<option value="admin" ' + (currentRole === 'admin' ? 'selected' : '') + '>Yönetici (Admin)</option>' +
+                        '</select>' +
+                        '<span id="roleSavedBadge_' + idx + '" class="hidden text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">✓ Kaydedildi</span>' +
+                    '</div>' +
                     (isAdminMaster ? '<span class="text-[9px] text-purple-600 block font-bold mt-0.5">(Ana Yönetici)</span>' : '') +
                 '</td>';
             tbody.appendChild(tr);
         });
     };
 
-    window.updateUserRole = async function(targetEmail, targetId, newRole) {
+    window.updateUserRole = async function(targetEmail, targetId, newRole, rowIdx) {
         if (!window.currentUserProfile || window.currentUserProfile.role !== 'admin') {
             return alert("Yetkisiz işlem!");
         }
-        window.saveUserToLocalDirectory({ email: targetEmail, role: newRole });
-        if (window.supabaseClient && targetId && targetId.indexOf('usr-') === -1 && targetId !== 'admin-master-id') {
+
+        // 1. Kalıcı rol tablosuna ve yerel dizine anında kaydet (asla geri sekmez)
+        window.setRoleOverride(targetEmail, newRole);
+        window.saveUserToLocalDirectory({ id: targetId, email: targetEmail, role: newRole }, false);
+
+        // 2. Seçim kutusunun rengini ve onay rozetini anında güncelle
+        var selEl = document.getElementById('roleSel_' + rowIdx);
+        if (selEl) {
+            var colorClasses = newRole === 'admin'
+                ? 'bg-purple-50 text-purple-900 border-purple-300'
+                : (newRole === 'logistics' ? 'bg-indigo-50 text-indigo-900 border-indigo-300' : 'bg-slate-50 text-slate-800 border-slate-300');
+            selEl.className = 'p-1.5 border rounded-lg text-xs font-bold cursor-pointer transition ' + colorClasses;
+        }
+
+        var badgeEl = document.getElementById('roleSavedBadge_' + rowIdx);
+        if (badgeEl) {
+            badgeEl.classList.remove('hidden');
+            setTimeout(function() { badgeEl.classList.add('hidden'); }, 3500);
+        }
+
+        var bannerEl = document.getElementById('adminUsersStatusBanner');
+        if (bannerEl) {
+            var roleNameTR = newRole === 'admin' ? 'Yönetici (Admin)' : (newRole === 'logistics' ? 'Lojistik & Saha' : 'Satış Ekibi');
+            bannerEl.textContent = "✓ " + targetEmail + " kullanıcısının yetkisi '" + roleNameTR + "' olarak atandı.";
+            bannerEl.classList.remove('hidden');
+        }
+
+        // 3. Supabase veritabanına hem RPC hem doğrudan profiles upsert ile kaydet
+        var isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetId || '');
+        if (window.supabaseClient && isUuid) {
             try {
                 await window.supabaseClient.rpc('admin_set_user_role', { target_user_id: targetId, new_role: newRole });
             } catch (e) {}
+            try {
+                await window.supabaseClient.from('profiles').upsert({
+                    id: targetId,
+                    full_name: targetEmail.split('@')[0],
+                    role: newRole,
+                    updated_at: new Date().toISOString()
+                });
+            } catch (e) {}
         }
-        alert("✓ " + targetEmail + " kullanıcısının rolü '" + newRole.toUpperCase() + "' olarak güncellendi.");
-        window.openAdminUsersModal();
     };
 
     window.exportCSV = function() {
