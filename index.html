@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Elita OptiLoad | Akıllı Lojistik & Sevk Optimizasyonu</title>
+    <title>Elita OptiLoad | Smart Logistics & Dispatch Optimization</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Supabase JS Kütüphanesi -->
+    <!-- Supabase JS Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- HTML2PDF Raporlama Kütüphanesi -->
+    <!-- HTML2PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -100,7 +100,7 @@
 </head>
 <body class="p-2 md:p-3 min-h-[100dvh] lg:h-[100dvh] flex flex-col justify-between antialiased">
 
-<!-- 🔒 GİRİŞ & KAYIT AÇILIŞ SAYFASI (AUTH GATE) -->
+<!-- 🔒 AUTHENTICATION LANDING PAGE -->
 <div id="authLandingPage" class="flex-grow flex items-center justify-center p-4">
     <div class="bg-white/95 backdrop-blur-xl p-8 rounded-3xl shadow-2xl shadow-slate-900/10 max-w-md w-full border border-slate-100 relative overflow-hidden">
         <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-sky-500 via-indigo-500 to-emerald-500"></div>
@@ -108,299 +108,303 @@
             <div class="w-11 h-11 bg-gradient-to-tr from-sky-600 to-indigo-600 rounded-xl flex items-center justify-center font-black text-white text-2xl shadow-md shadow-sky-600/20">E</div>
             <div>
                 <h2 class="text-2xl font-black text-slate-900 tracking-tight leading-none">Elita <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-600 to-indigo-600">OptiLoad</span></h2>
-                <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Akıllı Sevk & Filo Portalı</p>
+                <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Logistics Planning Platform</p>
             </div>
         </div>
         
         <div class="flex p-1 bg-slate-100/80 rounded-xl my-6 border border-slate-200/60">
-            <button id="authTabLogin" onclick="switchAuthTab('login')" class="flex-1 py-2 font-bold text-xs rounded-lg transition-all bg-white text-slate-900 shadow-sm">Giriş Yap</button>
-            <button id="authTabRegister" onclick="switchAuthTab('register')" class="flex-1 py-2 font-bold text-xs rounded-lg text-slate-500 hover:text-slate-900 transition-all">Hesap Oluştur</button>
+            <button type="button" id="authTabLogin" onclick="switchAuthTab('login')" class="flex-1 py-2 font-bold text-xs rounded-lg transition-all bg-white text-slate-900 shadow-sm cursor-pointer">Sign In</button>
+            <button type="button" id="authTabRegister" onclick="switchAuthTab('register')" class="flex-1 py-2 font-bold text-xs rounded-lg text-slate-500 hover:text-slate-900 transition-all cursor-pointer">Register</button>
         </div>
 
         <div id="registerFields" class="hidden space-y-3 mb-3">
             <div>
-                <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Ad Soyad</label>
-                <input type="text" id="regFullName" maxlength="70" class="w-full p-2.5 border rounded-xl bg-slate-50/50 text-xs focus:border-sky-500 outline-none" placeholder="Adınız Soyadınız">
+                <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Full Name</label>
+                <input type="text" id="regFullName" maxlength="70" class="w-full p-2.5 border rounded-xl bg-slate-50/50 text-xs focus:border-sky-500 outline-none" placeholder="First & Last Name">
             </div>
         </div>
 
         <div class="space-y-3">
             <div>
-                <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Kurumsal E-Posta</label>
-                <input type="email" id="authEmail" class="w-full p-2.5 border rounded-xl bg-slate-50/50 text-xs focus:border-sky-500 outline-none transition" placeholder="ad.soyad@elita.com" onkeydown="if(event.key==='Enter') handleAuthSubmit()">
+                <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Email Address</label>
+                <input type="email" id="authEmail" class="w-full p-2.5 border rounded-xl bg-slate-50/50 text-xs focus:border-sky-500 outline-none transition" placeholder="name@company.com" onkeydown="if(event.key==='Enter') handleAuthSubmit()">
             </div>
             <div>
-                <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Şifre</label>
+                <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Password</label>
                 <input type="password" id="authPassword" class="w-full p-2.5 border rounded-xl bg-slate-50/50 text-xs focus:border-sky-500 outline-none transition" placeholder="••••••••" onkeydown="if(event.key==='Enter') handleAuthSubmit()">
             </div>
         </div>
 
-        <button id="authSubmitBtn" onclick="handleAuthSubmit()" class="w-full bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-sky-600/25 mt-6 text-xs uppercase tracking-wider">Giriş Yap</button>
+        <button type="button" id="authSubmitBtn" onclick="handleAuthSubmit()" class="w-full bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-sky-600/25 mt-6 text-xs uppercase tracking-wider cursor-pointer active:scale-[0.99]">Sign In</button>
         
         <p id="authErrorMsg" class="text-rose-600 text-xs font-bold text-center mt-3 hidden p-2.5 bg-rose-50 rounded-xl border border-rose-200"></p>
         <p id="authSuccessMsg" class="text-emerald-700 text-xs font-bold text-center mt-3 hidden p-2.5 bg-emerald-50 rounded-xl border border-emerald-200"></p>
     </div>
 </div>
 
-<!-- 🔓 KORUMALI ÇALIŞMA ALANI -->
-<div id="protectedApp" class="hidden flex flex-col flex-grow">
+<!-- 🔓 PROTECTED APPLICATION WORKSPACE -->
+<div id="protectedApp" style="display: none;" class="hidden flex-col flex-grow">
 
-    <!-- ÜST MENÜ (NAVBAR) -->
+    <!-- TOP NAVIGATION BAR -->
     <nav class="bg-slate-900/95 backdrop-blur-md text-white shadow-xl shadow-slate-950/10 rounded-2xl mx-auto max-w-[1440px] w-full z-10 relative no-print mb-2.5 border border-slate-800">
         <div class="px-4 md:px-5 py-2.5 flex flex-col md:flex-row justify-between items-center gap-2.5">
             <div class="flex items-center gap-3 w-full md:w-auto">
                 <div class="w-8 h-8 bg-gradient-to-tr from-sky-500 to-indigo-600 rounded-lg flex items-center justify-center font-black text-lg tracking-tighter shadow-md shadow-sky-500/30">E</div>
                 <div>
                     <h1 class="text-base md:text-lg font-black tracking-tight leading-none">Elita <span class="font-normal text-sky-400">OptiLoad</span></h1>
-                    <p class="text-[9px] text-slate-400 font-medium tracking-wider uppercase mt-0.5">Akıllı Sevk & Filo Planlama Motoru</p>
+                    <p class="text-[9px] text-slate-400 font-medium tracking-wider uppercase mt-0.5">Fleet Loading & Dispatch Engine</p>
                 </div>
             </div>
 
             <div class="flex items-center gap-1.5 w-full md:w-auto justify-center md:justify-end flex-wrap">
                 <div class="bg-slate-800/80 p-0.5 rounded-lg border border-slate-700/80 flex items-center gap-1">
-                    <button onclick="exportCSV()" class="hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1">📊 CSV</button>
-                    <button onclick="exportPDF()" class="hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1">📄 PDF</button>
-                    <button onclick="window.print()" class="hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1">🖨 Yazdır</button>
+                    <button type="button" onclick="exportCSV()" class="hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 cursor-pointer">📊 CSV</button>
+                    <button type="button" onclick="exportPDF()" class="hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 cursor-pointer">📄 PDF</button>
+                    <button type="button" onclick="window.print()" class="hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center gap-1 cursor-pointer">🖨 Print</button>
                 </div>
 
                 <div class="h-4 w-px bg-slate-700 mx-1 hidden sm:block"></div>
 
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 flex-wrap">
                     <div id="userProfileBadge" class="flex items-center gap-2 bg-slate-800/90 px-2.5 py-1 rounded-lg border border-slate-700/80 text-xs">
-                        <span id="userRoleBadge" class="px-1.5 py-0.5 rounded font-black text-[9px] uppercase tracking-wider">Kullanıcı</span>
+                        <span id="userRoleBadge" class="px-1.5 py-0.5 rounded font-black text-[9px] uppercase tracking-wider">User</span>
                         <span id="userEmailLabel" class="text-slate-300 font-semibold text-[11px] hidden sm:inline">user@mail.com</span>
                     </div>
 
-                    <!-- 👑 SADECE ADMİNDE GÖRÜNEN KULLANICI & ROL YÖNETİM BUTONU -->
-                    <button id="btnAdminUsers" onclick="openAdminUsersModal()" class="hidden bg-purple-600 hover:bg-purple-500 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold shadow-md transition items-center gap-1">
-                        👥 Kullanıcılar & Roller
+                    <!-- 👑 ADMIN USERS & ROLES BUTTON -->
+                    <button type="button" id="btnAdminUsers" onclick="openAdminUsersModal()" class="hidden bg-purple-600 hover:bg-purple-500 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold shadow-md transition items-center gap-1 cursor-pointer">
+                        👥 Users & Roles
                     </button>
                     
-                    <button id="btnDashboard" onclick="openDashboard()" class="relative bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 shadow-sm">
-                        <span id="dashboardBtnText">📥 Talepler</span>
+                    <button type="button" id="btnDashboard" onclick="openDashboard()" class="relative bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 shadow-sm cursor-pointer">
+                        <span id="dashboardBtnText">📥 Requests</span>
                         <span id="pendingBadgeBubble" class="hidden absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full shadow-md animate-pulse">0</span>
                     </button>
 
-                    <button id="btnSubmitSales" onclick="saveSimulation('bekliyor')" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold shadow-md transition items-center gap-1">
-                        ↗ Onaya Gönder
+                    <button type="button" id="btnSubmitSales" onclick="saveSimulation('pending')" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold shadow-md transition items-center gap-1 cursor-pointer">
+                        ↗ Submit for Review
                     </button>
-                    <button onclick="handleLogout()" class="text-[11px] text-slate-400 hover:text-rose-400 font-semibold ml-1 transition">Çıkış</button>
+                    <button type="button" onclick="handleLogout()" class="text-[11px] text-slate-400 hover:text-rose-400 font-semibold ml-1 transition cursor-pointer">Sign Out</button>
                 </div>
             </div>
         </div>
     </nav>
 
-    <!-- LOJİSTİK İNCELEME ÇUBUĞU -->
-    <div id="activeReviewBar" class="hidden max-w-[1440px] mx-auto w-full mb-2.5 bg-slate-900 border-2 border-indigo-500 rounded-2xl p-3 md:p-4 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-3 no-print">
-        <div class="flex items-center gap-3">
-            <span class="text-2xl animate-pulse">📋</span>
-            <div>
-                <div class="flex items-center gap-2 flex-wrap">
-                    <span class="bg-amber-400 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded uppercase">Saha İnceleme Modu</span>
-                    <span id="reviewBarTalepMeta" class="text-xs font-bold text-slate-300">Talep #--</span>
-                </div>
-                <p class="text-[11px] text-slate-400 mt-0.5">Sevk onayından önce yük dengesini ve 3D simülasyonu kontrol edin.</p>
-            </div>
-        </div>
-        <div class="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
-            <button onclick="decideReviewAction('onaylandi')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition">✓ Onayla</button>
-            <button onclick="decideReviewAction('duzeltme_istendi')" class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition">↺ Düzeltme İste</button>
-            <button onclick="decideReviewAction('reddedildi')" class="bg-rose-600 hover:bg-rose-500 text-white px-3 py-1.5 rounded-xl text-xs font-bold transition">✕ Reddet</button>
-            <button onclick="exitReviewMode()" class="text-slate-400 hover:text-white px-2 py-1 text-xs font-bold">Kapat</button>
-        </div>
-    </div>
-
-    <!-- WORKSPACE BODY: 2 SÜTUN -->
+    <!-- WORKSPACE BODY: 2 COLUMNS -->
     <div class="flex-grow flex flex-col lg:flex-row max-w-[1440px] mx-auto w-full gap-3 print-full-width lg:overflow-hidden">
         
-        <!-- SOL KONTROL PANELİ -->
+        <!-- LEFT CONTROL PANEL: SPECS & ORDER CONFIG -->
         <div class="w-full lg:w-[350px] bg-white rounded-2xl shadow-sm border border-slate-200/80 flex flex-col no-print flex-shrink-0">
             <div class="p-2 border-b border-slate-100">
                 <div class="grid grid-cols-2 p-0.5 bg-slate-100 rounded-xl">
-                    <div class="tab-btn active text-center" id="tab-single" onclick="switchTab('single')">📦 Tekil SKU</div>
-                    <div class="tab-btn text-slate-500 text-center" id="tab-mixed" onclick="switchTab('mixed')">🔀 Karma Yük</div>
+                    <div class="tab-btn active text-center" id="tab-single" onclick="switchTab('single')">📦 Single SKU</div>
+                    <div class="tab-btn text-slate-500 text-center" id="tab-mixed" onclick="switchTab('mixed')">🔀 Mixed Load</div>
                 </div>
             </div>
 
             <div class="p-3.5 md:p-4 lg:overflow-y-auto flex-grow custom-scrollbar">
                 
                 <div class="mb-3 bg-slate-50/80 border border-slate-200/80 p-2.5 rounded-xl">
-                    <label class="text-[9px] font-bold text-slate-500 uppercase mb-1 block">Sipariş / Sevk Referansı</label>
-                    <input type="text" id="orderTitle" maxlength="100" placeholder="Örn: Sipariş #1042 - ABC Dağıtım" class="w-full p-2 border border-slate-200 rounded-lg bg-white text-xs font-bold text-slate-800 focus:outline-none focus:border-sky-500 transition" oninput="syncOrderTitleToPrint();">
+                    <label class="text-[9px] font-bold text-slate-500 uppercase mb-1 block">Order / Shipment Title</label>
+                    <input type="text" id="orderTitle" maxlength="100" placeholder="e.g. Order #1042 - Global Freight" class="w-full p-2 border border-slate-200 rounded-lg bg-white text-xs font-bold text-slate-800 focus:outline-none focus:border-sky-500 transition">
                 </div>
 
-                <div class="section-header mt-1">Araç & Güvenlik Kısıtları</div>
+                <div class="section-header mt-1">Vehicle & Physical Constraints</div>
                 <div class="input-group mb-2.5">
-                    <label>Araç Tipi</label>
+                    <label>Container / Truck Type</label>
                     <select id="vehicleType" onchange="onVehicleChange()">
-                        <option value="TIR">TIR Dorse (13600 x 2420 x 2600 mm)</option>
+                        <option value="TIR">Semi-Trailer (13600 x 2420 x 2600 mm)</option>
                         <option value="40HC">40' High Cube (12015 x 2345 x 2690 mm)</option>
-                        <option value="40DC">40' Standart DC (12015 x 2345 x 2385 mm)</option>
-                        <option value="20DC" selected>20' Standart DC (5890 x 2345 x 2385 mm)</option>
+                        <option value="40DC">40' Standard DC (12015 x 2345 x 2385 mm)</option>
+                        <option value="20DC" selected>20' Standard DC (5890 x 2345 x 2385 mm)</option>
                     </select>
                 </div>
 
                 <div class="grid grid-cols-2 gap-2 mb-2.5">
                     <div class="input-group">
-                        <label>Maks Tonaj (kg)</label>
-                        <input type="number" id="maxWgt" value="27800" max="27800" min="1000" class="font-bold text-slate-800" oninput="if(this.value > 27800) this.value = 27800; autoSyncSingleTargetCapacity();" onchange="debouncedRunEngine()">
+                        <label>Max Payload (kg)</label>
+                        <input type="number" id="maxWgt" value="27800" max="27800" class="font-bold text-slate-800" oninput="if(this.value > 27800) this.value = 27800; autoSyncSingleTargetCapacity();" onchange="debouncedRunEngine()">
                     </div>
                     <div class="input-group">
-                        <label>Yükleme Stratejisi</label>
+                        <label>Stacking Mode</label>
                         <select id="loadDistributionStrategy" class="font-bold text-sky-900 bg-sky-50/50 border-sky-200" onchange="debouncedRunEngine()">
-                            <option value="spread" selected>Kapıya Kadar (Sıfır Boşluk)</option>
-                            <option value="ceiling">Tavana Kadar (Maks Yükseklik)</option>
+                            <option value="spread" selected>Door-Reach (Zero Gap)</option>
+                            <option value="ceiling">Ceiling-First (Max Height)</option>
                         </select>
                     </div>
                 </div>
 
-                <!-- TEKİL ÜRÜN MODU -->
+                <!-- SINGLE SKU SUB-PANEL (ALL 22 SKUs PRE-POPULATED) -->
                 <div id="panel-single" class="block">
                     <div class="section-header">
-                        <span>Tekil Ürün Tanımı</span>
+                        <span>Single SKU Settings</span>
                     </div>
                     <div class="input-group mb-2.5">
-                        <label>Ürün Seçimi</label>
-                        <select id="skuSelect" onchange="onSkuSelectChanged()"></select>
+                        <label>Select Product</label>
+                        <select id="skuSelect" onchange="onSkuSelectChanged()">
+                            <option value="0">⚪ Frying Oil Tin (285×285×330)</option>
+                            <option value="1">⏹ 1.5L x 6 Handled (230x272x307)</option>
+                            <option value="2">⏹ 3L x 6 Square (238x362x333)</option>
+                            <option value="3">⏹ 4L x 4 Square (260x296x332)</option>
+                            <option value="4">⏹ 4.5L x 4 Square (260x296x363)</option>
+                            <option value="5" selected>⏹ 5L x 4 Square (260x296x394)</option>
+                            <option value="6">⏹ 1L x 12 Ribbed (247x328x283)</option>
+                            <option value="7">⏹ 2L x 6 Ribbed (224x329x326)</option>
+                            <option value="8">⏹ 5L x 4 Domed (336x336x355)</option>
+                            <option value="9">⏹ 5L x 4 Leaf (288x402x346)</option>
+                            <option value="10">⏹ 1.8L x 6 Ribbed (222x326x325)</option>
+                            <option value="11">⚪ 5L x 4 Round Jar (382x382x280)</option>
+                            <option value="12">⏹ 4.5L x 4 Square Jar (272x308x335)</option>
+                            <option value="13">⏹ 0.85L x 12 New Ribbed (232x308x262)</option>
+                            <option value="14">⏹ 1L x 20 Special (338x419x294)</option>
+                            <option value="15">⏹ 1L x 12 Special (257x338x294)</option>
+                            <option value="16">⏹ 1L x 12 Slim (296x326x294)</option>
+                            <option value="17">⏹ 1L x 20 Slim (367x430x294)</option>
+                            <option value="18">⏹ 2L x 6 Slim (212x407x326)</option>
+                            <option value="19">⏹ 0.75L x 12 Ribbed (226x300x251)</option>
+                            <option value="20">⏹ 2L x 6 Square Compact (214x314x323)</option>
+                            <option value="21">⏹ 1L x 12 Square Compact (230x302x297)</option>
+                        </select>
                     </div>
                     
                     <div class="input-group mb-2.5 p-2.5 bg-gradient-to-br from-slate-50 to-indigo-50/30 border border-slate-200 rounded-xl">
                         <label class="!text-slate-700">
-                            <span>Yüklenecek Hedef Adet</span>
-                            <span id="capacityHintBadge" class="text-[9px] bg-indigo-100 text-indigo-800 px-1.5 py-0.2 rounded font-bold">Kapasite</span>
+                            <span>Requested Quantity (Units)</span>
+                            <span id="capacityHintBadge" class="text-[9px] bg-indigo-100 text-indigo-800 px-1.5 py-0.2 rounded font-bold">Capacity: 890 Units</span>
                         </label>
-                        <input type="number" id="targetBoxes" value="" min="1" placeholder="Otomatik Tam Kapasite" class="bg-white border-slate-300 font-black text-indigo-950 font-mono" oninput="isUserDefinedTarget = (this.value !== ''); debouncedRunEngine();">
-                        <span class="text-[9px] text-slate-400 mt-1 block">Boş bırakılırsa aracın net fiziksel kapasitesi tam olarak hesaplanır.</span>
+                        <input type="number" id="targetBoxes" value="890" placeholder="Automatic Full Capacity" class="bg-white border-slate-300 font-black text-indigo-950 font-mono" oninput="isUserDefinedTarget = (this.value !== ''); debouncedRunEngine();">
+                        <span class="text-[9px] text-slate-400 mt-1 block">Leave empty to auto-calculate maximum physical vehicle capacity.</span>
                     </div>
 
                     <div class="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 font-mono text-xs">
-                        <div class="input-group"><label id="lblBoxW">En (mm)</label><input type="number" id="boxW" readonly class="bg-slate-100/80 font-bold text-slate-700"></div>
-                        <div class="input-group"><label id="lblBoxL">Boy (mm)</label><input type="number" id="boxL" readonly class="bg-slate-100/80 font-bold text-slate-700"></div>
-                        <div class="input-group"><label>Yükseklik (mm)</label><input type="number" id="boxH" readonly class="bg-slate-100/80 font-bold text-slate-700"></div>
-                        <div class="input-group"><label>Brüt Ağırlık (kg)</label><input type="number" id="boxWt" readonly class="bg-slate-100/80 font-bold text-slate-700"></div>
+                        <div class="input-group"><label id="lblBoxW">Width (mm)</label><input type="number" id="boxW" value="260" readonly class="bg-slate-100/80 font-bold text-slate-700"></div>
+                        <div class="input-group"><label id="lblBoxL">Length (mm)</label><input type="number" id="boxL" value="296" readonly class="bg-slate-100/80 font-bold text-slate-700"></div>
+                        <div class="input-group"><label>Height (mm)</label><input type="number" id="boxH" value="394" readonly class="bg-slate-100/80 font-bold text-slate-700"></div>
+                        <div class="input-group"><label>Gross Wt (kg)</label><input type="number" id="boxWt" value="19.23" readonly class="bg-slate-100/80 font-bold text-slate-700"></div>
                     </div>
                 </div>
 
-                <!-- KARMA YÜK MODU -->
+                <!-- MIXED LOAD SUB-PANEL -->
                 <div id="panel-mixed" class="hidden">
                     <div class="section-header">
-                        <span>Karma Yük Listesi</span>
+                        <span>Mixed Load SKU Manifest</span>
                     </div>
-
                     <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl mb-2.5">
                         <p class="text-[11px] text-slate-600 leading-relaxed">
-                            Her SKU tabanda kendine ait bağımsız bir kompartıman oluşturur. Satırları tutamaçtan (⋮⋮) sürükleyip bırakarak yükleme sırasını belirleyebilirsiniz.
+                            Each SKU forms an independent cargo compartment. Drag and drop rows using the handle to adjust front-to-back load sequence.
                         </p>
                     </div>
-
                     <div id="mixedList" class="space-y-1.5 mb-2.5"></div>
-                    <button onclick="addNewMixedRow()" class="w-full bg-slate-100 text-slate-700 text-xs font-bold py-2 rounded-xl border border-slate-200 hover:bg-slate-200/80 transition shadow-2xs">+ Yeni Ürün Satırı Ekle</button>
+                    <button type="button" onclick="addNewMixedRow()" class="w-full bg-slate-100 text-slate-700 text-xs font-bold py-2 rounded-xl border border-slate-200 hover:bg-slate-200/80 transition shadow-2xs cursor-pointer">+ Add New Cargo Row</button>
                 </div>
                 
-                <!-- TAŞIMA TABANI -->
-                <div class="section-header">Yükleme Tabanı</div>
+                <!-- 🌟 PALLET & LOADING BASE OPTIONS (ALL 5 MODES INCLUDED) -->
+                <div class="section-header">Loading Method & Base Type</div>
                 <div class="input-group mb-2.5">
-                    <select id="baseType" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();">
-                        <option value="floor" selected>Dökme / Zemin Yükleme (Maksimum CBM Doluluğu)</option>
+                    <select id="baseType" onchange="onBaseTypeChange()">
+                        <option value="floor" selected>Floor / Loose Stacking (Full CBM Reach)</option>
+                        <option value="euro_pallet">Euro Pallet (800 x 1200 mm - 144mm Height)</option>
+                        <option value="std_pallet">Standard Industrial Pallet (1000 x 1200 mm - 144mm Height)</option>
+                        <option value="special_97_115">97x115 Pallet (970 x 1150 mm - 144mm Height)</option>
+                        <option value="slipsheet">Slipsheet (Thin Slip Sheet ~5mm Height)</option>
                     </select>
                 </div>
 
-                <!-- GÜVENLİK VE ENGELLER -->
-                <div class="section-header">Güvenlik & Dinamik Engeller</div>
+                <!-- SAFETY BUFFERS & CLEARANCES -->
+                <div class="section-header">Buffers & Safety Clearances</div>
                 <div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
                     <label id="optFrontCurveLabel" class="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer" style="display:none;">
-                        <input type="checkbox" id="optFrontCurve" class="w-3.5 h-3.5 text-sky-600 rounded" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"> Ön Bombe Kör Noktası (-100mm Boy)
+                        <input type="checkbox" id="optFrontCurve" class="w-3.5 h-3.5 text-sky-600 rounded" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"> Front Bulkhead Curve (-100mm Length)
                     </label>
                     <label class="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
-                        <input type="checkbox" id="optDoor" checked class="w-3.5 h-3.5 text-sky-600 rounded" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"> Arka Kapı Kapanma Payı (-80mm Boy)
+                        <input type="checkbox" id="optDoor" checked class="w-3.5 h-3.5 text-sky-600 rounded" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"> Rear Door Lock Clearance (-80mm Length)
                     </label>
                     <label class="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
-                        <input type="checkbox" id="optAirbag" class="w-3.5 h-3.5 text-sky-600 rounded" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"> Hava Yastığı Payı (-80mm En)
+                        <input type="checkbox" id="optAirbag" class="w-3.5 h-3.5 text-sky-600 rounded" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"> Dunnage / Airbag Margin (-80mm Width)
                     </label>
                     <label class="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
-                        <input type="checkbox" id="optLashing" class="w-3.5 h-3.5 text-sky-600 rounded" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"> Spanset (Lashing) Alanı (-150mm Boy)
+                        <input type="checkbox" id="optLashing" class="w-3.5 h-3.5 text-sky-600 rounded" onchange="autoSyncSingleTargetCapacity(); debouncedRunEngine();"> Lashing & Strapping Zone (-150mm Length)
                     </label>
                 </div>
             </div>
         </div>
 
-        <!-- SAĞ PANEL: METRİKLER, 3D SİMÜLASYON VE DANIŞMAN -->
+        <!-- RIGHT DISPLAY PANEL: METRICS, SIMULATION & ADVISOR -->
         <div class="flex-grow flex flex-col gap-2.5 lg:overflow-y-auto print-full-width custom-scrollbar lg:pr-1" id="printArea">
             
-            <!-- 🌟 DİNAMİK FİLO VE ENTEGRE SATIŞ DANIŞMANI BANNERI -->
             <div id="salesAdvisorContainer" class="hidden no-print"></div>
 
             <div id="fleetPaginationContainer" class="no-print"></div>
 
-            <!-- 4 ANA METRİK KPI KARTI -->
+            <!-- 4 PRIMARY KPI METRIC CARDS -->
             <div class="grid grid-cols-2 xl:grid-cols-4 gap-2.5 print-grid print-stats">
                 <div class="bg-white p-3 rounded-2xl shadow-xs border border-slate-200/80 flex flex-col justify-between">
                     <div class="flex items-center justify-between">
-                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Toplam Koli</span>
+                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Total Quantity</span>
                         <span class="w-6 h-6 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center text-xs">📦</span>
                     </div>
                     <div class="mt-2">
-                        <p class="text-xl md:text-2xl font-black text-slate-900 font-mono tracking-tight" id="resTotalBoxes">-</p>
-                        <span class="text-[10px] text-slate-400 font-medium" id="resTotalBoxesSub">Araç İçi Net Adet</span>
+                        <p class="text-xl md:text-2xl font-black text-slate-900 font-mono tracking-tight" id="resTotalBoxes">890 Units</p>
+                        <span class="text-[10px] text-slate-400 font-medium" id="resTotalBoxesSub">Floor Stacking Mode</span>
                     </div>
                 </div>
 
                 <div class="bg-white p-3 rounded-2xl shadow-xs border border-slate-200/80 flex flex-col justify-between">
                     <div class="flex items-center justify-between">
-                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Brüt Ağırlık</span>
+                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Gross Weight</span>
                         <span class="w-6 h-6 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center text-xs">⚖️</span>
                     </div>
                     <div class="mt-2">
-                        <p class="text-xl md:text-2xl font-black text-slate-900 font-mono tracking-tight" id="resWeight">-</p>
-                        <span class="text-[10px] text-slate-400 font-medium" id="resWeightSub">Yasal Sınır: -</span>
+                        <p class="text-xl md:text-2xl font-black text-slate-900 font-mono tracking-tight" id="resWeight">17,114.7 kg</p>
+                        <span class="text-[10px] text-slate-400 font-medium" id="resWeightSub">Max Limit: 27,800 kg</span>
                     </div>
                 </div>
 
                 <div class="bg-white p-3 rounded-2xl shadow-xs border border-slate-200/80 flex flex-col justify-between">
                     <div class="flex items-center justify-between">
-                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Dolu Sıra</span>
+                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Loading Units</span>
                         <span class="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs">📐</span>
                     </div>
                     <div class="mt-2">
-                        <p class="text-xl md:text-2xl font-black text-slate-900 font-mono tracking-tight" id="resLoads">-</p>
-                        <span class="text-[10px] text-slate-400 font-medium" id="resLoadsSub">Boyuna Tam Yayılım</span>
+                        <p class="text-xl md:text-2xl font-black text-slate-900 font-mono tracking-tight" id="resLoads">20 Rows</p>
+                        <span class="text-[10px] text-slate-400 font-medium" id="resLoadsSub">Full Floor Extent</span>
                     </div>
                 </div>
 
                 <div class="bg-white p-3 rounded-2xl shadow-xs border border-slate-200/80 flex flex-col justify-between">
                     <div class="flex items-center justify-between">
-                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Aks & Yük Dengesi</span>
+                        <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Cargo Balance & Safety</span>
                         <span class="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xs">✓</span>
                     </div>
                     <div class="mt-2">
-                        <p class="text-xs md:text-sm font-bold text-emerald-700 leading-tight" id="resStatus">✓ Sevkiyata Uygun</p>
-                        <span class="text-[10px] text-slate-400 font-medium font-mono" id="resStatusSub">Dengeli Yük</span>
+                        <p class="text-xs md:text-sm font-bold text-emerald-700 leading-tight" id="resStatus">✓ Validated Dispatch</p>
+                        <span class="text-[10px] text-slate-400 font-medium font-mono" id="resStatusSub">Balanced CoG: 2.9m from front</span>
                     </div>
                 </div>
             </div>
 
-            <!-- DETAYLI SAHA OPERASYON VE YÜKLEME TALİMATI -->
+            <!-- DETAILED STOWAGE PLAN BREAKDOWN -->
             <div id="layerOptimizationInfo"><div id="optimizationDetailsList"></div></div>
 
-            <!-- 3D İZOMETRİK SİMÜLASYON CANVASI -->
+            <!-- 3D ISOMETRIC SIMULATION CANVAS -->
             <div class="bg-white border border-slate-200/80 rounded-2xl shadow-xs flex flex-col flex-grow min-h-[380px] md:min-h-[480px] relative overflow-hidden">
                 <div class="bg-slate-50/80 border-b border-slate-100 px-4 py-2.5 flex justify-between items-center z-10 relative">
                     <div class="flex items-center gap-2">
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <span class="text-xs font-black tracking-tight text-slate-800 uppercase">3D İzometrik Yükleme Simülasyonu</span>
+                        <span class="text-xs font-black tracking-tight text-slate-800 uppercase">3D Isometric Cargo Simulation</span>
                     </div>
-                    <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80" id="badgeSimSubtitle">Kapıya Kadar Yayılım Aktif</span>
+                    <span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/80" id="badgeSimSubtitle">Door-Reach Mode Active</span>
                 </div>
                 
                 <div class="flex-grow flex items-center justify-center p-2 md:p-4 bg-gradient-to-b from-slate-900 to-slate-950 relative overflow-hidden min-h-[350px]">
                     <div class="absolute top-3 right-3 z-20 flex gap-2 no-print">
-                        <button onclick="resetView()" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-xl shadow-lg border border-slate-700/80 font-bold text-xs flex items-center gap-1.5 transition backdrop-blur-md">
-                            <span class="text-sm leading-none">⟲</span> Merkeze Al
+                        <button type="button" onclick="resetView()" class="bg-slate-800/80 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-xl shadow-lg border border-slate-700/80 font-bold text-xs flex items-center gap-1.5 transition backdrop-blur-md cursor-pointer">
+                            <span class="text-sm leading-none">⟲</span> Center View
                         </button>
                     </div>
                     <div class="absolute bottom-3 left-3 z-20 pointer-events-none no-print">
                         <span class="bg-slate-950/70 text-slate-400 px-3 py-1.5 rounded-xl text-[10px] font-medium backdrop-blur-md border border-slate-800/80">
-                            🖱️ Döndürmek için sürükleyin • Yakınlaştırmak için kaydırın
+                            🖱️ Drag to rotate view • Scroll wheel to zoom
                         </span>
                     </div>
                     <canvas id="contCanvas" width="950" height="520" class="max-w-full w-full h-full object-contain"></canvas>
@@ -411,32 +415,30 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- MODALLER: DASHBOARD & İNCELEME GEREKÇESİ & KULLANICI ROL YÖNETİMİ         -->
+<!-- MODALS                                                                    -->
 <!-- ========================================================================= -->
-
-<!-- 👑 1. ADMİN KULLANICI & ROL YÖNETİM MODALI -->
 <div id="adminUsersModal" class="hidden fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 no-print backdrop-blur-sm">
     <div class="bg-white rounded-3xl shadow-2xl max-w-[850px] w-full max-h-[85vh] flex flex-col overflow-hidden border border-purple-200">
         <div class="bg-purple-950 text-white px-6 py-4 flex justify-between items-center border-b border-purple-800">
             <div class="flex items-center gap-2">
                 <span class="text-xl">👥</span>
                 <div>
-                    <h3 class="font-bold text-sm tracking-wide uppercase">Kullanıcı & Rol Yönetim Masası</h3>
-                    <p class="text-[10px] text-purple-300">Personel yetkilerini doğrudan bu ekrandan değiştirebilirsiniz.</p>
+                    <h3 class="font-bold text-sm tracking-wide uppercase">User & Role Management Console</h3>
+                    <p class="text-[10px] text-purple-300">Assign and adjust team permissions in real time.</p>
                 </div>
             </div>
-            <button onclick="closeModal('adminUsersModal')" class="text-purple-300 hover:text-white font-black text-lg">✕</button>
+            <button type="button" onclick="closeModal('adminUsersModal')" class="text-purple-300 hover:text-white font-black text-lg cursor-pointer">✕</button>
         </div>
         <div class="p-4 md:p-6 overflow-y-auto flex-grow custom-scrollbar">
-            <div id="adminUsersLoading" class="text-center text-slate-400 py-8 font-semibold">Kullanıcı listesi yükleniyor...</div>
+            <div id="adminUsersLoading" class="text-center text-slate-400 py-8 font-semibold">Loading user accounts...</div>
             <div class="overflow-x-auto">
                 <table id="adminUsersTable" class="w-full text-left text-xs bg-white rounded-xl border border-slate-200 hidden min-w-[650px]">
                     <thead class="bg-slate-100 text-slate-700 uppercase font-bold border-b">
                         <tr>
-                            <th class="p-3">Ad Soyad</th>
-                            <th class="p-3">E-Posta Adresi</th>
-                            <th class="p-3">Kayıt Tarihi</th>
-                            <th class="p-3 text-center">Atanmış Rol / Yetki</th>
+                            <th class="p-3">Full Name</th>
+                            <th class="p-3">Email Address</th>
+                            <th class="p-3">Registered Date</th>
+                            <th class="p-3 text-center">Assigned Role</th>
                         </tr>
                     </thead>
                     <tbody id="adminUsersTableBody" class="divide-y divide-slate-100"></tbody>
@@ -446,1105 +448,116 @@
     </div>
 </div>
 
-<!-- 2. SEVK TALEPLERİ DASHBOARD MODALI -->
 <div id="adminDashboardModal" class="hidden fixed inset-0 bg-slate-900/80 z-40 flex items-center justify-center p-4 no-print backdrop-blur-sm">
     <div class="bg-white rounded-3xl shadow-2xl max-w-[1150px] w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-200">
         <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
             <div class="flex items-center gap-2">
                 <span class="text-lg">📥</span>
-                <h3 class="font-bold text-sm tracking-wide uppercase" id="dashboardModalHeader">Sevk Talepleri & Onay Paneli</h3>
+                <h3 class="font-bold text-sm tracking-wide uppercase" id="dashboardModalHeader">Dispatch Requests & Review Board</h3>
             </div>
-            <button onclick="closeDashboard()" class="text-slate-400 hover:text-white font-black text-lg">✕</button>
+            <button type="button" onclick="closeDashboard()" class="text-slate-400 hover:text-white font-black text-lg cursor-pointer">✕</button>
         </div>
         <div class="p-4 md:p-6 overflow-y-auto flex-grow custom-scrollbar">
-            <div id="dashboardLoading" class="text-center text-slate-400 py-8 font-semibold">Talepler yükleniyor, lütfen bekleyin...</div>
-            <div class="overflow-x-auto">
-                <table id="dashboardTable" class="w-full text-left text-xs bg-white rounded-xl border border-slate-200 hidden min-w-[800px]">
-                    <thead class="bg-slate-100 text-slate-700 uppercase font-bold border-b">
-                        <tr>
-                            <th class="p-3">Tarih</th>
-                            <th class="p-3">Sipariş Başlığı</th>
-                            <th class="p-3">Durum</th>
-                            <th class="p-3">Satış Temsilcisi</th>
-                            <th class="p-3">Araç & Yük</th>
-                            <th class="p-3">Lojistik Denetim Notu</th>
-                            <th class="p-3 text-center">İşlem</th>
-                        </tr>
-                    </thead>
-                    <tbody id="dashboardTableBody" class="divide-y divide-slate-100"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- 3. KARAR GEREKÇESİ MODALI -->
-<div id="reviewReasonModal" class="hidden fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 no-print backdrop-blur-sm">
-    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border-t-8 border-indigo-600">
-        <div class="flex justify-between items-start mb-3">
-            <h3 class="text-sm font-black text-slate-900 uppercase" id="reviewReasonModalTitle">Karar Gerekçesi</h3>
-            <button onclick="closeModal('reviewReasonModal')" class="text-slate-400 hover:text-rose-500 font-bold">✕</button>
-        </div>
-        <input type="hidden" id="pendingActionType">
-        <div class="mb-4">
-            <label class="text-[10px] font-bold text-slate-600 uppercase mb-1 block">Satış Ekibine Not:</label>
-            <textarea id="reviewReasonInput" rows="3" class="w-full p-2.5 border rounded-xl bg-slate-50 text-xs focus:border-indigo-500 outline-none" placeholder="Açıklama veya talep edilen düzeltmeyi yazın..."></textarea>
-        </div>
-        <div class="flex gap-2">
-            <button onclick="closeModal('reviewReasonModal')" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition">İptal</button>
-            <button onclick="executeFinalDecision()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md">Kaydet & Bildir</button>
+            <div id="dashboardLoading" class="text-center text-slate-400 py-8 font-semibold">No pending dispatch requests recorded yet.</div>
         </div>
     </div>
 </div>
 
 <!-- ========================================================================= -->
-<!-- JAVASCRIPT: SUPABASE & HESAPLAMA MOTORU                                   -->
+<!-- JAVASCRIPT: INITIALIZATION AND WORKSPACE CONTROL                          -->
 <!-- ========================================================================= -->
 <script>
-    const SUPABASE_URL = 'https://wukjeatpuysvlosbtahf.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1a2plYXRwdXlzdmxvc2J0YWhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1MTk4NjMsImV4cCI6MjEwNDA5NTg2M30.-HitB_MtlNXIYvd1qqgydWmr0UxpnSP4Q29EMugF8P8';
-
-    const VEHICLE_SPECS = {
-        'TIR':  { name: 'TIR Dorse', L: 13600, W: 2420, H: 2600, maxWgt: 25000, doorH: 2550, isContainer: false },
-        '40HC': { name: "40' High Cube", L: 12015, W: 2345, H: 2690, maxWgt: 27800, doorH: 2585, isContainer: true },
-        '40DC': { name: "40' Standart DC", L: 12015, W: 2345, H: 2385, maxWgt: 27800, doorH: 2280, isContainer: true },
-        '20DC': { name: "20' Standart DC", L: 5890,  W: 2345, H: 2385, maxWgt: 27800, doorH: 2280, isContainer: true }
-    };
-
-    let supabaseClient = null;
-    let currentUser = null;
-    let currentUserProfile = null;
-    let authMode = 'login';
-    let currentReviewTalepId = null;
-
-    // --- PENCERE (MODAL) YARDIMCI FONKSİYONLARI ---
-    function openModal(id) { 
-        const el = document.getElementById(id); 
-        if (el) el.classList.remove('hidden'); 
-    }
-    function closeModal(id) { 
-        const el = document.getElementById(id); 
-        if (el) el.classList.add('hidden'); 
-    }
-    function closeDashboard() { 
-        const el = document.getElementById('adminDashboardModal'); 
-        if (el) el.classList.add('hidden'); 
-    }
-    function exitReviewMode() { 
-        const el = document.getElementById('activeReviewBar'); 
-        if (el) el.classList.add('hidden'); 
-        currentReviewTalepId = null; 
-    }
-
-    function escapeHtml(str) {
-        if (str === null || str === undefined) return '';
-        return String(str)
-            .replace(/&/g, '&')
-            .replace(/</g, '<')
-            .replace(/>/g, '>')
-            .replace(/"/g, '"')
-            .replace(/'/g, ''');
-    }
-
-    const defaultSkuDatabase = [
-        { name: "kızartmalık (285×285×330)", W: 285, L: 285, H: 330, Wt: 16.50, maxLayers: 6, shape: "round" },
-        { name: "1,5LX6 KULPLU", W: 230, L: 272, H: 307, Wt: 9.13, maxLayers: 7, shape: "box" },
-        { name: "3LX6Kare", W: 238, L: 362, H: 333, Wt: 17.64, maxLayers: 6, shape: "box" },
-        { name: "4LX4 Kare", W: 260, L: 296, H: 332, Wt: 15.24, maxLayers: 6, shape: "box" },
-        { name: "4,5LX4 Kare", W: 260, L: 296, H: 363, Wt: 17.32, maxLayers: 6, shape: "box" },
-        { name: "5LX4 Kare", W: 260, L: 296, H: 394, Wt: 19.23, maxLayers: 6, shape: "box" },
-        { name: "1LX12 VK BÜKLÜM", W: 247, L: 328, H: 283, Wt: 11.69, maxLayers: 8, shape: "box" },
-        { name: "2LX6 VK BÜKLÜM", W: 224, L: 329, H: 326, Wt: 11.70, maxLayers: 7, shape: "box" },
-        { name: "5LX4 Kubbeli", W: 336, L: 336, H: 355, Wt: 19.42, maxLayers: 6, shape: "box" },
-        { name: "5LX4 Yaprak", W: 288, L: 402, H: 346, Wt: 19.75, maxLayers: 6, shape: "box" },
-        { name: "1,8LX6 BÜKLÜM", W: 222, L: 326, H: 325, Wt: 10.60, maxLayers: 8, shape: "box" },
-        { name: "5LX4YUVARLAK KAVANOZ", W: 382, L: 382, H: 280, Wt: 19.75, maxLayers: 6, shape: "round" },
-        { name: "4,5LX4 KARE KAVANOZ", W: 272, L: 308, H: 335, Wt: 17.32, maxLayers: 6, shape: "box" },
-        { name: "0,85LX12 YENİ VK BÜKLÜM", W: 232, L: 308, H: 262, Wt: 9.68, maxLayers: 8, shape: "box" },
-        { name: "1LX20 BÜKLÜM (KADOOĞLU)", W: 338, L: 419, H: 294, Wt: 19.63, maxLayers: 8, shape: "box" },
-        { name: "1LX12 BÜKLÜM (KADOOĞLU)", W: 257, L: 338, H: 294, Wt: 11.70, maxLayers: 8, shape: "box" },
-        { name: "1LX12 İNCEBELLİ", W: 296, L: 326, H: 294, Wt: 11.95, maxLayers: 9, shape: "box" },
-        { name: "1LX20 İNCEBELLİ", W: 367, L: 430, H: 294, Wt: 19.73, maxLayers: 8, shape: "box" },
-        { name: "2LX6 incebelli", W: 212, L: 407, H: 326, Wt: 11.81, maxLayers: 7, shape: "box" },
-        { name: "0,75LX12 Yeni Vk Büklüm", W: 226, L: 300, H: 251, Wt: 8.83, maxLayers: 9, shape: "box" },
-        { name: "2LX6 Kare (Abalı-Kırlangıç)", W: 214, L: 314, H: 323, Wt: 11.70, maxLayers: 7, shape: "box" },
-        { name: "1LX12 Kare (Abalı-Kırlangıç)", W: 230, L: 302, H: 297, Wt: 11.66, maxLayers: 6, shape: "box" }
-    ];
-
-    let skuDatabase = [];
-    let mixedItemsState = [
-        { skuIdx: 5, count: 400 },  // 5LX4 Kare
-        { skuIdx: 13, count: 600 }, // 0,85LX12 Yeni VK
-        { skuIdx: 0, count: 100 }   // Kızartmalık Teneke
-    ];
-
-    const colorMap = [
-        { base: '#0284c7', top: '#38bdf8', right: '#0369a1', left: '#075985' },
-        { base: '#16a34a', top: '#4ade80', right: '#15803d', left: '#166534' },
-        { base: '#d97706', top: '#fbbf24', right: '#b45309', left: '#92400e' },
-        { base: '#9333ea', top: '#c084fc', right: '#7e22ce', left: '#6b21a8' },
-        { base: '#ea580c', top: '#fb923c', right: '#c2410c', left: '#9a3412' }
-    ];
-
-    let currentMode = 'mixed';
-    let globalFleet = [];
-    let currentVehicleIdx = 0;
-    let globalEngineContext = {};
-    let debounceTimer;
-    let isUserDefinedTarget = false;
-
-    let panX = 0, panY = 0, zoomLevel = 1;
-    let isDragging = false, startX = 0, startY = 0;
-    let lastRenderData = null;
-
-    function setElText(id, text) {
-        const el = document.getElementById(id);
-        if (el) el.textContent = text;
-    }
-
-    // =========================================================================
-    // 📐 KOMBİNE ENLEME (DUAL-STRIP) GEOMETRİ MOTORU
-    // =========================================================================
-    function findOptimalFloorPlan(effW, effL, contH, doorH, sku, maxWgt, isContainer) {
-        const boxW = Math.max(1, sku.W);
-        const boxL = Math.max(1, sku.L);
-        const boxH = Math.max(1, sku.H);
-        const boxWt = Math.max(0.01, sku.Wt);
-
-        const physMaxLayers = Math.max(1, Math.min(sku.maxLayers || 8, Math.floor((contH - 15) / boxH)));
-        const maxDoorLayers = Math.max(1, Math.min(physMaxLayers, Math.floor((doorH - 20) / boxH)));
-        const maxBoxesByWeight = Math.floor(maxWgt / boxWt);
-
-        if (sku.shape === 'round') {
-            const D = Math.max(boxW, boxL);
-            const cols = Math.floor(effW / D);
-            const rows = Math.floor(effL / D);
-            const layerBoxes = cols * rows;
-            const feasibleBoxes = Math.min(layerBoxes * physMaxLayers, maxBoxesByWeight);
-            return {
-                colsA: cols, rowsA: rows, dimW1: D, dimL1: D,
-                colsB: 0, rowsB: 0, dimW2: 0, dimL2: 0,
-                layerBoxes: layerBoxes, maxBoxes: Math.max(0, feasibleBoxes),
-                physMaxLayers: physMaxLayers, maxDoorLayers: maxDoorLayers, isRound: true
-            };
-        }
-
-        let bestPlan = null;
-        let maxBoxesFound = 0;
-        const maxA = Math.floor(effW / boxW);
-
-        for (let a = 0; a <= maxA; a++) {
-            const remainingW = effW - (a * boxW);
-            const b = Math.floor(remainingW / boxL); 
-
-            if (a === 0 && b === 0) continue;
-
-            const rowsA = (a > 0) ? Math.floor(effL / boxL) : 0;
-            const rowsB = (b > 0) ? Math.floor(effL / boxW) : 0;
-
-            const layerBoxes = (a * rowsA) + (b * rowsB);
-            if (layerBoxes <= 0) continue;
-
-            const doorRowsA = isContainer ? Math.min(rowsA, Math.ceil(650 / boxL)) : 0;
-            const innerRowsA = rowsA - doorRowsA;
-            const countA = a * (innerRowsA * physMaxLayers + doorRowsA * maxDoorLayers);
-
-            const doorRowsB = isContainer ? Math.min(rowsB, Math.ceil(650 / boxW)) : 0;
-            const innerRowsB = rowsB - doorRowsB;
-            const countB = b * (innerRowsB * physMaxLayers + doorRowsB * maxDoorLayers);
-
-            const feasibleBoxes = Math.min(countA + countB, maxBoxesByWeight);
-
-            if (feasibleBoxes > maxBoxesFound) {
-                maxBoxesFound = feasibleBoxes;
-                bestPlan = {
-                    colsA: a, rowsA: rowsA, dimW1: boxW, dimL1: boxL,
-                    colsB: b, rowsB: rowsB, dimW2: boxL, dimL2: boxW,
-                    layerBoxes: layerBoxes, maxBoxes: Math.max(0, feasibleBoxes),
-                    physMaxLayers: physMaxLayers, maxDoorLayers: maxDoorLayers, isRound: false
-                };
-            }
-        }
-        return bestPlan;
-    }
-
-    // =========================================================================
-    // 🚚 YÜKLEME VE YERLEŞTİRME MOTORU: KAPIYA KADAR KESİNTİSİZ YAYILIM
-    // =========================================================================
-    function runEngine() {
-        const vType = document.getElementById('vehicleType')?.value || '20DC';
-        const vSpec = VEHICLE_SPECS[vType] || VEHICLE_SPECS['20DC'];
-        const baseType = 'floor';
-        const loadStrategy = document.getElementById('loadDistributionStrategy')?.value || 'spread';
-
-        const contL = vSpec.L;
-        const contW = vSpec.W;
-        const contH = vSpec.H;
-        const doorH = vSpec.doorH;
-        const maxWgt = parseInt(document.getElementById('maxWgt')?.value) || vSpec.maxWgt;
-
-        let effContL = contL - 10;
-        let effContW = contW - 10;
-
-        const optFrontCurve = (vType === 'TIR') && document.getElementById('optFrontCurve')?.checked;
-        if (optFrontCurve) effContL -= 100;
-        if (document.getElementById('optDoor')?.checked) effContL -= 80;
-        if (document.getElementById('optAirbag')?.checked) effContW -= 80;
-        if (document.getElementById('optLashing')?.checked) effContL -= 150;
-
-        let queue = [];
-
-        if (currentMode === 'single') {
-            const skuIdx = parseInt(document.getElementById('skuSelect')?.value) || 0;
-            const sku = skuDatabase[skuIdx];
-            if (!sku) return;
-
-            let targetBoxes = parseInt(document.getElementById('targetBoxes')?.value);
-            if (isNaN(targetBoxes) || targetBoxes <= 0) {
-                const plan = findOptimalFloorPlan(effContW, effContL, contH, doorH, sku, maxWgt, vSpec.isContainer);
-                targetBoxes = plan ? plan.maxBoxes : Math.floor(maxWgt / sku.Wt);
-            }
-            queue.push({ sku, target: targetBoxes, color: colorMap[0], blockName: 'Tekil Yük' });
-        } else {
-            mixedItemsState.forEach((item, idx) => {
-                const sku = skuDatabase[item.skuIdx];
-                if (sku && item.count > 0) {
-                    queue.push({
-                        sku,
-                        target: item.count,
-                        color: colorMap[idx % colorMap.length],
-                        blockIndex: idx + 1,
-                        blockName: `${idx + 1}. Blok (${sku.name})`,
-                        itemStateIndex: idx
-                    });
-                }
-            });
-        }
-
-        globalFleet = [];
-        let remainingQueue = queue.map(q => ({ ...q, remaining: q.target }));
-        let safetyTruck = 0;
-
-        while (remainingQueue.some(q => q.remaining > 0) && safetyTruck < 20) {
-            safetyTruck++;
-            let truckResult = packSingleVehicle(remainingQueue, effContL, effContW, contH, doorH, maxWgt, baseType, optFrontCurve, vSpec.isContainer, loadStrategy);
-            if (truckResult.placedItems.length === 0) break;
-            globalFleet.push(truckResult);
-        }
-
-        if (globalFleet.length === 0) {
-            globalFleet.push({ placedItems: [], totalBoxes: 0, totalWgt: 0, gapL: effContL, gapW: effContW });
-        }
-
-        globalEngineContext = { contL, contW, contH, doorH, maxWgt, baseType, optFrontCurve, isContainer: vSpec.isContainer, effContL, effContW };
-        currentVehicleIdx = 0;
-        updateFleetUI();
-        evaluateSalesAdvisor(queue, vType, baseType);
-        syncOrderTitleToPrint();
-    }
-
-    function packSingleVehicle(queue, effContL, effContW, contH, doorH, maxWgt, baseType, optFrontCurve, isContainer, loadStrategy) {
-        let placedItems = [];
-        let totalWgt = 0;
-        let totalBoxes = 0;
-        let currentX = optFrontCurve ? 100 : 0;
-        const doorZoneX = effContL - 650;
-
-        for (let itemIdx = 0; itemIdx < queue.length; itemIdx++) {
-            let item = queue[itemIdx];
-            if (item.remaining <= 0) continue;
-            if (currentX >= effContL || totalWgt >= maxWgt) break;
-
-            const sku = item.sku;
-            const availableL = effContL - currentX;
-            if (availableL < Math.min(sku.L, sku.W)) break;
-
-            const plan = findOptimalFloorPlan(effContW, availableL, contH, doorH, sku, maxWgt - totalWgt, isContainer);
-            if (!plan || plan.layerBoxes <= 0) continue;
-
-            const maxBoxesByWeight = Math.floor((maxWgt - totalWgt) / sku.Wt);
-            const boxesForThisTruck = Math.min(item.remaining, maxBoxesByWeight);
-            if (boxesForThisTruck <= 0) break;
-
-            const widthUsed = (plan.colsA * plan.dimW1) + (plan.colsB * plan.dimW2);
-            const startY = Math.max(0, (effContW - widthUsed) / 2);
-
-            const isSingleOrLast = (itemIdx === queue.length - 1) || (queue.slice(itemIdx + 1).every(it => it.remaining <= 0));
-
-            if (loadStrategy === 'spread' && isSingleOrLast) {
-                const totalRowsA = (plan.colsA > 0) ? Math.floor(availableL / plan.dimL1) : 0;
-                const totalRowsB = (plan.colsB > 0) ? Math.floor(availableL / plan.dimL2) : 0;
-
-                const positionsPerLayer = (plan.colsA * totalRowsA) + (plan.colsB * totalRowsB);
-                let baseLayers = Math.max(1, Math.floor(boxesForThisTruck / Math.max(1, positionsPerLayer)));
-                baseLayers = Math.min(baseLayers, plan.physMaxLayers);
-
-                let remainingToDistribute = boxesForThisTruck;
-
-                // Strip A
-                if (plan.colsA > 0 && totalRowsA > 0) {
-                    const stripAY = startY;
-                    const widthA = plan.colsA * plan.dimW1;
-
-                    for (let r = 0; r < totalRowsA; r++) {
-                        if (remainingToDistribute <= 0 || item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
-
-                        const rowX = currentX + (r * plan.dimL1);
-                        const isNearDoor = isContainer && (rowX + plan.dimL1 >= doorZoneX);
-                        let rowL = baseLayers;
-
-                        let maxPossibleLayers = isNearDoor ? plan.maxDoorLayers : plan.physMaxLayers;
-                        if (rowL < maxPossibleLayers && remainingToDistribute > (totalRowsA - r) * plan.colsA * rowL) {
-                            rowL = Math.min(maxPossibleLayers, rowL + 1);
-                        }
-
-                        let rowBoxes = Math.min(plan.colsA * rowL, remainingToDistribute);
-                        rowBoxes = Math.min(rowBoxes, Math.floor((maxWgt - totalWgt) / sku.Wt));
-                        if (rowBoxes <= 0) break;
-
-                        let actualLayers = Math.max(1, Math.ceil(rowBoxes / plan.colsA));
-                        let rowWgt = rowBoxes * sku.Wt;
-
-                        placedItems.push({
-                            id: sku.name, stripTag: 'A',
-                            x: rowX, y: stripAY, z: 0,
-                            l: plan.dimL1, w: widthA, h: actualLayers * sku.H,
-                            boxes: rowBoxes, wgt: rowWgt, color: item.color,
-                            cols: plan.colsA, rows: 1, layers: actualLayers,
-                            singleBoxL: plan.dimL1, singleBoxW: plan.dimW1, singleBoxH: sku.H,
-                            isRound: (sku.shape === 'round'),
-                            blockName: item.blockName || `${sku.name} Bloğu`
-                        });
-
-                        totalWgt += rowWgt;
-                        totalBoxes += rowBoxes;
-                        remainingToDistribute -= rowBoxes;
-                        item.remaining -= rowBoxes;
-                    }
-                }
-
-                // Strip B
-                if (plan.colsB > 0 && totalRowsB > 0) {
-                    const stripBY = startY + (plan.colsA * plan.dimW1);
-                    const widthB = plan.colsB * plan.dimW2;
-
-                    for (let r = 0; r < totalRowsB; r++) {
-                        if (remainingToDistribute <= 0 || item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
-
-                        const rowX = currentX + (r * plan.dimL2);
-                        const isNearDoor = isContainer && (rowX + plan.dimL2 >= doorZoneX);
-                        let rowL = baseLayers;
-
-                        let maxPossibleLayers = isNearDoor ? plan.maxDoorLayers : plan.physMaxLayers;
-                        if (rowL < maxPossibleLayers && remainingToDistribute > (totalRowsB - r) * plan.colsB * rowL) {
-                            rowL = Math.min(maxPossibleLayers, rowL + 1);
-                        }
-
-                        let rowBoxes = Math.min(plan.colsB * rowL, remainingToDistribute);
-                        rowBoxes = Math.min(rowBoxes, Math.floor((maxWgt - totalWgt) / sku.Wt));
-                        if (rowBoxes <= 0) break;
-
-                        let actualLayers = Math.max(1, Math.ceil(rowBoxes / plan.colsB));
-                        let rowWgt = rowBoxes * sku.Wt;
-
-                        placedItems.push({
-                            id: sku.name, stripTag: 'B',
-                            x: rowX, y: stripBY, z: 0,
-                            l: plan.dimL2, w: widthB, h: actualLayers * sku.H,
-                            boxes: rowBoxes, wgt: rowWgt, color: item.color,
-                            cols: plan.colsB, rows: 1, layers: actualLayers,
-                            singleBoxL: plan.dimL2, singleBoxW: plan.dimW2, singleBoxH: sku.H,
-                            isRound: false,
-                            blockName: item.blockName || `${sku.name} Bloğu`
-                        });
-
-                        totalWgt += rowWgt;
-                        totalBoxes += rowBoxes;
-                        remainingToDistribute -= rowBoxes;
-                        item.remaining -= rowBoxes;
-                    }
-                }
-
-            } else {
-                let curX_A = currentX;
-                let curX_B = currentX;
-                const stripAY = startY;
-                const widthA = plan.colsA * plan.dimW1;
-                const stripBY = startY + widthA;
-                const widthB = plan.colsB * plan.dimW2;
-
-                while (item.remaining > 0 && totalWgt + sku.Wt <= maxWgt) {
-                    const canA = (plan.colsA > 0) && (curX_A + plan.dimL1 <= effContL);
-                    const canB = (plan.colsB > 0) && (curX_B + plan.dimL2 <= effContL);
-                    if (!canA && !canB) break;
-
-                    let chooseA = canA && (!canB || curX_A <= curX_B);
-
-                    if (chooseA) {
-                        const isNearDoor = isContainer && (curX_A + plan.dimL1 >= doorZoneX);
-                        const rowMaxL = isNearDoor ? plan.maxDoorLayers : plan.physMaxLayers;
-                        let rowB = Math.min(plan.colsA * rowMaxL, item.remaining);
-                        rowB = Math.min(rowB, Math.floor((maxWgt - totalWgt) / sku.Wt));
-                        if (rowB <= 0) break;
-                        let rowL = Math.max(1, Math.ceil(rowB / plan.colsA));
-                        let rowW = rowB * sku.Wt;
-
-                        placedItems.push({
-                            id: sku.name, stripTag: 'A',
-                            x: curX_A, y: stripAY, z: 0,
-                            l: plan.dimL1, w: widthA, h: rowL * sku.H,
-                            boxes: rowB, wgt: rowW, color: item.color,
-                            cols: plan.colsA, rows: 1, layers: rowL,
-                            singleBoxL: plan.dimL1, singleBoxW: plan.dimW1, singleBoxH: sku.H,
-                            isRound: (sku.shape === 'round'),
-                            blockName: item.blockName || `${sku.name} Bloğu`
-                        });
-
-                        totalWgt += rowW;
-                        totalBoxes += rowB;
-                        item.remaining -= rowB;
-                        curX_A += plan.dimL1;
-                    } else {
-                        const isNearDoor = isContainer && (curX_B + plan.dimL2 >= doorZoneX);
-                        const rowMaxL = isNearDoor ? plan.maxDoorLayers : plan.physMaxLayers;
-                        let rowB = Math.min(plan.colsB * rowMaxL, item.remaining);
-                        rowB = Math.min(rowB, Math.floor((maxWgt - totalWgt) / sku.Wt));
-                        if (rowB <= 0) break;
-                        let rowL = Math.max(1, Math.ceil(rowB / plan.colsB));
-                        let rowW = rowB * sku.Wt;
-
-                        placedItems.push({
-                            id: sku.name, stripTag: 'B',
-                            x: curX_B, y: stripBY, z: 0,
-                            l: plan.dimL2, w: widthB, h: rowL * sku.H,
-                            boxes: rowB, wgt: rowW, color: item.color,
-                            cols: plan.colsB, rows: 1, layers: rowL,
-                            singleBoxL: plan.dimL2, singleBoxW: plan.dimW2, singleBoxH: sku.H,
-                            isRound: false,
-                            blockName: item.blockName || `${sku.name} Bloğu`
-                        });
-
-                        totalWgt += rowW;
-                        totalBoxes += rowB;
-                        item.remaining -= rowB;
-                        curX_B += plan.dimL2;
-                    }
-                }
-            }
-
-            currentX = placedItems.reduce((max, it) => Math.max(max, it.x + it.l), 0);
-        }
-
-        const maxReachX = placedItems.reduce((max, it) => Math.max(max, it.x + it.l), 0);
-        const maxReachY = placedItems.reduce((max, it) => Math.max(max, it.y + it.w), 0);
-
-        return {
-            placedItems, totalWgt, totalBoxes,
-            gapL: Math.max(0, effContL - maxReachX),
-            gapW: Math.max(0, effContW - maxReachY)
-        };
-    }
-
-    // =========================================================================
-    // 💡 DRY-RUN TEST: SİMÜLASYONLU FİLO SAYISI HESAPLAYICI
-    // =========================================================================
-    function simulateTotalContainers(simQueue, vType, baseType) {
-        const vSpec = VEHICLE_SPECS[vType];
-        let effL = vSpec.L - 90;
-        let effW = vSpec.W - 10;
-        let qCopy = simQueue.map(q => ({ ...q, remaining: q.target }));
-        let count = 0;
-        while (qCopy.some(q => q.remaining > 0) && count < 20) {
-            count++;
-            let res = packSingleVehicle(qCopy, effL, effW, vSpec.H, vSpec.doorH, vSpec.maxWgt, baseType, false, vSpec.isContainer, 'spread');
-            if (res.placedItems.length === 0) break;
-        }
-        return count;
-    }
-
-    // =========================================================================
-    // 💡 DİNAMİK FİLO VE ENTEGRE SATIŞ DANIŞMANI (1-TIKLA UPSELL & FİT ENGINE)
-    // =========================================================================
-    function evaluateSalesAdvisor(queue, vType, baseType) {
-        const container = document.getElementById('salesAdvisorContainer');
-        if (!container) return;
-
-        if (globalFleet.length <= 1) {
-            container.innerHTML = '';
-            container.classList.add('hidden');
+    function openAdminUsersModal() {
+        openModal('adminUsersModal');
+        const table = document.getElementById('adminUsersTable');
+        const loading = document.getElementById('adminUsersLoading');
+        const tbody = document.getElementById('adminUsersTableBody');
+
+        if (table) table.classList.add('hidden');
+        if (loading) { loading.classList.remove('hidden'); loading.textContent = "Loading user accounts..."; }
+        if (tbody) tbody.innerHTML = '';
+
+        ensureSupabaseClient();
+        if (!supabaseClient) {
+            if (loading) loading.textContent = "Database connection offline.";
             return;
         }
 
-        const N = globalFleet.length;
-        const lastTruck = globalFleet[N - 1];
-        const overflowBoxes = lastTruck.totalBoxes;
-        const currentSpec = VEHICLE_SPECS[vType];
-
-        let targetMaxContainers = Math.max(1, N - 1);
-        let downscaleButtonsHtml = '';
-
-        queue.forEach((item, qIdx) => {
-            let low = 0;
-            let high = item.target;
-            let exactFitQty = -1;
-
-            while (low <= high) {
-                let mid = Math.floor((low + high) / 2);
-                let testQueue = queue.map((q, idx) => ({ ...q, target: (idx === qIdx ? mid : q.target) }));
-                let neededContainers = simulateTotalContainers(testQueue, vType, baseType);
-
-                if (neededContainers <= targetMaxContainers) {
-                    exactFitQty = mid;
-                    low = mid + 1;
-                } else {
-                    high = mid - 1;
-                }
-            }
-
-            if (exactFitQty !== -1 && exactFitQty < item.target) {
-                let removeCount = item.target - exactFitQty;
-                downscaleButtonsHtml += `
-                    <div class="flex items-center justify-between bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/80 text-xs">
-                        <div>
-                            <strong class="text-amber-300 font-bold">${escapeHtml(item.sku.name)}</strong>: 
-                            <span class="text-slate-300">${item.target} ➔ <strong class="text-white">${exactFitQty} adet</strong></span>
-                            <span class="text-[10px] text-emerald-400 block font-semibold mt-0.5">✓ 2. Konteyner iptal olur, tek navlunda kalır</span>
-                        </div>
-                        <button onclick="applyAdvisorFitOne(${item.itemStateIndex}, ${exactFitQty})" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black px-3 py-1.5 rounded-lg text-xs shadow-md transition whitespace-nowrap">
-                            🎯 Sığdır (-${removeCount})
-                        </button>
-                    </div>
-                `;
-            }
-        });
-
-        let upgradeTargetVeh = (vType === '20DC') ? '40DC' : ((vType === '40DC') ? '40HC' : 'TIR');
-        let upgradeVehName = VEHICLE_SPECS[upgradeTargetVeh].name;
-        let upSpec = VEHICLE_SPECS[upgradeTargetVeh];
-
-        let dryQueue = queue.map(q => ({ ...q, remaining: q.target }));
-        let dryTrucks = 0;
-        let lastDryTruck = null;
-        while (dryQueue.some(q => q.remaining > 0) && dryTrucks < 20) {
-            dryTrucks++;
-            let res = packSingleVehicle(dryQueue, upSpec.L - 90, upSpec.W - 10, upSpec.H, upSpec.doorH, upSpec.maxWgt, baseType, false, upSpec.isContainer, 'spread');
-            if (res.placedItems.length === 0) break;
-            lastDryTruck = res;
-        }
-
-        let bigContainerUpsells = [];
-        if (lastDryTruck) {
-            queue.forEach(item => {
-                let plan = findOptimalFloorPlan(upSpec.W - 10, lastDryTruck.gapL, upSpec.H, upSpec.doorH, item.sku, upSpec.maxWgt - lastDryTruck.totalWgt, upSpec.isContainer);
-                let addCount = plan ? plan.maxBoxes : 0;
-                if (addCount > 0) {
-                    bigContainerUpsells.push({
-                        skuName: item.sku.name,
-                        addCount: addCount,
-                        itemStateIndex: item.itemStateIndex
-                    });
-                }
-            });
-        }
-
-        let bigContainerActionsHtml = bigContainerUpsells.map(u => `
-            <div class="flex items-center justify-between bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/80 text-xs">
-                <div>
-                    <strong class="text-sky-300 font-bold">${escapeHtml(u.skuName)}</strong>: 
-                    <span class="text-slate-300">Kalan boşluğa <strong>+${u.addCount} adet</strong></span>
-                </div>
-                <button onclick="applyAdvisorUpgradeAndFill('${upgradeTargetVeh}', ${u.itemStateIndex}, ${u.addCount})" class="bg-sky-500 hover:bg-sky-400 text-slate-950 font-black px-2.5 py-1 rounded-lg text-xs shadow-md transition whitespace-nowrap">
-                    🚀 Geç & +${u.addCount} Ekle
-                </button>
-            </div>
-        `).join('');
-
-        let upsellButtonsHtml = queue.map(item => {
-            const plan = findOptimalFloorPlan(currentSpec.W - 10, lastTruck.gapL, currentSpec.H, currentSpec.doorH, item.sku, currentSpec.maxWgt - lastTruck.totalWgt, currentSpec.isContainer);
-            const addCount = plan ? plan.maxBoxes : 0;
-            if (addCount <= 0) return '';
-            return `
-                <div class="flex items-center justify-between bg-slate-800/80 p-2.5 rounded-xl border border-slate-700/80 text-xs">
-                    <div>
-                        <strong class="text-emerald-300 font-bold">${escapeHtml(item.sku.name)}</strong>: 
-                        <span class="text-slate-300">Boş alana <strong>+${addCount} adet</strong></span>
-                    </div>
-                    <button onclick="applyAdvisorFillSecond(${item.itemStateIndex}, ${addCount})" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black px-2.5 py-1 rounded-lg text-xs shadow-md transition whitespace-nowrap">
-                        +${addCount} Ekle & Doldur
-                    </button>
-                </div>
-            `;
-        }).join('');
-
-        container.innerHTML = `
-            <div class="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 text-white border border-indigo-500/40 rounded-3xl p-4 md:p-5 shadow-xl shadow-slate-950/20 space-y-4">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-indigo-800/60 pb-3 gap-2">
-                    <div class="flex items-center gap-2.5">
-                        <span class="text-2xl animate-bounce">⚡</span>
-                        <div>
-                            <h4 class="font-black text-sm md:text-base tracking-tight text-white uppercase">Dinamik Filo & Satış Strateji Konsolu</h4>
-                            <p class="text-xs text-indigo-300">İlk ${N-1} araç tam dolu, son ${N}. araç yalnızca <strong>${overflowBoxes} koli</strong> ile sevk edilmektedir. Aksiyonu 1 tıkla uygulayabilirsiniz:</p>
-                        </div>
-                    </div>
-                    <span class="bg-rose-500/90 text-white font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-wider self-start sm:self-auto border border-rose-400/30">${N}. Konteyner Yarım</span>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div class="bg-slate-900/60 border border-slate-800 hover:border-amber-500/40 p-4 rounded-2xl flex flex-col justify-between transition-all backdrop-blur-sm">
-                        <div class="space-y-2 mb-3">
-                            <span class="bg-amber-500/10 text-amber-300 font-black px-2 py-0.5 rounded-md text-[9px] uppercase border border-amber-500/20">Seçenek 1: Navlun Tasarrufu</span>
-                            <strong class="text-white text-xs block font-black">Siparişi ${targetMaxContainers} Konteynere Tam Sığdır</strong>
-                            <p class="text-[11px] text-slate-300 leading-relaxed">
-                                Son konteyneri tamamen iptal edip tek navlunda kalmak için gereken kusursuz düşürme miktarları:
-                            </p>
-                            <div class="space-y-1.5 pt-1">
-                                ${downscaleButtonsHtml}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-slate-900/60 border border-slate-800 hover:border-sky-500/40 p-4 rounded-2xl flex flex-col justify-between transition-all backdrop-blur-sm">
-                        <div class="space-y-2 mb-3">
-                            <span class="bg-sky-500/10 text-sky-300 font-black px-2 py-0.5 rounded-md text-[9px] uppercase border border-sky-500/20">Seçenek 2: Büyük Araç & Upsell</span>
-                            <strong class="text-white text-xs block font-black">${dryTrucks}x ${escapeHtml(upgradeVehName)}'ye Geç & Doldur</strong>
-                            <p class="text-[11px] text-slate-300 leading-relaxed">
-                                Siparişinizi <strong>${dryTrucks} adet ${escapeHtml(upgradeVehName)}</strong> konteynere taşıyıp boş kalan alana ek ürün alarak koli başı navlunu düşürün:
-                            </p>
-                            <div class="space-y-1.5 pt-1">
-                                <button onclick="applyAdvisorUpgradeVehicle('${upgradeTargetVeh}')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2 rounded-xl text-xs transition mb-2 border border-slate-700">
-                                    Sadece ${escapeHtml(upgradeVehName)}'ye Geçiş Yap ➔
-                                </button>
-                                ${bigContainerActionsHtml}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="bg-slate-900/60 border border-slate-800 hover:border-emerald-500/40 p-4 rounded-2xl flex flex-col justify-between transition-all backdrop-blur-sm">
-                        <div class="space-y-2 mb-3">
-                            <span class="bg-emerald-500/10 text-emerald-300 font-black px-2 py-0.5 rounded-md text-[9px] uppercase border border-emerald-500/20">Seçenek 3: Ciro Artırma</span>
-                            <strong class="text-white text-xs block font-black">Son ${N}. Konteyneri Tam Doldur</strong>
-                            <p class="text-[11px] text-slate-300 leading-relaxed">
-                                Son konteynerdeki boş alana müşteriden ilave sipariş alarak aracı %100 doldurun:
-                            </p>
-                            <div class="space-y-1.5 pt-1">
-                                ${upsellButtonsHtml}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        container.classList.remove('hidden');
-    }
-
-    function applyAdvisorFitOne(idx, exactFitQty) {
-        if (currentMode === 'single') {
-            const targetEl = document.getElementById('targetBoxes');
-            if (targetEl) targetEl.value = exactFitQty;
-        } else if (mixedItemsState[idx] !== undefined) {
-            mixedItemsState[idx].count = exactFitQty;
-            renderMixedList();
-        }
-        debouncedRunEngine();
-    }
-
-    function applyAdvisorUpgradeVehicle(targetVehType) {
-        const sel = document.getElementById('vehicleType');
-        if (sel) {
-            sel.value = targetVehType;
-            onVehicleChange();
-        }
-    }
-
-    function applyAdvisorUpgradeAndFill(targetVehType, itemIdx, extraQty) {
-        const sel = document.getElementById('vehicleType');
-        if (sel) sel.value = targetVehType;
-
-        if (currentMode === 'single') {
-            const targetEl = document.getElementById('targetBoxes');
-            if (targetEl) targetEl.value = (parseInt(targetEl.value) || 0) + extraQty;
-        } else if (mixedItemsState[itemIdx] !== undefined) {
-            mixedItemsState[itemIdx].count += extraQty;
-            renderMixedList();
-        }
-        onVehicleChange();
-    }
-
-    function applyAdvisorFillSecond(idx, extraQty) {
-        if (currentMode === 'single') {
-            const targetEl = document.getElementById('targetBoxes');
-            if (targetEl) targetEl.value = (parseInt(targetEl.value) || 0) + extraQty;
-        } else if (mixedItemsState[idx] !== undefined) {
-            mixedItemsState[idx].count += extraQty;
-            renderMixedList();
-        }
-        debouncedRunEngine();
-    }
-
-    // =========================================================================
-    // 📊 METRİKLER VE ŞEFFAF MATEMATİKSEL TEYİT RAPORU
-    // =========================================================================
-    function updateFleetUI() {
-        let pagContainer = document.getElementById('fleetPaginationContainer');
-        if (pagContainer) {
-            if (globalFleet.length > 1) {
-                let pagHtml = `<div class="flex gap-1.5 mb-2.5 p-1.5 bg-white rounded-2xl shadow-xs border border-slate-200/80 overflow-x-auto">`;
-                globalFleet.forEach((v, idx) => {
-                    let activeClass = idx === currentVehicleIdx ? 'bg-slate-900 text-white shadow-sm' : 'bg-slate-50 text-slate-600 hover:bg-slate-100';
-                    pagHtml += `<button onclick="currentVehicleIdx = ${idx}; updateFleetUI();" class="px-3.5 py-1.5 rounded-xl font-bold text-xs whitespace-nowrap transition ${activeClass}">🚚 Konteyner #${idx + 1} (${v.totalBoxes} Koli)</button>`;
+        supabaseClient.rpc('admin_list_users').then(({ data, error }) => {
+            if (error || !data) {
+                return supabaseClient.from('profiles').select('*').then(({ data: profData, error: profErr }) => {
+                    if (profErr) throw profErr;
+                    renderUsersTable(profData || []);
                 });
-                pagHtml += `</div>`;
-                pagContainer.innerHTML = pagHtml;
-            } else {
-                pagContainer.innerHTML = '';
             }
-        }
-
-        let truck = globalFleet[currentVehicleIdx] || { placedItems: [], totalBoxes: 0, totalWgt: 0, gapL: 0, gapW: 0 };
-        const ctx = globalEngineContext;
-
-        setElText('resTotalBoxes', `${truck.totalBoxes.toLocaleString()} Adet`);
-        setElText('resTotalBoxesSub', `Dorse Tabanında Dökme Yük`);
-        setElText('resWeight', `${truck.totalWgt.toLocaleString(undefined, {maximumFractionDigits:1})} kg`);
-
-        let weightPct = Math.min(100, Math.round((truck.totalWgt / (ctx.maxWgt || 27800)) * 100));
-        setElText('resWeightSub', `Yasal Sınır: ${(ctx.maxWgt || 27800).toLocaleString()} kg (%${weightPct} Dolu)`);
-        setElText('resLoads', `${truck.placedItems.length} Sıra`);
-        setElText('resLoadsSub', currentMode === 'mixed' ? "Ayrık Bloklar" : "Dorse Boyunca Sıralı");
-
-        let momentX = 0;
-        truck.placedItems.forEach(p => { momentX += (p.x + p.l/2) * p.wgt; });
-        let cogX = truck.totalWgt > 0 ? (momentX / truck.totalWgt) : 0;
-        setElText('resStatusSub', `Dengeli Yük (CoG: ${(cogX/1000).toFixed(1)}m)`);
-
-        let blocksExplanation = '';
-        let groupedSkus = {};
-        truck.placedItems.forEach(item => {
-            if (!groupedSkus[item.id]) {
-                groupedSkus[item.id] = { name: item.id, totalBoxes: 0, totalWgt: 0, strips: {} };
-            }
-            groupedSkus[item.id].totalBoxes += item.boxes;
-            groupedSkus[item.id].totalWgt += item.wgt;
-
-            let tag = item.stripTag || (item.cols > 1 ? 'B' : 'A');
-            if (!groupedSkus[item.id].strips[tag]) {
-                groupedSkus[item.id].strips[tag] = {
-                    cols: item.cols, rows: 0, layers: item.layers,
-                    boxes: 0, singleL: item.singleBoxL, singleW: item.singleBoxW
-                };
-            }
-            groupedSkus[item.id].strips[tag].rows += (item.rows || 1);
-            groupedSkus[item.id].strips[tag].boxes += item.boxes;
-            groupedSkus[item.id].strips[tag].layers = Math.max(groupedSkus[item.id].strips[tag].layers, item.layers);
+            renderUsersTable(data || []);
+        }).catch(e => {
+            if (loading) loading.textContent = "Could not load users: " + (e.message || "");
         });
 
-        blocksExplanation = Object.values(groupedSkus).map((skuData, sIdx) => {
-            let stripKeys = Object.keys(skuData.strips);
-            let stripsHtml = stripKeys.map(k => {
-                let st = skuData.strips[k];
-                let isRotated = (k === 'B');
-                let tagTitle = isRotated ? 'Şerit B (Enine Çevrilmiş)' : 'Şerit A (Boyuna Düz)';
-                return `
-                    <div class="bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs">
-                        <span class="text-[10px] text-slate-500 font-bold uppercase block mb-1.5">${tagTitle}</span>
-                        <div class="grid grid-cols-4 gap-1.5 text-center font-mono">
-                            <div class="bg-slate-50 p-1 rounded-lg"><span class="text-[9px] text-slate-400 block uppercase">En</span><strong class="text-slate-800 font-black text-xs">${st.cols} Sütun</strong></div>
-                            <div class="bg-slate-50 p-1 rounded-lg"><span class="text-[9px] text-slate-400 block uppercase">Boy</span><strong class="text-slate-800 font-black text-xs">${st.rows} Sıra</strong></div>
-                            <div class="bg-slate-50 p-1 rounded-lg"><span class="text-[9px] text-slate-400 block uppercase">Kat</span><strong class="text-slate-800 font-black text-xs">${st.layers} Kat</strong></div>
-                            <div class="bg-emerald-50 p-1 rounded-lg"><span class="text-[9px] text-emerald-600 block uppercase font-sans font-bold">Toplam</span><strong class="text-emerald-700 font-black text-xs">${st.boxes}</strong></div>
-                        </div>
-                    </div>
+        function renderUsersTable(usersData) {
+            if (!usersData || usersData.length === 0) {
+                if (loading) loading.textContent = "No registered users found.";
+                return;
+            }
+            if (loading) loading.classList.add('hidden');
+            if (table) table.classList.remove('hidden');
+
+            usersData.forEach(user => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition";
+                const uId = user.out_user_id || user.user_id || user.id;
+                const uEmail = user.out_email || user.email || '-';
+                const uName = user.out_full_name || user.full_name || 'Unnamed';
+                const uRole = user.out_role || user.role || 'sales';
+                const uDate = user.out_created_at || user.created_at;
+
+                const isCurrentSelf = (uId === currentUser?.id);
+                const safeName = escapeHtml(uName);
+                const safeEmail = escapeHtml(uEmail);
+                const dateStr = uDate ? new Date(uDate).toLocaleDateString() : '-';
+
+                tr.innerHTML = `
+                    <td class="p-3 font-bold text-slate-900">${safeName}</td>
+                    <td class="p-3 font-mono text-slate-600">${safeEmail}</td>
+                    <td class="p-3 text-slate-500 font-mono">${dateStr}</td>
+                    <td class="p-3 text-center">
+                        <select onchange="updateUserRole('${uId}', this.value)" class="p-1.5 border rounded-lg text-xs font-bold ${uRole === 'admin' ? 'bg-purple-50 text-purple-900 border-purple-300' : (uRole === 'logistics' ? 'bg-indigo-50 text-indigo-900 border-indigo-300' : 'bg-slate-50 text-slate-800 border-slate-300')}">
+                            <option value="sales" ${uRole === 'sales' ? 'selected' : ''}>Sales Team</option>
+                            <option value="logistics" ${uRole === 'logistics' ? 'selected' : ''}>Logistics & Field</option>
+                            <option value="admin" ${uRole === 'admin' ? 'selected' : ''}>Administrator</option>
+                        </select>
+                        ${isCurrentSelf ? '<span class="text-[9px] text-slate-400 block font-semibold mt-0.5">(You)</span>' : ''}
+                    </td>
                 `;
-            }).join('');
-
-            return `
-                <div class="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/80 text-slate-800 space-y-2">
-                    <div class="flex items-center justify-between border-b border-slate-200/60 pb-2">
-                        <strong class="text-xs font-black text-slate-900">${sIdx + 1}. Blok: ${escapeHtml(skuData.name)}</strong>
-                        <span class="text-emerald-700 bg-emerald-50 border border-emerald-200 font-bold px-2.5 py-0.5 rounded-full text-xs font-mono">${skuData.totalBoxes.toLocaleString()} Adet • ${skuData.totalWgt.toLocaleString(undefined, {maximumFractionDigits:1})} kg</span>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        ${stripsHtml}
-                    </div>
-                </div>
-            `;
-        }).join('');
-
-        const optListEl = document.getElementById('optimizationDetailsList');
-        if (optListEl) {
-            optListEl.innerHTML = `
-                <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs text-xs space-y-3">
-                    <div class="flex items-center justify-between border-b pb-2">
-                        <strong class="text-slate-900 text-xs uppercase font-black tracking-tight">🚚 Kombine Dökme Yerleşim Planı (Araç ${currentVehicleIdx + 1} / ${globalFleet.length})</strong>
-                        <span class="text-[10px] text-slate-400 font-medium">Ön duvardan kapıya doğru dizilim</span>
-                    </div>
-                    <div class="space-y-2">${blocksExplanation}</div>
-                </div>
-            `;
-        }
-
-        lastRenderData = { placedItems: truck.placedItems, contL: ctx.contL, contW: ctx.contW, contH: ctx.contH, optFrontCurve: ctx.optFrontCurve, cogX };
-        performRender(lastRenderData);
-    }
-
-    // 🎨 3D İZOMETRİK ÇİZİM (SADE VE ÇİZGİSİZ)
-    function performRender(data) {
-        if (!data) return;
-        const { placedItems, contL, contW, contH, optFrontCurve, cogX } = data;
-        const canvas = document.getElementById('contCanvas');
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        const cosA = Math.cos(0.523599);
-        const sinA = Math.sin(0.523599);
-        const validContL = contL || 5890;
-        const validContW = contW || 2345;
-        const validContH = contH || 2385;
-
-        let scale = Math.min((canvas.width - 100) / ((validContL + validContW) * cosA), (canvas.height - 100) / ((validContL + validContW) * sinA + validContH)) * (zoomLevel || 1);
-        if (!isFinite(scale) || scale <= 0) scale = 0.035;
-
-        let cx = canvas.width / 2 + (panX || 0);
-        let cy = canvas.height / 2 + 50 + (panY || 0);
-
-        function project(x, y, z) {
-            return { x: cx + (x - y) * cosA * scale, y: cy + (x + y) * sinA * scale - (z * scale) };
-        }
-
-        function drawPoly(pts, fill, stroke = 'rgba(0,0,0,0.2)', width = 1) {
-            ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
-            for(let i=1; i<pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-            ctx.closePath();
-            if (fill) { ctx.fillStyle = fill; ctx.fill(); }
-            if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = width; ctx.stroke(); }
-        }
-
-        function drawLine(p1, p2, stroke = 'rgba(0,0,0,0.35)', width = 1) {
-            ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
-            ctx.strokeStyle = stroke; ctx.lineWidth = width; ctx.stroke();
-        }
-
-        drawPoly([project(0,0,0), project(validContL,0,0), project(validContL,validContW,0), project(0,validContW,0)], '#1e293b');
-        drawPoly([project(0,0,0), project(validContL,0,0), project(validContL,0,validContH), project(0,0,validContH)], '#0f172a');
-        drawPoly([project(0,0,0), project(0,validContW,0), project(0,validContW,validContH), project(0,0,validContH)], '#090d16');
-
-        if (Array.isArray(placedItems)) {
-            placedItems.forEach(b => {
-                const z0 = b.z || 0;
-                const z1 = z0 + b.h;
-
-                drawPoly([project(b.x + b.l, b.y, z0), project(b.x + b.l, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z1), project(b.x + b.l, b.y, z1)], b.color.right, 'rgba(0,0,0,0.5)', 1);
-                drawPoly([project(b.x, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z0), project(b.x + b.l, b.y + b.w, z1), project(b.x, b.y + b.w, z1)], b.color.left, 'rgba(0,0,0,0.5)', 1);
-                drawPoly([project(b.x, b.y, z1), project(b.x + b.l, b.y, z1), project(b.x + b.l, b.y + b.w, z1), project(b.x, b.y + b.w, z1)], b.color.top, 'rgba(0,0,0,0.5)', 1);
-
-                if (b.layers && b.layers > 1) {
-                    for (let l = 1; l < b.layers; l++) {
-                        let z = z0 + (l * b.singleBoxH);
-                        drawLine(project(b.x + b.l, b.y, z), project(b.x + b.l, b.y + b.w, z), 'rgba(0,0,0,0.3)');
-                        drawLine(project(b.x, b.y + b.w, z), project(b.x + b.l, b.y + b.w, z), 'rgba(0,0,0,0.3)');
-                    }
-                }
-
-                if (b.cols && b.cols > 1) {
-                    for (let c = 1; c < b.cols; c++) {
-                        let y = b.y + c * (b.w / b.cols);
-                        drawLine(project(b.x + b.l, y, z0), project(b.x + b.l, y, z1), 'rgba(0,0,0,0.3)');
-                        drawLine(project(b.x, y, z1), project(b.x + b.l, y, z1), 'rgba(0,0,0,0.35)');
-                    }
-                }
+                tbody.appendChild(tr);
             });
         }
-
-        if (placedItems && placedItems.length > 0) {
-            let cogPt = project(cogX, validContW / 2, validContH / 2);
-            ctx.beginPath(); ctx.arc(cogPt.x, cogPt.y, 5.5, 0, 2*Math.PI);
-            ctx.fillStyle = '#ef4444'; ctx.fill();
-            ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke();
-            ctx.fillStyle = '#ffffff'; ctx.font = 'bold 9px JetBrains Mono'; ctx.fillText('⌖ CoG', cogPt.x - 12, cogPt.y - 9);
-        }
     }
 
-    function initCanvasInteractions() {
-        const canvas = document.getElementById('contCanvas');
-        if (!canvas) return;
-        canvas.addEventListener('mousedown', (e) => { isDragging = true; startX = e.clientX - panX; startY = e.clientY - panY; });
-        window.addEventListener('mousemove', (e) => { if (isDragging) { panX = e.clientX - startX; panY = e.clientY - startY; if (lastRenderData) performRender(lastRenderData); } });
-        window.addEventListener('mouseup', () => { isDragging = false; });
-        canvas.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            zoomLevel = Math.max(0.4, Math.min(6, zoomLevel * (e.deltaY < 0 ? 1.1 : 0.9)));
-            if (lastRenderData) performRender(lastRenderData);
-        }, { passive: false });
-    }
-
-    function resetView() { panX = 0; panY = 0; zoomLevel = 1; if (lastRenderData) performRender(lastRenderData); }
-
-    // =========================================================================
-    // FORM VE MODAL AKSİYONLARI
-    // =========================================================================
-    function populateSelects() {
-        const select = document.getElementById('skuSelect');
-        if (!select) return;
-        select.innerHTML = "";
-        skuDatabase.forEach((sku, idx) => {
-            select.options.add(new Option(`${sku.shape === 'round' ? '⚪' : '⏹'} ${sku.name} (${sku.W}x${sku.L}x${sku.H})`, idx));
-        });
-    }
-
-    function populateSKU() {
-        const idx = parseInt(document.getElementById('skuSelect')?.value) || 0;
-        const sku = skuDatabase[idx];
-        if (!sku) return;
-        const boxLEl = document.getElementById('boxL'); if (boxLEl) boxLEl.value = sku.L;
-        const boxWEl = document.getElementById('boxW'); if (boxWEl) boxWEl.value = sku.W;
-        const boxHEl = document.getElementById('boxH'); if (boxHEl) boxHEl.value = sku.H;
-        const boxWtEl = document.getElementById('boxWt'); if (boxWtEl) boxWtEl.value = sku.Wt;
-
-        setElText('lblBoxW', sku.shape === 'round' ? 'Çap (mm)' : 'En (mm)');
-        setElText('lblBoxL', sku.shape === 'round' ? 'Çap (mm)' : 'Boy (mm)');
-    }
-
-    function updateVehicleDims() {
-        const vType = document.getElementById('vehicleType')?.value || '20DC';
-        const vSpec = VEHICLE_SPECS[vType] || VEHICLE_SPECS['20DC'];
-        const mWEl = document.getElementById('maxWgt'); if (mWEl) mWEl.value = vSpec.maxWgt;
-        syncOrderTitleToPrint();
-    }
-
-    function autoSyncSingleTargetCapacity() {
-        const vType = document.getElementById('vehicleType')?.value || '20DC';
-        const vSpec = VEHICLE_SPECS[vType] || VEHICLE_SPECS['20DC'];
-        const sku = skuDatabase[parseInt(document.getElementById('skuSelect')?.value) || 0];
-        if (!sku) return;
-
-        const maxWgt = parseInt(document.getElementById('maxWgt')?.value) || vSpec.maxWgt;
-        let effL = vSpec.L - 10 - 80;
-        let effW = vSpec.W - 10;
-        if (vType === 'TIR' && document.getElementById('optFrontCurve')?.checked) effL -= 100;
-        if (document.getElementById('optAirbag')?.checked) effW -= 80;
-        if (document.getElementById('optLashing')?.checked) effL -= 150;
-
-        const plan = findOptimalFloorPlan(effW, effL, vSpec.H, vSpec.doorH, sku, maxWgt, vSpec.isContainer);
-        const totalMax = plan ? plan.maxBoxes : Math.floor(maxWgt / sku.Wt);
-
-        const targetEl = document.getElementById('targetBoxes');
-        if (!isUserDefinedTarget || targetEl?.value === '') {
-            if (targetEl) targetEl.value = totalMax;
-        }
-        setElText('capacityHintBadge', `Kapasite: ${totalMax} Adet`);
-    }
-
-    function switchTab(mode) {
-        currentMode = mode;
-        const tabS = document.getElementById('tab-single'); if (tabS) tabS.className = mode === 'single' ? 'tab-btn active text-center' : 'tab-btn text-slate-500 text-center';
-        const tabM = document.getElementById('tab-mixed'); if (tabM) tabM.className = mode === 'mixed' ? 'tab-btn active text-center' : 'tab-btn text-slate-500 text-center';
-        const panS = document.getElementById('panel-single'); if (panS) panS.style.display = mode === 'single' ? 'block' : 'none';
-        const panM = document.getElementById('panel-mixed'); if (panM) panM.style.display = mode === 'mixed' ? 'block' : 'none';
-        if (mode === 'single') autoSyncSingleTargetCapacity();
-        debouncedRunEngine();
-    }
-
-    function syncOrderTitleToPrint() {
-        const titleVal = document.getElementById('orderTitle')?.value.trim() || 'İsimsiz Sevk';
-    }
-
-    function onVehicleChange() {
-        isUserDefinedTarget = false;
-        const targetEl = document.getElementById('targetBoxes');
-        if (targetEl) targetEl.value = '';
-        updateVehicleDims();
-        autoSyncSingleTargetCapacity();
-        debouncedRunEngine();
-    }
-
-    function onSkuSelectChanged() {
-        isUserDefinedTarget = false;
-        const targetEl = document.getElementById('targetBoxes');
-        if (targetEl) targetEl.value = '';
-        populateSKU();
-        autoSyncSingleTargetCapacity();
-        debouncedRunEngine();
-    }
-
-    let draggedIndex = null;
-
-    function renderMixedList() {
-        const list = document.getElementById('mixedList');
-        if (!list) return;
-        list.innerHTML = '';
-
-        mixedItemsState.forEach((item, idx) => {
-            const row = document.createElement('div');
-            row.className = "mixed-row p-2.5 bg-white border border-slate-200/80 rounded-xl shadow-2xs flex flex-col gap-2 transition hover:border-slate-400 select-none cursor-default";
-            row.draggable = true;
-            row.dataset.index = idx;
-
-            let options = skuDatabase.map((s, i) => `<option value="${i}" ${i === item.skuIdx ? 'selected' : ''}>${s.shape === 'round' ? '⚪' : '⏹'} ${escapeHtml(s.name)} (${s.W}x${s.L}x${s.H})</option>`).join('');
-            const badgeText = idx === 0 ? "1. Blok (Ön Duvar / Ayna)" : `${idx + 1}. Blok`;
-
-            row.innerHTML = `
-                <div class="flex items-center justify-between gap-2 border-b border-slate-100 pb-1.5">
-                    <div class="flex items-center gap-1.5">
-                        <span class="drag-handle text-slate-400 hover:text-slate-800 font-bold px-1 text-base cursor-grab active:cursor-grabbing">⋮⋮</span>
-                        <span class="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">${badgeText}</span>
-                    </div>
-                    <button onclick="removeMixedRow(${idx})" class="text-rose-400 hover:text-rose-600 font-bold px-1.5 text-xs">✕</button>
-                </div>
-                <div class="flex gap-2 items-center">
-                    <select class="w-[62%] p-1.5 border rounded-lg text-xs font-semibold bg-slate-50" onchange="onMixedSkuChange(${idx}, this.value)">${options}</select>
-                    <input type="number" class="w-[38%] p-1.5 border rounded-lg text-xs font-bold text-slate-900 bg-slate-50 font-mono" placeholder="Adet" value="${item.count}" oninput="onMixedCountChange(${idx}, this.value)">
-                </div>
-            `;
-
-            row.addEventListener('dragstart', (e) => { draggedIndex = idx; e.dataTransfer.effectAllowed = 'move'; });
-            row.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
-            row.addEventListener('drop', (e) => {
-                e.preventDefault();
-                const targetIndex = parseInt(row.dataset.index);
-                if (draggedIndex !== null && draggedIndex !== targetIndex) {
-                    const movedItem = mixedItemsState.splice(draggedIndex, 1)[0];
-                    mixedItemsState.splice(targetIndex, 0, movedItem);
-                    renderMixedList();
-                    debouncedRunEngine();
-                }
+    async function updateUserRole(targetUserId, newRole) {
+        ensureSupabaseClient();
+        if (!supabaseClient) return;
+        try {
+            const { error } = await supabaseClient.rpc('admin_set_user_role', {
+                target_user_id: targetUserId,
+                new_role: newRole
             });
-            list.appendChild(row);
-        });
-    }
-
-    function addNewMixedRow() {
-        mixedItemsState.push({ skuIdx: 0, count: 100 });
-        renderMixedList();
-        debouncedRunEngine();
-    }
-
-    function removeMixedRow(idx) {
-        if (mixedItemsState.length > 1) {
-            mixedItemsState.splice(idx, 1);
-            renderMixedList();
-            debouncedRunEngine();
-        } else {
-            alert("Karma yük için en az bir ürün satırı bulunmalıdır.");
+            if (error) {
+                const { error: updErr } = await supabaseClient.from('profiles').update({ role: newRole }).eq('id', targetUserId);
+                if (updErr) throw updErr;
+            }
+            alert("✓ Role updated successfully: " + newRole);
+            openAdminUsersModal();
+        } catch (e) {
+            alert("Role update error: " + (e.message || "Insufficient permission."));
         }
     }
 
-    function onMixedSkuChange(idx, val) {
-        mixedItemsState[idx].skuIdx = parseInt(val) || 0;
-        debouncedRunEngine();
-    }
-
-    function onMixedCountChange(idx, val) {
-        mixedItemsState[idx].count = Math.max(0, parseInt(val) || 0);
-        debouncedRunEngine();
-    }
-
-    // =========================================================================
-    // 📥 VERİTABANI İŞLEMLERİ (ONAYA GÖNDERME & DASHBOARD YÖNETİMİ)
-    // =========================================================================
-    async function saveSimulation(status = 'bekliyor') {
-        if (!supabaseClient || !currentUser) return alert("Lütfen önce giriş yapın.");
-        const orderTitle = document.getElementById('orderTitle')?.value.trim() || 'İsimsiz Sevk';
+    async function saveSimulation(status = 'pending') {
+        ensureSupabaseClient();
+        if (!supabaseClient || !currentUser) return alert("Please log in first.");
+        const orderTitle = document.getElementById('orderTitle')?.value.trim() || 'Untitled Order';
         const vehicleType = document.getElementById('vehicleType')?.value || '20DC';
         
         let totalBoxes = globalFleet.reduce((sum, v) => sum + v.totalBoxes, 0);
@@ -1564,404 +577,18 @@
             }]);
 
             if (error) throw error;
-            alert("✓ Sevk talebi başarıyla Lojistik Ekibine iletildi!");
+            alert("✓ Shipment request submitted to Logistics team!");
         } catch (e) {
-            alert("Kayıt hatası: " + (e.message || "Talep kaydedilemedi."));
+            alert("Save error: " + (e.message || "Failed to submit."));
         }
-    }
-
-    async function openDashboard() {
-        openModal('adminDashboardModal');
-        const table = document.getElementById('dashboardTable');
-        const loading = document.getElementById('dashboardLoading');
-        const tbody = document.getElementById('dashboardTableBody');
-        
-        table.classList.add('hidden');
-        loading.classList.remove('hidden');
-        tbody.innerHTML = '';
-
-        if (!supabaseClient) {
-            loading.textContent = "Veritabanı bağlantısı yok.";
-            return;
-        }
-
-        try {
-            const role = currentUserProfile?.role || 'sales';
-            let query = supabaseClient.from('sevk_talepleri').select(`
-                *,
-                profiles:user_id (full_name, role)
-            `).order('created_at', { ascending: false });
-
-            if (role === 'sales') {
-                query = query.eq('user_id', currentUser.id);
-            }
-
-            const { data, error } = await query;
-            if (error) throw error;
-
-            if (!data || data.length === 0) {
-                loading.textContent = "Henüz sevk talebi kaydı bulunmuyor.";
-                return;
-            }
-
-            loading.classList.add('hidden');
-            table.classList.remove('hidden');
-
-            data.forEach(item => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 transition";
-                
-                let badgeClass = "bg-amber-100 text-amber-800";
-                let statusLabel = "Bekliyor";
-                if (item.status === 'onaylandi') { badgeClass = "bg-emerald-100 text-emerald-800"; statusLabel = "Onaylandı"; }
-                else if (item.status === 'duzeltme_istendi') { badgeClass = "bg-purple-100 text-purple-800"; statusLabel = "Düzeltme İstendi"; }
-                else if (item.status === 'reddedildi') { badgeClass = "bg-rose-100 text-rose-800"; statusLabel = "Reddedildi"; }
-
-                const safeTitle = escapeHtml(item.order_title);
-                const safeName = escapeHtml(item.profiles?.full_name || 'Bilinmiyor');
-                const safeNotes = escapeHtml(item.reviewer_notes || '-');
-                const dateStr = new Date(item.created_at).toLocaleDateString('tr-TR');
-
-                tr.innerHTML = `
-                    <td class="p-3 text-slate-500 font-mono">${dateStr}</td>
-                    <td class="p-3 font-bold text-slate-900">${safeTitle}</td>
-                    <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${badgeClass}">${statusLabel}</span></td>
-                    <td class="p-3 text-slate-700">${safeName}</td>
-                    <td class="p-3 font-mono">${item.vehicle_type} • ${item.total_boxes} Koli</td>
-                    <td class="p-3 text-slate-500">${safeNotes}</td>
-                    <td class="p-3 text-center">
-                        <button onclick="loadTalepIntoWorkspace(${item.id})" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-2.5 py-1 rounded-lg transition text-[11px]">
-                            🔍 İncele
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-
-        } catch (e) {
-            loading.textContent = "Talepler yüklenemedi: " + (e.message || "");
-        }
-    }
-
-    async function loadTalepIntoWorkspace(talepId) {
-        closeDashboard();
-        try {
-            const { data, error } = await supabaseClient.from('sevk_talepleri').select('*').eq('id', talepId).single();
-            if (error || !data) return alert("Talep bulunamadı.");
-
-            currentReviewTalepId = data.id;
-            document.getElementById('orderTitle').value = data.order_title;
-            document.getElementById('vehicleType').value = data.vehicle_type;
-
-            if (data.load_manifest && Array.isArray(data.load_manifest)) {
-                if (data.load_manifest.length === 1 && !data.load_manifest[0].blockName) {
-                    switchTab('single');
-                    document.getElementById('skuSelect').value = data.load_manifest[0].skuIdx || 0;
-                    document.getElementById('targetBoxes').value = data.load_manifest[0].count;
-                } else {
-                    switchTab('mixed');
-                    mixedItemsState = data.load_manifest;
-                    renderMixedList();
-                }
-            }
-
-            onVehicleChange();
-
-            const role = currentUserProfile?.role || 'sales';
-            if (role === 'logistics' || role === 'admin') {
-                const bar = document.getElementById('activeReviewBar');
-                const meta = document.getElementById('reviewBarTalepMeta');
-                meta.textContent = `Talep #${data.id} - ${data.order_title}`;
-                bar.classList.remove('hidden');
-            }
-
-        } catch (e) {
-            alert("Yükleme hatası: " + e.message);
-        }
-    }
-
-    function decideReviewAction(actionType) {
-        if (!currentReviewTalepId) return;
-        document.getElementById('pendingActionType').value = actionType;
-        const modalTitle = document.getElementById('reviewReasonModalTitle');
-        modalTitle.textContent = actionType === 'onaylandi' ? "Sevk Onayı" : (actionType === 'duzeltme_istendi' ? "Düzeltme Talebi" : "Sevk Reddi");
-        openModal('reviewReasonModal');
-    }
-
-    async function executeFinalDecision() {
-        const actionType = document.getElementById('pendingActionType').value;
-        const notes = document.getElementById('reviewReasonInput').value.trim();
-        closeModal('reviewReasonModal');
-
-        if (!currentReviewTalepId || !supabaseClient) return;
-
-        try {
-            const { error } = await supabaseClient.from('sevk_talepleri').update({
-                status: actionType,
-                reviewer_notes: notes,
-                updated_at: new Date().toISOString()
-            }).eq('id', currentReviewTalepId);
-
-            if (error) throw error;
-            alert("✓ Sevk durumu güncellendi: " + actionType);
-            exitReviewMode();
-        } catch (e) {
-            alert("Güncelleme yetki hatası: " + (e.message || "İşlem yapılamadı."));
-        }
-    }
-
-    // =========================================================================
-    // 👑 ADMİN KULLANICI & ROL YÖNETİM MODAL FONKSİYONLARI (out_ UYUMLU)
-    // =========================================================================
-    async function openAdminUsersModal() {
-        openModal('adminUsersModal');
-        const table = document.getElementById('adminUsersTable');
-        const loading = document.getElementById('adminUsersLoading');
-        const tbody = document.getElementById('adminUsersTableBody');
-
-        table.classList.add('hidden');
-        loading.classList.remove('hidden');
-        loading.textContent = "Kullanıcı listesi yükleniyor...";
-        tbody.innerHTML = '';
-
-        if (!supabaseClient) {
-            loading.textContent = "Veritabanı bağlantısı yok.";
-            return;
-        }
-
-        try {
-            const { data, error } = await supabaseClient.rpc('admin_list_users');
-            if (error) throw error;
-
-            if (!data || data.length === 0) {
-                loading.textContent = "Kayıtlı kullanıcı bulunamadı.";
-                return;
-            }
-
-            loading.classList.add('hidden');
-            table.classList.remove('hidden');
-
-            data.forEach(user => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 transition";
-                
-                const uId = user.out_user_id || user.user_id;
-                const uEmail = user.out_email || user.email;
-                const uName = user.out_full_name || user.full_name;
-                const uRole = user.out_role || user.role;
-                const uDate = user.out_created_at || user.created_at;
-
-                const isCurrentSelf = (uId === currentUser.id);
-                const safeName = escapeHtml(uName);
-                const safeEmail = escapeHtml(uEmail);
-                const dateStr = uDate ? new Date(uDate).toLocaleDateString('tr-TR') : '-';
-
-                tr.innerHTML = `
-                    <td class="p-3 font-bold text-slate-900">${safeName}</td>
-                    <td class="p-3 font-mono text-slate-600">${safeEmail}</td>
-                    <td class="p-3 text-slate-500 font-mono">${dateStr}</td>
-                    <td class="p-3 text-center">
-                        <select onchange="updateUserRole('${uId}', this.value)" class="p-1.5 border rounded-lg text-xs font-bold ${uRole === 'admin' ? 'bg-purple-50 text-purple-900 border-purple-300' : (uRole === 'logistics' ? 'bg-indigo-50 text-indigo-900 border-indigo-300' : 'bg-slate-50 text-slate-800 border-slate-300')}">
-                            <option value="sales" ${uRole === 'sales' ? 'selected' : ''}>Satış Ekibi</option>
-                            <option value="logistics" ${uRole === 'logistics' ? 'selected' : ''}>Lojistik & Saha</option>
-                            <option value="admin" ${uRole === 'admin' ? 'selected' : ''}>Yönetici (Admin)</option>
-                        </select>
-                        ${isCurrentSelf ? '<span class="text-[9px] text-slate-400 block font-semibold mt-0.5">(Siz)</span>' : ''}
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-
-        } catch (e) {
-            loading.textContent = "Kullanıcılar getirilemedi: " + (e.message || "");
-        }
-    }
-
-    async function updateUserRole(targetUserId, newRole) {
-        if (!supabaseClient) return;
-        try {
-            const { data, error } = await supabaseClient.rpc('admin_set_user_role', {
-                target_user_id: targetUserId,
-                new_role: newRole
-            });
-            if (error) throw error;
-            alert("✓ Rol başarıyla güncellendi: " + newRole);
-            openAdminUsersModal();
-        } catch (e) {
-            alert("Rol güncelleme hatası: " + (e.message || "Yetki yetersiz."));
-        }
-    }
-
-    // =========================================================================
-    // 🔐 GÜÇLENDİRİLMİŞ SUPABASE OTURUM & GİRİŞ YÖNETİMİ
-    // =========================================================================
-    function switchAuthTab(mode) {
-        authMode = mode;
-        const btnLogin = document.getElementById('authTabLogin');
-        const btnReg = document.getElementById('authTabRegister');
-        const regFields = document.getElementById('registerFields');
-        const submitBtn = document.getElementById('authSubmitBtn');
-        const err = document.getElementById('authErrorMsg');
-        const scs = document.getElementById('authSuccessMsg');
-        err.classList.add('hidden');
-        scs.classList.add('hidden');
-
-        if (mode === 'login') {
-            btnLogin.className = "flex-1 py-2 font-bold text-xs rounded-lg transition-all bg-white text-slate-900 shadow-sm";
-            btnReg.className = "flex-1 py-2 font-bold text-xs rounded-lg text-slate-500 hover:text-slate-900 transition-all";
-            regFields.classList.add('hidden');
-            submitBtn.innerText = "Giriş Yap";
-        } else {
-            btnReg.className = "flex-1 py-2 font-bold text-xs rounded-lg transition-all bg-white text-slate-900 shadow-sm";
-            btnLogin.className = "flex-1 py-2 font-bold text-xs rounded-lg text-slate-500 hover:text-slate-900 transition-all";
-            regFields.classList.remove('hidden');
-            submitBtn.innerText = "Hesap Oluştur";
-        }
-    }
-
-    async function handleAuthSubmit() {
-        const errLabel = document.getElementById('authErrorMsg');
-        const scsLabel = document.getElementById('authSuccessMsg');
-        errLabel.classList.add('hidden');
-        scsLabel.classList.add('hidden');
-
-        if (!supabaseClient) {
-            errLabel.textContent = "Veritabanı bağlantısı kurulamadı.";
-            errLabel.classList.remove('hidden');
-            return;
-        }
-
-        const email = document.getElementById('authEmail').value.trim();
-        const password = document.getElementById('authPassword').value;
-        if (!email || !password) {
-            errLabel.textContent = "Lütfen kurumsal e-posta ve şifrenizi girin.";
-            errLabel.classList.remove('hidden');
-            return;
-        }
-
-        const btn = document.getElementById('authSubmitBtn');
-        btn.innerText = "Giriş yapılıyor...";
-        btn.disabled = true;
-
-        try {
-            if (authMode === 'login') {
-                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-                if (error) throw error;
-                handleAuthChange(data.user);
-            } else {
-                const fullName = document.getElementById('regFullName').value.trim() || 'Kullanıcı';
-                const { data, error } = await supabaseClient.auth.signUp({
-                    email, password, options: { data: { full_name: fullName, role: 'sales' } }
-                });
-                if (error) throw error;
-                if (data?.session) {
-                    handleAuthChange(data.user);
-                } else {
-                    scsLabel.textContent = "Hesabınız başarıyla oluşturuldu! Şimdi giriş yapabilirsiniz.";
-                    scsLabel.classList.remove('hidden');
-                    switchAuthTab('login');
-                }
-            }
-        } catch (e) {
-            errLabel.textContent = "Hata: " + (e.message || "Giriş işlemi başarısız.");
-            errLabel.classList.remove('hidden');
-        } finally {
-            btn.innerText = authMode === 'login' ? "Giriş Yap" : "Hesap Oluştur";
-            btn.disabled = false;
-        }
-    }
-
-    function handleAuthChange(user) {
-        currentUser = user;
-        const landingPage = document.getElementById('authLandingPage');
-        const protectedApp = document.getElementById('protectedApp');
-
-        if (user) {
-            landingPage.classList.add('hidden');
-            protectedApp.classList.remove('hidden');
-            loadUserProfile(user.id);
-            runEngine();
-        } else {
-            landingPage.classList.remove('hidden');
-            protectedApp.classList.add('hidden');
-            currentUserProfile = null;
-        }
-    }
-
-    async function loadUserProfile(userId) {
-        if (!currentUser) return;
-        try {
-            const { data, error } = await supabaseClient.from('profiles').select('role, full_name').eq('id', userId).single();
-            if (!error && data) {
-                currentUserProfile = data;
-            } else {
-                const metaRole = currentUser.user_metadata?.role || 'admin';
-                const metaName = currentUser.user_metadata?.full_name || currentUser.email;
-                currentUserProfile = { role: metaRole, full_name: metaName };
-            }
-        } catch (e) {
-            currentUserProfile = { 
-                role: currentUser.user_metadata?.role || 'admin', 
-                full_name: currentUser.email 
-            };
-        }
-        applyRolePermissions();
-    }
-
-    function applyRolePermissions() {
-        const role = currentUserProfile?.role || 'sales';
-        const roleBadge = document.getElementById('userRoleBadge');
-        const btnSales = document.getElementById('btnSubmitSales');
-        const btnAdminUsers = document.getElementById('btnAdminUsers');
-
-        setElText('userEmailLabel', currentUserProfile?.full_name || currentUser?.email || 'Kullanıcı');
-
-        if (role === 'admin') {
-            if (roleBadge) {
-                roleBadge.innerText = "YÖNETİCİ";
-                roleBadge.className = "px-2 py-0.5 rounded-full font-black text-[9px] bg-purple-500/20 text-purple-400 border border-purple-500/30 uppercase tracking-wider";
-            }
-            if (btnAdminUsers) {
-                btnAdminUsers.classList.remove('hidden');
-                btnAdminUsers.classList.add('flex');
-            }
-            setElText('dashboardBtnText', "📥 Sevk Talepleri");
-            if (btnSales) btnSales.classList.add('hidden');
-        } else if (role === 'logistics') {
-            if (roleBadge) {
-                roleBadge.innerText = "LOJİSTİK & SAHA";
-                roleBadge.className = "px-2 py-0.5 rounded-full font-black text-[9px] bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 uppercase tracking-wider";
-            }
-            if (btnAdminUsers) btnAdminUsers.classList.add('hidden');
-            setElText('dashboardBtnText', "📥 Gelen Sevk Talepleri");
-            if (btnSales) btnSales.classList.add('hidden');
-        } else {
-            if (roleBadge) {
-                roleBadge.innerText = "SATIŞ EKİBİ";
-                roleBadge.className = "px-2 py-0.5 rounded-full font-black text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 uppercase tracking-wider";
-            }
-            if (btnAdminUsers) btnAdminUsers.classList.add('hidden');
-            setElText('dashboardBtnText', "📥 Sevk Taleplerim");
-            if (btnSales) {
-                btnSales.classList.remove('hidden');
-                btnSales.classList.add('flex');
-            }
-        }
-    }
-
-    async function handleLogout() {
-        if (supabaseClient) {
-            try { await supabaseClient.auth.signOut(); } catch(e){}
-        }
-        handleAuthChange(null);
     }
 
     function exportCSV() {
-        if (!globalFleet || !globalFleet[0] || globalFleet[0].placedItems.length === 0) return alert("Dışa aktarılacak aktif yük verisi bulunamadı.");
-        let orderRaw = document.getElementById('orderTitle')?.value || 'Isimsiz';
+        if (!globalFleet || !globalFleet[0] || globalFleet[0].placedItems.length === 0) return alert("No active cargo data to export.");
+        let orderRaw = document.getElementById('orderTitle')?.value || 'Untitled';
         let safeOrder = orderRaw.replace(/^[=+\-@]/, "'$&").replace(/"/g, '""');
         
-        let csv = "\uFEFFArac_No,Siparis_Basligi,SKU_Adi,Koli_Adedi,Agirlik_kg\n";
+        let csv = "\uFEFFVehicle_No,Order_Title,SKU_Name,Quantity,Weight_kg\n";
         globalFleet.forEach((f, i) => {
             f.placedItems.forEach(it => { 
                 let safeSku = (it.id || '').replace(/^[=+\-@]/, "'$&").replace(/"/g, '""');
@@ -1970,62 +597,48 @@
         });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-        a.download = `Elita_Yukleme_Manifestosu.csv`;
+        a.download = `Elita_OptiLoad_Manifest.csv`;
         a.click();
     }
 
     function exportPDF() {
-        html2pdf().set({ margin: 10, filename: 'Elita_Yukleme_Manifestosu.pdf', html2canvas: { scale: 2 }, jsPDF: { orientation: 'landscape' } }).from(document.getElementById('printArea')).save();
+        if (typeof html2pdf === 'undefined') return window.print();
+        html2pdf().set({ margin: 10, filename: 'Elita_OptiLoad_Manifest.pdf', html2canvas: { scale: 2 }, jsPDF: { orientation: 'landscape' } }).from(document.getElementById('printArea')).save();
     }
 
-    // =========================================================================
-    // 🚀 BAŞLATICI YAŞAM DÖNGÜSÜ
-    // =========================================================================
-    function initApp() {
-        if (window.supabase) {
-            try {
-                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-                supabaseClient.auth.getSession().then(({ data: { session } }) => {
-                    handleAuthChange(session?.user || null);
-                }).catch(() => {
-                    handleAuthChange(null);
-                });
+    function debouncedRunEngine() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(runEngine, 40);
+    }
 
-                supabaseClient.auth.onAuthStateChange((_event, session) => {
-                    handleAuthChange(session?.user || null);
-                });
-            } catch (e) {
-                handleAuthChange(null);
-            }
-        } else {
-            handleAuthChange(null);
-        }
-
-        skuDatabase = [...defaultSkuDatabase];
+    function initWorkspace() {
         populateSelects();
-        
-        const skuSel = document.getElementById('skuSelect');
-        if (skuSel) skuSel.value = "5"; 
         populateSKU();
-
         renderMixedList();
         updateVehicleDims();
-        initCanvasInteractions();
+        if (!canvasInitialized) {
+            initCanvasInteractions();
+            canvasInitialized = true;
+        }
         autoSyncSingleTargetCapacity();
-        syncOrderTitleToPrint();
+    }
 
-        runEngine();
+    function initApp() {
+        initWorkspace();
+        ensureSupabaseClient();
+        if (supabaseClient) {
+            supabaseClient.auth.getSession().then(({ data: { session } }) => {
+                if (session?.user) {
+                    enterApplication(session.user);
+                }
+            }).catch(() => {});
+        }
     }
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initApp);
     } else {
         initApp();
-    }
-
-    function debouncedRunEngine() {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(runEngine, 50);
     }
 </script>
 </body>
