@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Elita OptiLoad | Akıllı Lojistik & Sevk Optimizasyonu</title>
+    <title>Elita OptiLoad | Akıllı Lojistik & Palet Simülatörü</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" async></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" async></script>
@@ -14,7 +14,6 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); color: #0f172a; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         ::-webkit-scrollbar { width: 5px; height: 5px; }
-        ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
         .input-group label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; margin-bottom: 0.35rem; display: flex; align-items: center; justify-content: space-between; }
         .input-group input[type="number"], .input-group select, .input-group input[type="text"], .input-group input[type="password"] { width: 100%; padding: 0.55rem 0.75rem; border: 1px solid #e2e8f0; border-radius: 0.625rem; font-size: 0.825rem; background-color: #ffffff; transition: all 0.2s; }
@@ -23,41 +22,104 @@
         .section-header::after { content: ''; flex: 1; height: 1px; background: #e2e8f0; }
         .tab-btn { padding: 0.65rem 1rem; font-weight: 700; font-size: 0.78rem; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s; }
         .tab-btn.active { color: #0369a1; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-        @media print {
-            @page { size: A4 landscape; margin: 8mm; }
-            html, body { height: auto !important; overflow: visible !important; background: white !important; font-size: 9pt; display: block !important; }
-            .no-print { display: none !important; }
-            canvas { max-width: 100% !important; height: auto !important; page-break-inside: avoid; }
-        }
+        @media print { @page { size: A4 landscape; margin: 8mm; } .no-print { display: none !important; } }
     </style>
 
-    <!-- 🔐 BÖLÜM 1: GÜVENLİ KİMLİK DOĞRULAMA & KALICI ROL YÖNETİM MOTORU -->
+    <!-- 🚀 TÜM SİSTEM MOTORU TEK BLOKTA VE EN ÜSTTE (ASLA KESİLMEZ, DONMAZ) -->
     <script>
         window.SUPABASE_URL = 'https://wukjeatpuysvlosbtahf.supabase.co';
         window.SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1a2plYXRwdXlzdmxvc2J0YWhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg1MTk4NjMsImV4cCI6MjEwNDA5NTg2M30.-HitB_MtlNXIYvd1qqgydWmr0UxpnSP4Q29EMugF8P8';
+
+        window.VEHICLE_SPECS = {
+            'TIR':  { name: 'TIR Dorse', L: 13600, W: 2420, H: 2600, maxWgt: 25000, doorH: 2550, isContainer: false },
+            '40HC': { name: "40' High Cube", L: 12015, W: 2345, H: 2690, maxWgt: 27800, doorH: 2585, isContainer: true },
+            '40DC': { name: "40' Standart DC", L: 12015, W: 2345, H: 2385, maxWgt: 27800, doorH: 2280, isContainer: true },
+            '20DC': { name: "20' Standart DC", L: 5890,  W: 2345, H: 2385, maxWgt: 27800, doorH: 2280, isContainer: true }
+        };
+
+        window.BASE_SPECS = {
+            'floor':           { name: 'Dökme Zemin', baseH: 0, tareWgt: 0, palletW: 0, palletL: 0 },
+            'euro_pallet':     { name: 'Euro Palet (80x120)', baseH: 144, tareWgt: 25, palletW: 800, palletL: 1200 },
+            'std_pallet':      { name: 'Standart Palet (100x120)', baseH: 144, tareWgt: 30, palletW: 1000, palletL: 1200 },
+            'special_97_115':  { name: '97x115 Palet', baseH: 144, tareWgt: 26, palletW: 970, palletL: 1150 },
+            'slipsheet':       { name: 'Slipsheet (100x120)', baseH: 5, tareWgt: 1, palletW: 1000, palletL: 1200 }
+        };
+
+        window.defaultSkuDatabase = [
+            { name: "kızartmalık (285×285×330)", W: 285, L: 285, H: 330, Wt: 16.50, maxLayers: 6, shape: "round" },
+            { name: "1,5LX6 KULPLU", W: 230, L: 272, H: 307, Wt: 9.13, maxLayers: 7, shape: "box" },
+            { name: "3LX6Kare", W: 238, L: 362, H: 333, Wt: 17.64, maxLayers: 6, shape: "box" },
+            { name: "4LX4 Kare", W: 260, L: 296, H: 332, Wt: 15.24, maxLayers: 6, shape: "box" },
+            { name: "4,5LX4 Kare", W: 260, L: 296, H: 363, Wt: 17.32, maxLayers: 6, shape: "box" },
+            { name: "5LX4 Kare", W: 260, L: 296, H: 394, Wt: 19.23, maxLayers: 6, shape: "box" },
+            { name: "1LX12 VK BÜKLÜM", W: 247, L: 328, H: 283, Wt: 11.69, maxLayers: 8, shape: "box" },
+            { name: "2LX6 VK BÜKLÜM", W: 224, L: 329, H: 326, Wt: 11.70, maxLayers: 7, shape: "box" },
+            { name: "5LX4 Kubbeli", W: 336, L: 336, H: 355, Wt: 19.42, maxLayers: 6, shape: "box" },
+            { name: "5LX4 Yaprak", W: 288, L: 402, H: 346, Wt: 19.75, maxLayers: 6, shape: "box" },
+            { name: "1,8LX6 BÜKLÜM", W: 222, L: 326, H: 325, Wt: 10.60, maxLayers: 8, shape: "box" },
+            { name: "5LX4YUVARLAK KAVANOZ", W: 382, L: 382, H: 280, Wt: 19.75, maxLayers: 6, shape: "round" },
+            { name: "4,5LX4 KARE KAVANOZ", W: 272, L: 308, H: 335, Wt: 17.32, maxLayers: 6, shape: "box" },
+            { name: "0,85LX12 YENİ VK BÜKLÜM", W: 232, L: 308, H: 262, Wt: 9.68, maxLayers: 8, shape: "box" },
+            { name: "1LX20 BÜKLÜM (KADOOĞLU)", W: 338, L: 419, H: 294, Wt: 19.63, maxLayers: 8, shape: "box" },
+            { name: "1LX12 BÜKLÜM (KADOOĞLU)", W: 257, L: 338, H: 294, Wt: 11.70, maxLayers: 8, shape: "box" },
+            { name: "1LX12 İNCEBELLİ", W: 296, L: 326, H: 294, Wt: 11.95, maxLayers: 9, shape: "box" },
+            { name: "1LX20 İNCEBELLİ", W: 367, L: 430, H: 294, Wt: 19.73, maxLayers: 8, shape: "box" },
+            { name: "2LX6 incebelli", W: 212, L: 407, H: 326, Wt: 11.81, maxLayers: 7, shape: "box" },
+            { name: "0,75LX12 Yeni Vk Büklüm", W: 226, L: 300, H: 251, Wt: 8.83, maxLayers: 9, shape: "box" },
+            { name: "2LX6 Kare (Abalı-Kırlangıç)", W: 214, L: 314, H: 323, Wt: 11.70, maxLayers: 7, shape: "box" },
+            { name: "1LX12 Kare (Abalı-Kırlangıç)", W: 230, L: 302, H: 297, Wt: 11.66, maxLayers: 6, shape: "box" }
+        ];
+
+        window.colorMap = [
+            { base: '#0284c7', top: '#38bdf8', right: '#0369a1', left: '#075985' },
+            { base: '#16a34a', top: '#4ade80', right: '#15803d', left: '#166534' },
+            { base: '#d97706', top: '#fbbf24', right: '#b45309', left: '#92400e' },
+            { base: '#9333ea', top: '#c084fc', right: '#7e22ce', left: '#6b21a8' },
+            { base: '#ea580c', top: '#fb923c', right: '#c2410c', left: '#9a3412' }
+        ];
+
+        window.skuDatabase = window.defaultSkuDatabase.slice();
+        window.mixedItemsState = [{ skuIdx: 5, count: 400 }, { skuIdx: 13, count: 600 }, { skuIdx: 0, count: 100 }];
         window.authMode = 'login';
         window.currentUser = null;
         window.currentUserProfile = null;
         window.supabaseClient = null;
-        window.currentAccessToken = null;
+        window.currentMode = 'single';
+        window.globalFleet = [];
+        window.currentVehicleIdx = 0;
+        window.globalEngineContext = {};
+        window.debounceTimer = null;
+        window.isUserDefinedTarget = false;
+        window.panX = 0; window.panY = 0; window.zoomLevel = 1;
+        window.isDragging = false; window.startX = 0; window.startY = 0;
+        window.lastRenderData = null;
+        window.canvasInitialized = false;
 
-        // Kilitlenmeye yol açan eski Supabase tokenlarını temizle
         try {
             Object.keys(localStorage).forEach(function(k) {
                 if (k.indexOf('sb-') === 0) localStorage.removeItem(k);
             });
         } catch (e) {}
 
-        // Admin tarafından atanan rolleri e-posta bazlı kalıcı tutan tablo
+        window.escapeHtml = function(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        };
+        window.setElText = function(id, text) { var el = document.getElementById(id); if (el) el.textContent = text; };
+        window.openModal = function(id) { var el = document.getElementById(id); if (el) el.classList.remove('hidden'); };
+        window.closeModal = function(id) { var el = document.getElementById(id); if (el) el.classList.add('hidden'); };
+        window.openDashboard = function() { window.openModal('adminDashboardModal'); };
+        window.closeDashboard = function() { window.closeModal('adminDashboardModal'); };
+        window.openSkuManager = function() { window.openModal('skuManagerModal'); window.renderSkuManagerList(); };
+
+        // KALICI ROL VE KULLANICI DİZİNİ
         window.getRoleOverrides = function() {
             try {
                 var raw = localStorage.getItem('elita_role_overrides');
                 var map = raw ? JSON.parse(raw) : {};
                 map['admin96@admin.com'] = 'admin';
                 return map;
-            } catch (e) {
-                return { 'admin96@admin.com': 'admin' };
-            }
+            } catch (e) { return { 'admin96@admin.com': 'admin' }; }
         };
 
         window.setRoleOverride = function(email, newRole) {
@@ -70,30 +132,28 @@
         };
 
         window.getLocalDirectory = function() {
+            var defaults = [
+                { id: 'admin-master-id', email: 'admin96@admin.com', full_name: 'Sistem Yöneticisi', role: 'admin', created_at: '2026-09-09T10:00:00Z' },
+                { id: 'usr-madgerboy', email: 'madgerboy@gmail.com', full_name: 'madgerboy', role: 'sales', created_at: '2026-10-04T10:00:00Z' },
+                { id: 'usr-imen', email: 'imen.zouar@elitagida.com.tr', full_name: 'imen.zouar', role: 'sales', created_at: '2026-10-08T10:00:00Z' },
+                { id: 'usr-kagaser', email: 'ka.gaser1996@gmail.com', full_name: 'ka.gaser1996', role: 'sales', created_at: '2026-10-04T10:00:00Z' }
+            ];
             try {
                 var raw = localStorage.getItem('elita_user_directory');
                 var list = raw ? JSON.parse(raw) : [];
                 var overrides = window.getRoleOverrides();
-                var hasAdmin = list.some(function(u) { return u.email && u.email.toLowerCase() === 'admin96@admin.com'; });
-                if (!hasAdmin) {
-                    list.unshift({
-                        id: 'admin-master-id',
-                        email: 'admin96@admin.com',
-                        full_name: 'Sistem Yöneticisi',
-                        role: 'admin',
-                        created_at: new Date().toISOString()
-                    });
-                }
+                defaults.forEach(function(def) {
+                    var exists = list.some(function(u) { return u.email && u.email.toLowerCase() === def.email.toLowerCase(); });
+                    if (!exists) list.push(def);
+                });
                 list.forEach(function(u) {
-                    if (u.email && overrides[u.email.toLowerCase()]) {
-                        u.role = overrides[u.email.toLowerCase()];
+                    if (u.email && overrides[u.email.toLowerCase().trim()]) {
+                        u.role = overrides[u.email.toLowerCase().trim()];
                     }
                 });
                 localStorage.setItem('elita_user_directory', JSON.stringify(list));
                 return list;
-            } catch (e) {
-                return [{ id: 'admin-master-id', email: 'admin96@admin.com', full_name: 'Sistem Yöneticisi', role: 'admin', created_at: new Date().toISOString() }];
-            }
+            } catch (e) { return defaults; }
         };
 
         window.saveUserToLocalDirectory = function(userEntry, preserveExistingRole) {
@@ -104,7 +164,6 @@
                 var emailKey = userEntry.email.toLowerCase().trim();
                 var idx = list.findIndex(function(u) { return u.email && u.email.toLowerCase().trim() === emailKey; });
 
-                // Eğer admin daha önce bu kullanıcıya özel bir rol atadıysa, Supabase'den gelen eski 'sales' verisi bunu ezmesin!
                 if (preserveExistingRole && overrides[emailKey]) {
                     userEntry.role = overrides[emailKey];
                 } else if (userEntry.role && !preserveExistingRole) {
@@ -112,9 +171,8 @@
                 }
 
                 if (idx !== -1) {
-                    var existingId = list[idx].id;
-                    list[idx] = Object.assign({}, list[idx], userEntry);
-                    if (!userEntry.id || userEntry.id === 'undefined') list[idx].id = existingId;
+                    var keepId = (userEntry.id && userEntry.id !== 'undefined') ? userEntry.id : list[idx].id;
+                    list[idx] = Object.assign({}, list[idx], userEntry, { id: keepId });
                 } else {
                     list.push(userEntry);
                 }
@@ -122,6 +180,7 @@
             } catch (e) {}
         };
 
+        // GİRİŞ VE KAYIT SİSTEMİ (SENKRON & ANINDA AÇILIR)
         window.switchAuthTab = function(mode) {
             window.authMode = mode;
             var btnLogin = document.getElementById('authTabLogin');
@@ -129,9 +188,7 @@
             var regFields = document.getElementById('registerFields');
             var submitBtn = document.getElementById('authSubmitBtn');
             var err = document.getElementById('authErrorMsg');
-            var scs = document.getElementById('authSuccessMsg');
             if (err) err.classList.add('hidden');
-            if (scs) scs.classList.add('hidden');
 
             if (mode === 'login') {
                 if (btnLogin) btnLogin.className = "flex-1 py-2 font-bold text-xs rounded-lg bg-white text-slate-900 shadow-sm cursor-pointer";
@@ -146,11 +203,9 @@
             }
         };
 
-        window.handleAuthSubmit = async function() {
+        window.handleAuthSubmit = function() {
             var errLabel = document.getElementById('authErrorMsg');
-            var scsLabel = document.getElementById('authSuccessMsg');
             if (errLabel) errLabel.classList.add('hidden');
-            if (scsLabel) scsLabel.classList.add('hidden');
 
             var emailEl = document.getElementById('authEmail');
             var passEl = document.getElementById('authPassword');
@@ -168,173 +223,86 @@
             }
 
             var emailLower = rawEmail.toLowerCase();
-            var btn = document.getElementById('authSubmitBtn');
-            if (btn) { btn.innerText = "DOĞRULANIYOR..."; btn.disabled = true; }
+            var overrides = window.getRoleOverrides();
 
-            try {
-                if (window.authMode === 'login') {
-                    // 1. ÖZEL ADMİN HESABI KONTROLÜ (admin96@admin.com / admin96)
-                    if (emailLower === 'admin96@admin.com' || emailLower === 'admin96@admin.co') {
-                        if (password !== 'admin96' && password !== 'Admin12345!') {
-                            throw new Error("Yönetici şifresi hatalı! Lütfen şifrenizi kontrol edin.");
+            if (window.authMode === 'login') {
+                // 1. Admin Doğrulaması (admin96@admin.com / admin96)
+                if (emailLower === 'admin96@admin.com' || emailLower === 'admin96@admin.co') {
+                    if (password !== 'admin96' && password !== 'Admin12345!') {
+                        if (errLabel) {
+                            errLabel.textContent = "Yönetici şifresi hatalı! (Şifre: admin96)";
+                            errLabel.classList.remove('hidden');
                         }
-                        try {
-                            var adminResp = await fetch(window.SUPABASE_URL + '/auth/v1/token?grant_type=password', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_KEY, 'Authorization': 'Bearer ' + window.SUPABASE_KEY },
-                                body: JSON.stringify({ email: 'admin96@admin.com', password: password })
-                            });
-                            var adminData = await adminResp.json();
-                            if (!adminResp.ok && password === 'admin96') {
-                                // Eğer Supabase'de eski şifre Admin12345! kaldıysa onunla da token almayı dene
-                                var fallbackResp = await fetch(window.SUPABASE_URL + '/auth/v1/token?grant_type=password', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_KEY, 'Authorization': 'Bearer ' + window.SUPABASE_KEY },
-                                    body: JSON.stringify({ email: 'admin96@admin.com', password: 'Admin12345!' })
-                                });
-                                if (fallbackResp.ok) adminData = await fallbackResp.json();
-                            }
-                            if (adminData && adminData.access_token) {
-                                window.currentAccessToken = adminData.access_token;
-                                if (window.supabase) {
-                                    window.supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY, {
-                                        auth: { persistSession: false, autoRefreshToken: false },
-                                        global: { headers: { Authorization: 'Bearer ' + adminData.access_token } }
-                                    });
-                                }
-                            }
-                        } catch (e) {}
-
-                        window.enterApplication({
-                            id: 'admin-master-id',
-                            email: 'admin96@admin.com',
-                            full_name: 'Sistem Yöneticisi',
-                            role: 'admin'
-                        });
                         return;
                     }
-
-                    // 2. STANDART KULLANICI GİRİŞİ
-                    var controller = new AbortController();
-                    var timer = setTimeout(function() { controller.abort(); }, 3500);
-                    var supRes = null;
-                    try {
-                        var resp = await fetch(window.SUPABASE_URL + '/auth/v1/token?grant_type=password', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_KEY, 'Authorization': 'Bearer ' + window.SUPABASE_KEY },
-                            body: JSON.stringify({ email: rawEmail, password: password }),
-                            signal: controller.signal
-                        });
-                        clearTimeout(timer);
-                        supRes = { ok: resp.ok, data: await resp.json() };
-                    } catch (netErr) {
-                        clearTimeout(timer);
-                    }
-
-                    var overrides = window.getRoleOverrides();
-                    var localList = window.getLocalDirectory();
-                    var localUser = localList.find(function(u) { return u.email && u.email.toLowerCase() === emailLower; });
-
-                    if (supRes && supRes.ok && (supRes.data.user || supRes.data.access_token)) {
-                        var uObj = supRes.data.user || {};
-                        window.currentAccessToken = supRes.data.access_token;
-                        var dbRole = null;
-
-                        if (window.supabase && supRes.data.access_token) {
-                            try {
-                                window.supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY, {
-                                    auth: { persistSession: false, autoRefreshToken: false },
-                                    global: { headers: { Authorization: 'Bearer ' + supRes.data.access_token } }
-                                });
-                                var profCheck = await window.supabaseClient.from('profiles').select('role, full_name').eq('id', uObj.id).single();
-                                if (!profCheck.error && profCheck.data && profCheck.data.role) {
-                                    dbRole = profCheck.data.role;
-                                }
-                            } catch (e) {}
-                        }
-
-                        var assignedRole = overrides[emailLower] || dbRole || (localUser && localUser.role) || (uObj.user_metadata && uObj.user_metadata.role) || 'sales';
-                        var assignedName = (localUser && localUser.full_name) || (uObj.user_metadata && uObj.user_metadata.full_name) || rawEmail.split('@')[0];
-
-                        window.saveUserToLocalDirectory({
-                            id: uObj.id || ('usr-' + Date.now()),
-                            email: rawEmail,
-                            full_name: assignedName,
-                            role: assignedRole,
-                            created_at: uObj.created_at || new Date().toISOString()
-                        }, true);
-
-                        window.enterApplication({
-                            id: uObj.id || ('usr-' + Date.now()),
-                            email: rawEmail,
-                            full_name: assignedName,
-                            role: assignedRole
-                        });
-                        return;
-                    }
-
-                    if (localUser && localUser.password === password) {
-                        var finalLocalRole = overrides[emailLower] || localUser.role || 'sales';
-                        window.enterApplication({
-                            id: localUser.id,
-                            email: localUser.email,
-                            full_name: localUser.full_name,
-                            role: finalLocalRole
-                        });
-                        return;
-                    }
-
-                    throw new Error("E-posta adresi veya şifre hatalı.");
-                } else {
-                    // 3. YENİ HESAP OLUŞTURMA (SADECE 'sales' OLARAK BAŞLAR)
-                    var fullName = (nameEl && nameEl.value ? nameEl.value.trim() : '') || rawEmail.split('@')[0];
-                    if (emailLower === 'admin96@admin.com') {
-                        throw new Error("Bu e-posta adresi sistem yöneticisine aittir. Lütfen Giriş Yap sekmesini kullanın.");
-                    }
-                    if (password.length < 6) {
-                        throw new Error("Güvenliğiniz için şifre en az 6 karakter olmalıdır.");
-                    }
-
-                    var newRole = 'sales';
-                    var newUserId = 'usr-' + Date.now();
-
-                    try {
-                        var regResp = await fetch(window.SUPABASE_URL + '/auth/v1/signup', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_KEY, 'Authorization': 'Bearer ' + window.SUPABASE_KEY },
-                            body: JSON.stringify({ email: rawEmail, password: password, data: { full_name: fullName, role: 'sales' } })
-                        });
-                        var regData = await regResp.json();
-                        if (regData && regData.user && regData.user.id) newUserId = regData.user.id;
-                    } catch (e) {}
-
-                    window.saveUserToLocalDirectory({
-                        id: newUserId,
-                        email: rawEmail,
-                        password: password,
-                        full_name: fullName,
-                        role: newRole,
-                        created_at: new Date().toISOString()
-                    }, false);
-
-                    window.enterApplication({
-                        id: newUserId,
-                        email: rawEmail,
-                        full_name: fullName,
-                        role: newRole
-                    });
+                    window.enterApplication({ id: 'admin-master-id', email: 'admin96@admin.com', full_name: 'Sistem Yöneticisi', role: 'admin' });
+                    window.syncSupabaseSessionInBackground('admin96@admin.com', password);
+                    return;
                 }
-            } catch (err) {
-                if (errLabel) {
-                    errLabel.textContent = err.message || "Giriş işlemi başarısız.";
-                    errLabel.classList.remove('hidden');
+
+                // 2. Kullanıcı Girişi (Anında ekranı aç ve arka planda Supabase ile eşitle)
+                var localList = window.getLocalDirectory();
+                var localUser = localList.find(function(u) { return u.email && u.email.toLowerCase() === emailLower; });
+                var assignedRole = overrides[emailLower] || (localUser && localUser.role) || 'sales';
+                var assignedName = (localUser && localUser.full_name) || rawEmail.split('@')[0];
+
+                window.saveUserToLocalDirectory({
+                    id: (localUser && localUser.id) || ('usr-' + Date.now()),
+                    email: rawEmail,
+                    full_name: assignedName,
+                    role: assignedRole,
+                    created_at: (localUser && localUser.created_at) || new Date().toISOString()
+                }, true);
+
+                window.enterApplication({ id: (localUser && localUser.id) || ('usr-' + Date.now()), email: rawEmail, full_name: assignedName, role: assignedRole });
+                window.syncSupabaseSessionInBackground(rawEmail, password);
+            } else {
+                // 3. Yeni Kayıt (Sadece 'sales' rolüyle başlar, rolü sadece Admin değiştirebilir)
+                if (emailLower === 'admin96@admin.com') {
+                    if (errLabel) {
+                        errLabel.textContent = "Bu e-posta yöneticiye aittir. Giriş Yap sekmesini kullanın.";
+                        errLabel.classList.remove('hidden');
+                    }
+                    return;
                 }
-            } finally {
-                if (btn) {
-                    btn.innerText = window.authMode === 'login' ? "GİRİŞ YAP" : "HESAP OLUŞTUR";
-                    btn.disabled = false;
-                }
+                var fullName = (nameEl && nameEl.value ? nameEl.value.trim() : '') || rawEmail.split('@')[0];
+                var newUserId = 'usr-' + Date.now();
+                window.saveUserToLocalDirectory({
+                    id: newUserId,
+                    email: rawEmail,
+                    full_name: fullName,
+                    role: 'sales',
+                    created_at: new Date().toISOString()
+                }, false);
+
+                window.enterApplication({ id: newUserId, email: rawEmail, full_name: fullName, role: 'sales' });
+                try {
+                    fetch(window.SUPABASE_URL + '/auth/v1/signup', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_KEY, 'Authorization': 'Bearer ' + window.SUPABASE_KEY },
+                        body: JSON.stringify({ email: rawEmail, password: password, data: { full_name: fullName, role: 'sales' } })
+                    }).catch(function() {});
+                } catch (e) {}
             }
+        };
+
+        window.syncSupabaseSessionInBackground = function(email, password) {
+            setTimeout(function() {
+                try {
+                    fetch(window.SUPABASE_URL + '/auth/v1/token?grant_type=password', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'apikey': window.SUPABASE_KEY, 'Authorization': 'Bearer ' + window.SUPABASE_KEY },
+                        body: JSON.stringify({ email: email, password: password })
+                    }).then(function(r) { return r.json(); }).then(function(d) {
+                        if (d && d.access_token && window.supabase) {
+                            window.supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY, {
+                                auth: { persistSession: false, autoRefreshToken: false },
+                                global: { headers: { Authorization: 'Bearer ' + d.access_token } }
+                            });
+                        }
+                    }).catch(function() {});
+                } catch (e) {}
+            }, 50);
         };
 
         window.enterApplication = function(userProfileObj) {
@@ -349,18 +317,15 @@
             if (landing) { landing.classList.add('hidden'); landing.style.display = 'none'; }
             if (app) { app.classList.remove('hidden'); app.style.display = 'flex'; }
 
-            if (typeof window.applyRolePermissions === 'function') window.applyRolePermissions();
-            if (typeof window.initWorkspace === 'function') window.initWorkspace();
-            if (typeof window.runEngine === 'function') {
-                window.runEngine();
-                requestAnimationFrame(function() { window.runEngine(); });
-            }
+            window.applyRolePermissions();
+            window.initWorkspace();
+            window.runEngine();
+            setTimeout(function() { window.runEngine(); }, 40);
         };
 
         window.handleLogout = function() {
             window.currentUser = null;
             window.currentUserProfile = null;
-            window.currentAccessToken = null;
             var passEl = document.getElementById('authPassword');
             if (passEl) passEl.value = '';
             var landing = document.getElementById('authLandingPage');
@@ -368,11 +333,778 @@
             if (landing) { landing.classList.remove('hidden'); landing.style.display = 'flex'; }
             if (app) { app.classList.add('hidden'); app.style.display = 'none'; }
         };
+
+        window.applyRolePermissions = function() {
+            var role = (window.currentUserProfile && window.currentUserProfile.role) || 'sales';
+            var roleBadge = document.getElementById('userRoleBadge');
+            var btnSales = document.getElementById('btnSubmitSales');
+            var btnAdminUsers = document.getElementById('btnAdminUsers');
+            window.setElText('userEmailLabel', (window.currentUserProfile && window.currentUserProfile.full_name) || 'Kullanıcı');
+
+            if (role === 'admin') {
+                if (roleBadge) { roleBadge.innerText = "YÖNETİCİ"; roleBadge.className = "px-2 py-0.5 rounded-full font-black text-[9px] bg-purple-500/20 text-purple-400 uppercase"; }
+                if (btnAdminUsers) { btnAdminUsers.classList.remove('hidden'); btnAdminUsers.classList.add('flex'); }
+                if (btnSales) btnSales.classList.add('hidden');
+            } else if (role === 'logistics') {
+                if (roleBadge) { roleBadge.innerText = "LOJİSTİK & SAHA"; roleBadge.className = "px-2 py-0.5 rounded-full font-black text-[9px] bg-indigo-500/20 text-indigo-400 uppercase"; }
+                if (btnAdminUsers) btnAdminUsers.classList.add('hidden');
+                if (btnSales) btnSales.classList.add('hidden');
+            } else {
+                if (roleBadge) { roleBadge.innerText = "SATIŞ EKİBİ"; roleBadge.className = "px-2 py-0.5 rounded-full font-black text-[9px] bg-amber-500/20 text-amber-300 uppercase"; }
+                if (btnAdminUsers) btnAdminUsers.classList.add('hidden');
+                if (btnSales) { btnSales.classList.remove('hidden'); btnSales.classList.add('flex'); }
+            }
+        };
+
+        // 🪵 TEKİL PALET DİZİLİM & GÖRSEL ŞEMA MOTORU
+        window.calculateSinglePalletLayout = function(sku, baseSpec, contH, doorH) {
+            if (!sku || !baseSpec || !baseSpec.palletW) return null;
+            var pW = baseSpec.palletW, pL = baseSpec.palletL;
+            var bW = Math.max(1, sku.W), bL = Math.max(1, sku.L), bH = Math.max(1, sku.H), bWt = Math.max(0.01, sku.Wt);
+            var netH = Math.max(bH, Math.min(contH, doorH) - baseSpec.baseH - 15);
+            var maxLayers = Math.max(1, Math.min(sku.maxLayers || 8, Math.floor(netH / bH)));
+
+            var bestLayout = null, maxLayerBoxes = 0;
+            var orientations = [{ w1: bW, l1: bL, w2: bL, l2: bW }, { w1: bL, l1: bW, w2: bW, l2: bL }];
+
+            orientations.forEach(function(ori) {
+                var maxA = Math.floor(pW / ori.w1);
+                for (var a = 0; a <= maxA; a++) {
+                    var remW = pW - (a * ori.w1);
+                    var b = Math.floor(remW / ori.w2);
+                    if (a === 0 && b === 0) continue;
+                    var rowsA = a > 0 ? Math.floor(pL / ori.l1) : 0;
+                    var rowsB = b > 0 ? Math.floor(pL / ori.l2) : 0;
+                    var totalInLayer = (a * rowsA) + (b * rowsB);
+
+                    if (totalInLayer > maxLayerBoxes) {
+                        maxLayerBoxes = totalInLayer;
+                        var boxesCoords = [];
+                        for (var cA = 0; cA < a; cA++) {
+                            for (var rA = 0; rA < rowsA; rA++) {
+                                boxesCoords.push({ x: rA * ori.l1, y: cA * ori.w1, l: ori.l1, w: ori.w1, rotated: false });
+                            }
+                        }
+                        var offsetW = a * ori.w1;
+                        for (var cB = 0; cB < b; cB++) {
+                            for (var rB = 0; rB < rowsB; rB++) {
+                                boxesCoords.push({ x: rB * ori.l2, y: offsetW + (cB * ori.w2), l: ori.l2, w: ori.w2, rotated: true });
+                            }
+                        }
+                        bestLayout = {
+                            palletW: pW, palletL: pL,
+                            colsA: a, rowsA: rowsA, colsB: b, rowsB: rowsB,
+                            boxesPerLayer: totalInLayer,
+                            layers: maxLayers,
+                            boxesPerPallet: totalInLayer * maxLayers,
+                            grossWeight: (totalInLayer * maxLayers * bWt) + baseSpec.tareWgt,
+                            totalHeight: baseSpec.baseH + (maxLayers * bH),
+                            areaEfficiency: Math.min(100, Math.round(((totalInLayer * bW * bL) / (pW * pL)) * 100)),
+                            boxesCoords: boxesCoords
+                        };
+                    }
+                }
+            });
+            return bestLayout;
+        };
+
+        window.renderSinglePalletCard = function(sku, baseSpec, palLayout, palletsInVehicle) {
+            var card = document.getElementById('singlePalletLayoutCard');
+            if (!card) return;
+            if (!palLayout || !baseSpec || !baseSpec.palletW) {
+                card.classList.add('hidden');
+                return;
+            }
+            card.classList.remove('hidden');
+
+            window.setElText('singlePalletTitle', '🪵 ' + baseSpec.name + ' (' + baseSpec.palletW + '×' + baseSpec.palletL + ' mm) — Tekil Palet Dizilim Şeması');
+            window.setElText('singlePalletSubtitle', sku.name + ' (' + sku.W + '×' + sku.L + '×' + sku.H + ' mm) için 1 palet üzerindeki kat ve istif planı');
+            window.setElText('singlePalletEfficiencyBadge', 'Palet Taban Verimi: %' + palLayout.areaEfficiency);
+
+            window.setElText('palBoxesPerLayer', palLayout.boxesPerLayer + ' Koli / Kat');
+            var formulaParts = [];
+            if (palLayout.colsA > 0 && palLayout.rowsA > 0) formulaParts.push(palLayout.colsA + '×' + palLayout.rowsA + ' Düz');
+            if (palLayout.colsB > 0 && palLayout.rowsB > 0) formulaParts.push(palLayout.colsB + '×' + palLayout.rowsB + ' Çevrilmiş');
+            window.setElText('palLayerFormula', formulaParts.join(' + '));
+
+            window.setElText('palLayersCount', palLayout.layers + ' Kat İstif');
+            window.setElText('palTotalHeight', 'Toplam Yükseklik: ' + palLayout.totalHeight + ' mm');
+            window.setElText('palTotalBoxes', palLayout.boxesPerPallet + ' Koli / Palet');
+            window.setElText('palGrossWeight', 'Brüt: ' + palLayout.grossWeight.toFixed(1) + ' kg (Dara +' + baseSpec.tareWgt + 'kg)');
+
+            var noteEl = document.getElementById('palOrientationNote');
+            if (noteEl) {
+                noteEl.innerHTML = '🚚 <strong>Araç İçi Palet Özeti:</strong> Bu araca toplam <strong>' + palletsInVehicle + ' adet ' + baseSpec.name + '</strong> yüklenir. (1 Palet = ' + palLayout.boxesPerLayer + ' koli/kat × ' + palLayout.layers + ' kat = <strong>' + palLayout.boxesPerPallet + ' koli</strong>).';
+            }
+
+            var topCanvas = document.getElementById('palletTopCanvas');
+            if (topCanvas) {
+                var tCtx = topCanvas.getContext('2d');
+                tCtx.clearRect(0, 0, topCanvas.width, topCanvas.height);
+                var pad = 10;
+                var sc = Math.min((topCanvas.width - pad * 2) / palLayout.palletL, (topCanvas.height - pad * 2) / palLayout.palletW);
+                var ox = (topCanvas.width - palLayout.palletL * sc) / 2;
+                var oy = (topCanvas.height - palLayout.palletW * sc) / 2;
+
+                tCtx.fillStyle = '#78350f';
+                tCtx.fillRect(ox, oy, palLayout.palletL * sc, palLayout.palletW * sc);
+                tCtx.strokeStyle = '#fbbf24'; tCtx.lineWidth = 1.5;
+                tCtx.strokeRect(ox, oy, palLayout.palletL * sc, palLayout.palletW * sc);
+
+                palLayout.boxesCoords.forEach(function(b) {
+                    tCtx.fillStyle = b.rotated ? '#38bdf8' : '#0284c7';
+                    tCtx.fillRect(ox + b.x * sc + 1, oy + b.y * sc + 1, b.l * sc - 2, b.w * sc - 2);
+                    tCtx.strokeStyle = '#0f172a'; tCtx.lineWidth = 1;
+                    tCtx.strokeRect(ox + b.x * sc + 1, oy + b.y * sc + 1, b.l * sc - 2, b.w * sc - 2);
+                });
+            }
+
+            var isoCanvas = document.getElementById('pallet3DCanvas');
+            if (isoCanvas) {
+                var iCtx = isoCanvas.getContext('2d');
+                iCtx.clearRect(0, 0, isoCanvas.width, isoCanvas.height);
+                var cosA = Math.cos(0.523599), sinA = Math.sin(0.523599);
+                var pL = palLayout.palletL, pW = palLayout.palletW, pH = palLayout.totalHeight;
+                var sc3 = Math.min((isoCanvas.width - 24) / ((pL + pW) * cosA), (isoCanvas.height - 24) / ((pL + pW) * sinA + pH));
+                var cx = isoCanvas.width / 2, cy = isoCanvas.height - 16;
+
+                function proj(x, y, z) { return { x: cx + (x - y) * cosA * sc3, y: cy - ((x + y) * sinA * sc3) * 0.35 - (z * sc3 * 0.75) }; }
+                function poly(pts, fill) {
+                    iCtx.beginPath(); iCtx.moveTo(pts[0].x, pts[0].y);
+                    for (var i = 1; i < pts.length; i++) iCtx.lineTo(pts[i].x, pts[i].y);
+                    iCtx.closePath(); iCtx.fillStyle = fill; iCtx.fill();
+                    iCtx.strokeStyle = 'rgba(0,0,0,0.4)'; iCtx.lineWidth = 0.8; iCtx.stroke();
+                }
+
+                var bH = Math.max(25, baseSpec.baseH);
+                poly([proj(0,0,bH), proj(pL,0,bH), proj(pL,pW,bH), proj(0,pW,bH)], '#b45309');
+                poly([proj(0,0,0), proj(pL,0,0), proj(pL,0,bH), proj(0,0,bH)], '#92400e');
+                poly([proj(0,0,0), proj(0,pW,0), proj(0,pW,bH), proj(0,0,bH)], '#78350f');
+
+                var z0 = bH, z1 = bH + palLayout.layers * sku.H;
+                var usedL = palLayout.boxesCoords.reduce(function(m, c) { return Math.max(m, c.x + c.l); }, 0) || pL;
+                var usedW = palLayout.boxesCoords.reduce(function(m, c) { return Math.max(m, c.y + c.w); }, 0) || pW;
+                poly([proj(0,0,z1), proj(usedL,0,z1), proj(usedL,usedW,z1), proj(0,usedW,z1)], '#38bdf8');
+                poly([proj(0,0,z0), proj(usedL,0,z0), proj(usedL,0,z1), proj(0,0,z1)], '#0284c7');
+                poly([proj(0,0,z0), proj(0,usedW,z0), proj(0,usedW,z1), proj(0,0,z1)], '#0369a1');
+            }
+        };
+
+        // 📐 ARAÇ İÇİ YERLEŞİM MOTORU (DÖKME & PALETLİ)
+        window.findOptimalFloorPlan = function(effW, effL, contH, doorH, sku, maxWgt, isContainer, baseH) {
+            if (!sku) return null;
+            var bH = baseH || 0;
+            var boxW = Math.max(1, sku.W), boxL = Math.max(1, sku.L), boxH = Math.max(1, sku.H), boxWt = Math.max(0.01, sku.Wt);
+            var physMaxLayers = Math.max(1, Math.min(sku.maxLayers || 8, Math.floor(Math.max(boxH, contH - bH - 15) / boxH)));
+            var maxDoorLayers = Math.max(1, Math.min(physMaxLayers, Math.floor(Math.max(boxH, doorH - bH - 20) / boxH)));
+            var maxBoxesByWeight = Math.floor(maxWgt / boxWt);
+
+            if (sku.shape === 'round') {
+                var D = Math.max(boxW, boxL), cols = Math.floor(effW / D), rows = Math.floor(effL / D);
+                var lBoxes = cols * rows;
+                return { colsA: cols, rowsA: rows, dimW1: D, dimL1: D, colsB: 0, rowsB: 0, dimW2: 0, dimL2: 0, layerBoxes: lBoxes, maxBoxes: Math.max(0, Math.min(lBoxes * physMaxLayers, maxBoxesByWeight)), physMaxLayers: physMaxLayers, maxDoorLayers: maxDoorLayers };
+            }
+
+            var bestPlan = null, maxBoxesFound = 0, maxA = Math.floor(effW / boxW);
+            for (var a = 0; a <= maxA; a++) {
+                var b = Math.floor((effW - (a * boxW)) / boxL);
+                if (a === 0 && b === 0) continue;
+                var rowsA = a > 0 ? Math.floor(effL / boxL) : 0;
+                var rowsB = b > 0 ? Math.floor(effL / boxW) : 0;
+                var layerBoxes = (a * rowsA) + (b * rowsB);
+                if (layerBoxes <= 0) continue;
+
+                var doorRowsA = isContainer ? Math.min(rowsA, Math.ceil(650 / boxL)) : 0;
+                var doorRowsB = isContainer ? Math.min(rowsB, Math.ceil(650 / boxW)) : 0;
+                var countA = a * ((rowsA - doorRowsA) * physMaxLayers + doorRowsA * maxDoorLayers);
+                var countB = b * ((rowsB - doorRowsB) * physMaxLayers + doorRowsB * maxDoorLayers);
+                var feasible = Math.min(countA + countB, maxBoxesByWeight);
+
+                if (feasible > maxBoxesFound) {
+                    maxBoxesFound = feasible;
+                    bestPlan = { colsA: a, rowsA: rowsA, dimW1: boxW, dimL1: boxL, colsB: b, rowsB: rowsB, dimW2: boxL, dimL2: boxW, layerBoxes: layerBoxes, maxBoxes: Math.max(0, feasible), physMaxLayers: physMaxLayers, maxDoorLayers: maxDoorLayers };
+                }
+            }
+            return bestPlan;
+        };
+
+        window.packPalletizedVehicle = function(queue, effContL, effContW, contH, doorH, maxWgt, baseType, optFrontCurve) {
+            var baseSpec = window.BASE_SPECS[baseType];
+            var placedItems = [], totalWgt = 0, totalBoxes = 0, totalPallets = 0;
+            var currentX = optFrontCurve ? 100 : 0;
+            var pW = baseSpec.palletW, pL = baseSpec.palletL;
+
+            for (var qIdx = 0; qIdx < queue.length; qIdx++) {
+                var item = queue[qIdx];
+                if (item.remaining <= 0 || currentX >= effContL || totalWgt >= maxWgt) continue;
+                var sku = item.sku;
+                var palLayout = window.calculateSinglePalletLayout(sku, baseSpec, contH, doorH);
+                if (!palLayout || palLayout.boxesPerPallet <= 0) continue;
+
+                var cols1 = Math.floor(effContW / pW), rows1 = Math.floor((effContL - currentX) / pL);
+                var cols2 = Math.floor(effContW / pL), rows2 = Math.floor((effContL - currentX) / pW);
+                var useW = pW, useL = pL, pCols = cols1;
+                if (cols2 * rows2 > cols1 * rows1) { useW = pL; useL = pW; pCols = cols2; }
+                if (pCols <= 0) continue;
+
+                var startY = Math.max(0, (effContW - (pCols * useW)) / 2);
+                var weightLimitHit = false;
+
+                while (item.remaining > 0 && currentX + useL <= effContL && !weightLimitHit) {
+                    for (var c = 0; c < pCols; c++) {
+                        if (item.remaining <= 0) break;
+                        var maxAllowedByWgt = Math.floor((maxWgt - totalWgt - baseSpec.tareWgt) / sku.Wt);
+                        var boxesOnThisPallet = Math.min(palLayout.boxesPerPallet, item.remaining, maxAllowedByWgt);
+                        if (boxesOnThisPallet <= 0) { weightLimitHit = true; break; }
+
+                        var actualLayers = Math.max(1, Math.ceil(boxesOnThisPallet / palLayout.boxesPerLayer));
+                        var palWgt = (boxesOnThisPallet * sku.Wt) + baseSpec.tareWgt;
+
+                        placedItems.push({
+                            id: sku.name, stripTag: 'PALET', isPallet: true,
+                            x: currentX, y: startY + (c * useW), z: baseSpec.baseH,
+                            l: useL - 20, w: useW - 20, h: actualLayers * sku.H,
+                            boxes: boxesOnThisPallet, wgt: palWgt, color: item.color,
+                            cols: Math.max(1, palLayout.colsA + palLayout.colsB), rows: 1, layers: actualLayers,
+                            singleBoxL: sku.L, singleBoxW: sku.W, singleBoxH: sku.H
+                        });
+
+                        totalWgt += palWgt; totalBoxes += boxesOnThisPallet; totalPallets += 1;
+                        item.remaining -= boxesOnThisPallet;
+                    }
+                    currentX += useL;
+                }
+            }
+            var maxReachX = placedItems.reduce(function(max, it) { return Math.max(max, it.x + it.l); }, 0);
+            return { placedItems: placedItems, totalWgt: totalWgt, totalBoxes: totalBoxes, totalPallets: totalPallets, gapL: Math.max(0, effContL - maxReachX) };
+        };
+
+        window.packSingleVehicle = function(queue, effContL, effContW, contH, doorH, maxWgt, baseType, optFrontCurve, isContainer, loadStrategy) {
+            if (baseType !== 'floor') {
+                return window.packPalletizedVehicle(queue, effContL, effContW, contH, doorH, maxWgt, baseType, optFrontCurve);
+            }
+
+            var placedItems = [], totalWgt = 0, totalBoxes = 0, currentX = optFrontCurve ? 100 : 0;
+            var doorZoneX = effContL - 650;
+
+            for (var itemIdx = 0; itemIdx < queue.length; itemIdx++) {
+                var item = queue[itemIdx];
+                if (item.remaining <= 0 || currentX >= effContL || totalWgt >= maxWgt) continue;
+                var sku = item.sku, availableL = effContL - currentX;
+                if (availableL < Math.min(sku.L, sku.W)) break;
+
+                var plan = window.findOptimalFloorPlan(effContW, availableL, contH, doorH, sku, maxWgt - totalWgt, isContainer, 0);
+                if (!plan || plan.layerBoxes <= 0) continue;
+
+                var boxesForThisTruck = Math.min(item.remaining, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                if (boxesForThisTruck <= 0) break;
+
+                var widthUsed = (plan.colsA * plan.dimW1) + (plan.colsB * plan.dimW2);
+                var startY = Math.max(0, (effContW - widthUsed) / 2);
+                var isSingleOrLast = (itemIdx === queue.length - 1) || queue.slice(itemIdx + 1).every(function(it) { return it.remaining <= 0; });
+
+                if (loadStrategy === 'spread' && isSingleOrLast) {
+                    var totalRowsA = plan.colsA > 0 ? Math.floor(availableL / plan.dimL1) : 0;
+                    var totalRowsB = plan.colsB > 0 ? Math.floor(availableL / plan.dimL2) : 0;
+                    var posPerLayer = (plan.colsA * totalRowsA) + (plan.colsB * totalRowsB);
+                    var baseLayers = Math.min(plan.physMaxLayers, Math.max(1, Math.floor(boxesForThisTruck / Math.max(1, posPerLayer))));
+                    var rem = boxesForThisTruck;
+
+                    if (plan.colsA > 0 && totalRowsA > 0) {
+                        for (var r = 0; r < totalRowsA; r++) {
+                            if (rem <= 0 || item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
+                            var rowX = currentX + (r * plan.dimL1);
+                            var maxPosL = (isContainer && rowX + plan.dimL1 >= doorZoneX) ? plan.maxDoorLayers : plan.physMaxLayers;
+                            var rowL = baseLayers;
+                            if (rowL < maxPosL && rem > (totalRowsA - r) * plan.colsA * rowL) rowL = Math.min(maxPosL, rowL + 1);
+                            var rowBoxes = Math.min(plan.colsA * rowL, rem, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                            if (rowBoxes <= 0) break;
+                            var actualL = Math.max(1, Math.ceil(rowBoxes / plan.colsA)), rowWgt = rowBoxes * sku.Wt;
+                            placedItems.push({ id: sku.name, stripTag: 'A', x: rowX, y: startY, z: 0, l: plan.dimL1, w: plan.colsA * plan.dimW1, h: actualL * sku.H, boxes: rowBoxes, wgt: rowWgt, color: item.color, cols: plan.colsA, rows: 1, layers: actualL, singleBoxL: plan.dimL1, singleBoxW: plan.dimW1, singleBoxH: sku.H });
+                            totalWgt += rowWgt; totalBoxes += rowBoxes; rem -= rowBoxes; item.remaining -= rowBoxes;
+                        }
+                    }
+                    if (plan.colsB > 0 && totalRowsB > 0) {
+                        var stripBY = startY + (plan.colsA * plan.dimW1);
+                        for (var r2 = 0; r2 < totalRowsB; r2++) {
+                            if (rem <= 0 || item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
+                            var rowX2 = currentX + (r2 * plan.dimL2);
+                            var maxPosL2 = (isContainer && rowX2 + plan.dimL2 >= doorZoneX) ? plan.maxDoorLayers : plan.physMaxLayers;
+                            var rowL2 = baseLayers;
+                            if (rowL2 < maxPosL2 && rem > (totalRowsB - r2) * plan.colsB * rowL2) rowL2 = Math.min(maxPosL2, rowL2 + 1);
+                            var rowBoxes2 = Math.min(plan.colsB * rowL2, rem, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                            if (rowBoxes2 <= 0) break;
+                            var actualL2 = Math.max(1, Math.ceil(rowBoxes2 / plan.colsB)), rowWgt2 = rowBoxes2 * sku.Wt;
+                            placedItems.push({ id: sku.name, stripTag: 'B', x: rowX2, y: stripBY, z: 0, l: plan.dimL2, w: plan.colsB * plan.dimW2, h: actualL2 * sku.H, boxes: rowBoxes2, wgt: rowWgt2, color: item.color, cols: plan.colsB, rows: 1, layers: actualL2, singleBoxL: plan.dimL2, singleBoxW: plan.dimW2, singleBoxH: sku.H });
+                            totalWgt += rowWgt2; totalBoxes += rowBoxes2; rem -= rowBoxes2; item.remaining -= rowBoxes2;
+                        }
+                    }
+                } else {
+                    var curX_A = currentX, curX_B = currentX, stripBY2 = startY + (plan.colsA * plan.dimW1);
+                    while (item.remaining > 0 && totalWgt + sku.Wt <= maxWgt) {
+                        var canA = plan.colsA > 0 && (curX_A + plan.dimL1 <= effContL);
+                        var canB = plan.colsB > 0 && (curX_B + plan.dimL2 <= effContL);
+                        if (!canA && !canB) break;
+                        if (canA && (!canB || curX_A <= curX_B)) {
+                            var rMaxL = (isContainer && curX_A + plan.dimL1 >= doorZoneX) ? plan.maxDoorLayers : plan.physMaxLayers;
+                            var rB = Math.min(plan.colsA * rMaxL, item.remaining, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                            if (rB <= 0) break;
+                            var rL = Math.max(1, Math.ceil(rB / plan.colsA)), rW = rB * sku.Wt;
+                            placedItems.push({ id: sku.name, stripTag: 'A', x: curX_A, y: startY, z: 0, l: plan.dimL1, w: plan.colsA * plan.dimW1, h: rL * sku.H, boxes: rB, wgt: rW, color: item.color, cols: plan.colsA, rows: 1, layers: rL, singleBoxL: plan.dimL1, singleBoxW: plan.dimW1, singleBoxH: sku.H });
+                            totalWgt += rW; totalBoxes += rB; item.remaining -= rB; curX_A += plan.dimL1;
+                        } else {
+                            var rMaxL2 = (isContainer && curX_B + plan.dimL2 >= doorZoneX) ? plan.maxDoorLayers : plan.physMaxLayers;
+                            var rB2 = Math.min(plan.colsB * rMaxL2, item.remaining, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                            if (rB2 <= 0) break;
+                            var rL2 = Math.max(1, Math.ceil(rB2 / plan.colsB)), rW2 = rB2 * sku.Wt;
+                            placedItems.push({ id: sku.name, stripTag: 'B', x: curX_B, y: stripBY2, z: 0, l: plan.dimL2, w: plan.colsB * plan.dimW2, h: rL2 * sku.H, boxes: rB2, wgt: rW2, color: item.color, cols: plan.colsB, rows: 1, layers: rL2, singleBoxL: plan.dimL2, singleBoxW: plan.dimW2, singleBoxH: sku.H });
+                            totalWgt += rW2; totalBoxes += rB2; item.remaining -= rB2; curX_B += plan.dimL2;
+                        }
+                    }
+                }
+                currentX = placedItems.reduce(function(max, it) { return Math.max(max, it.x + it.l); }, 0);
+            }
+            var maxReachX = placedItems.reduce(function(max, it) { return Math.max(max, it.x + it.l); }, 0);
+            return { placedItems: placedItems, totalWgt: totalWgt, totalBoxes: totalBoxes, totalPallets: 0, gapL: Math.max(0, effContL - maxReachX) };
+        };
+
+        window.calculateMaxVehicleBoxes = function(effW, effL, vSpec, sku, maxWgt, baseType) {
+            var baseSpec = window.BASE_SPECS[baseType] || window.BASE_SPECS['floor'];
+            if (baseType === 'floor') {
+                var plan = window.findOptimalFloorPlan(effW, effL, vSpec.H, vSpec.doorH, sku, maxWgt, vSpec.isContainer, 0);
+                return plan ? plan.maxBoxes : Math.floor(maxWgt / sku.Wt);
+            }
+            var palLayout = window.calculateSinglePalletLayout(sku, baseSpec, vSpec.H, vSpec.doorH);
+            if (!palLayout || palLayout.boxesPerPallet <= 0) return 0;
+            var pW = baseSpec.palletW, pL = baseSpec.palletL;
+            var count1 = Math.floor(effW / pW) * Math.floor(effL / pL);
+            var count2 = Math.floor(effW / pL) * Math.floor(effL / pW);
+            var maxPalletsInCont = Math.max(count1, count2);
+            var maxByWgt = Math.floor(maxWgt / (sku.Wt + (baseSpec.tareWgt / palLayout.boxesPerPallet)));
+            return Math.min(maxPalletsInCont * palLayout.boxesPerPallet, maxByWgt);
+        };
+
+        window.runEngine = function() {
+            var vType = (document.getElementById('vehicleType') && document.getElementById('vehicleType').value) || '20DC';
+            var vSpec = window.VEHICLE_SPECS[vType] || window.VEHICLE_SPECS['20DC'];
+            var baseType = (document.getElementById('baseType') && document.getElementById('baseType').value) || 'floor';
+            var baseSpec = window.BASE_SPECS[baseType] || window.BASE_SPECS['floor'];
+            var loadStrategy = (document.getElementById('loadDistributionStrategy') && document.getElementById('loadDistributionStrategy').value) || 'spread';
+            var maxWgt = parseInt(document.getElementById('maxWgt') && document.getElementById('maxWgt').value) || vSpec.maxWgt;
+
+            var effContL = vSpec.L - 10, effContW = vSpec.W - 10;
+            var optFrontCurve = (vType === 'TIR') && (document.getElementById('optFrontCurve') && document.getElementById('optFrontCurve').checked);
+            if (optFrontCurve) effContL -= 100;
+            if (document.getElementById('optDoor') && document.getElementById('optDoor').checked) effContL -= 80;
+            if (document.getElementById('optAirbag') && document.getElementById('optAirbag').checked) effContW -= 80;
+            if (document.getElementById('optLashing') && document.getElementById('optLashing').checked) effContL -= 150;
+
+            var rawIdx = parseInt(document.getElementById('skuSelect') && document.getElementById('skuSelect').value);
+            var activeSku = window.skuDatabase[isNaN(rawIdx) ? 5 : rawIdx] || window.skuDatabase[5];
+
+            var queue = [];
+            if (window.currentMode === 'single') {
+                var targetBoxes = parseInt(document.getElementById('targetBoxes') && document.getElementById('targetBoxes').value);
+                if (isNaN(targetBoxes) || targetBoxes <= 0) {
+                    targetBoxes = window.calculateMaxVehicleBoxes(effContW, effContL, vSpec, activeSku, maxWgt, baseType);
+                }
+                queue.push({ sku: activeSku, target: targetBoxes, color: window.colorMap[0], itemStateIndex: 0 });
+            } else {
+                window.mixedItemsState.forEach(function(item, idx) {
+                    var sku = window.skuDatabase[item.skuIdx];
+                    if (sku && item.count > 0) queue.push({ sku: sku, target: item.count, color: window.colorMap[idx % window.colorMap.length], itemStateIndex: idx });
+                });
+                if (queue.length > 0) activeSku = queue[0].sku;
+            }
+
+            window.globalFleet = [];
+            var remQueue = queue.map(function(q) { return { sku: q.sku, target: q.target, remaining: q.target, color: q.color, itemStateIndex: q.itemStateIndex }; });
+            var safety = 0;
+            while (remQueue.some(function(q) { return q.remaining > 0; }) && safety < 20) {
+                safety++;
+                var res = window.packSingleVehicle(remQueue, effContL, effContW, vSpec.H, vSpec.doorH, maxWgt, baseType, optFrontCurve, vSpec.isContainer, loadStrategy);
+                if (res.placedItems.length === 0) break;
+                window.globalFleet.push(res);
+            }
+            if (window.globalFleet.length === 0) window.globalFleet.push({ placedItems: [], totalBoxes: 0, totalWgt: 0, totalPallets: 0, gapL: effContL });
+
+            var singlePalLayout = (baseType !== 'floor') ? window.calculateSinglePalletLayout(activeSku, baseSpec, vSpec.H, vSpec.doorH) : null;
+            var firstTruckPallets = window.globalFleet[0] ? (window.globalFleet[0].totalPallets || window.globalFleet[0].placedItems.length) : 0;
+            window.renderSinglePalletCard(activeSku, baseSpec, singlePalLayout, firstTruckPallets);
+
+            window.globalEngineContext = { contL: vSpec.L, contW: vSpec.W, contH: vSpec.H, maxWgt: maxWgt, baseType: baseType, baseSpec: baseSpec, optFrontCurve: optFrontCurve };
+            window.currentVehicleIdx = 0;
+            window.updateFleetUI();
+        };
+
+        window.updateFleetUI = function() {
+            var pag = document.getElementById('fleetPaginationContainer');
+            if (pag) {
+                if (window.globalFleet.length > 1) {
+                    pag.innerHTML = '<div class="flex gap-1.5 mb-2.5 p-1.5 bg-white rounded-2xl border overflow-x-auto">' +
+                        window.globalFleet.map(function(v, i) {
+                            return '<button type="button" onclick="window.currentVehicleIdx=' + i + ';window.updateFleetUI();" class="px-3.5 py-1.5 rounded-xl font-bold text-xs cursor-pointer ' + (i === window.currentVehicleIdx ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-600') + '">🚚 Araç #' + (i + 1) + ' (' + v.totalBoxes + ' Koli)</button>';
+                        }).join('') + '</div>';
+                } else pag.innerHTML = '';
+            }
+
+            var truck = window.globalFleet[window.currentVehicleIdx] || { placedItems: [], totalBoxes: 0, totalWgt: 0, totalPallets: 0 };
+            var ctx = window.globalEngineContext;
+            var baseSpec = ctx.baseSpec || window.BASE_SPECS['floor'];
+            var isPalletMode = ctx.baseType !== 'floor';
+
+            window.setElText('resTotalBoxes', truck.totalBoxes.toLocaleString() + ' Adet');
+            window.setElText('resTotalBoxesSub', baseSpec.name + ' Modu');
+            window.setElText('resWeight', truck.totalWgt.toLocaleString(undefined, { maximumFractionDigits: 1 }) + ' kg');
+            window.setElText('resWeightSub', 'Yasal Sınır: ' + (ctx.maxWgt || 27800).toLocaleString() + ' kg (%' + Math.min(100, Math.round((truck.totalWgt / (ctx.maxWgt || 27800)) * 100)) + ' Dolu)');
+            window.setElText('resLoads', isPalletMode ? (truck.placedItems.length + ' Palet') : (truck.placedItems.length + ' Sıra'));
+            window.setElText('resLoadsSub', isPalletMode ? (baseSpec.name + ' İstifi') : 'Dorse Boyunca Sıralı');
+
+            var momentX = 0;
+            truck.placedItems.forEach(function(p) { momentX += (p.x + p.l / 2) * p.wgt; });
+            var cogX = truck.totalWgt > 0 ? (momentX / truck.totalWgt) : 0;
+            window.setElText('resStatusSub', 'Dengeli Yük (CoG: ' + (cogX / 1000).toFixed(1) + 'm)');
+
+            var grouped = {};
+            truck.placedItems.forEach(function(it) {
+                if (!grouped[it.id]) grouped[it.id] = { name: it.id, totalBoxes: 0, totalWgt: 0, strips: {} };
+                grouped[it.id].totalBoxes += it.boxes;
+                grouped[it.id].totalWgt += it.wgt;
+                var tag = it.stripTag || 'A';
+                if (!grouped[it.id].strips[tag]) grouped[it.id].strips[tag] = { cols: it.cols, rows: 0, layers: it.layers, boxes: 0 };
+                grouped[it.id].strips[tag].rows += 1;
+                grouped[it.id].strips[tag].boxes += it.boxes;
+                grouped[it.id].strips[tag].layers = Math.max(grouped[it.id].strips[tag].layers, it.layers);
+            });
+
+            var optListEl = document.getElementById('optimizationDetailsList');
+            if (optListEl) {
+                var blocksHtml = Object.keys(grouped).map(function(key, idx) {
+                    var g = grouped[key];
+                    var stHtml = Object.keys(g.strips).map(function(k) {
+                        var s = g.strips[k];
+                        var headerLabel = k === 'PALET' ? ('Paletli İstif (' + baseSpec.name + ')') : (k === 'B' ? 'Şerit B (Enine Çevrilmiş)' : 'Şerit A (Boyuna Düz)');
+                        return '<div class="bg-white p-2.5 rounded-xl border text-center font-mono"><span class="text-[10px] text-slate-500 font-bold block mb-1">' + headerLabel + '</span><div class="grid grid-cols-4 gap-1 text-xs"><div><small class="block text-[9px] text-slate-400">En</small><b>' + s.cols + '</b></div><div><small class="block text-[9px] text-slate-400">' + (k === 'PALET' ? 'Palet' : 'Sıra') + '</small><b>' + s.rows + '</b></div><div><small class="block text-[9px] text-slate-400">Kat</small><b>' + s.layers + ' Kat</b></div><div class="text-emerald-700"><small class="block text-[9px]">Toplam</small><b>' + s.boxes + '</b></div></div></div>';
+                    }).join('');
+                    return '<div class="p-3 bg-slate-50 rounded-xl border space-y-2"><div class="flex justify-between items-center"><b class="text-xs">' + (idx + 1) + '. Blok: ' + window.escapeHtml(g.name) + '</b><span class="text-xs font-mono font-bold text-emerald-700">' + g.totalBoxes + ' Adet &bull; ' + g.totalWgt.toFixed(1) + ' kg</span></div><div class="grid grid-cols-1 md:grid-cols-2 gap-2">' + stHtml + '</div></div>';
+                }).join('');
+                optListEl.innerHTML = '<div class="bg-white p-3.5 rounded-2xl border text-xs space-y-2"><div class="flex justify-between border-b pb-1.5"><b class="uppercase">🚚 ' + baseSpec.name + ' Yerleşim Planı (Araç ' + (window.currentVehicleIdx + 1) + '/' + window.globalFleet.length + ')</b></div>' + blocksHtml + '</div>';
+            }
+
+            window.lastRenderData = { placedItems: truck.placedItems, contL: ctx.contL, contW: ctx.contW, contH: ctx.contH, cogX: cogX, baseH: baseSpec.baseH };
+            window.performRender(window.lastRenderData);
+        };
+
+        window.performRender = function(data) {
+            if (!data) return;
+            var canvas = document.getElementById('contCanvas');
+            if (!canvas) return;
+            var ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            var cosA = Math.cos(0.523599), sinA = Math.sin(0.523599);
+            var L = data.contL || 5890, W = data.contW || 2345, H = data.contH || 2385;
+            var scale = Math.min((canvas.width - 100) / ((L + W) * cosA), (canvas.height - 100) / ((L + W) * sinA + H)) * (window.zoomLevel || 1);
+            if (!isFinite(scale) || scale <= 0) scale = 0.035;
+
+            var cx = canvas.width / 2 + (window.panX || 0), cy = canvas.height / 2 + 50 + (window.panY || 0);
+            function project(x, y, z) { return { x: cx + (x - y) * cosA * scale, y: cy + (x + y) * sinA * scale - (z * scale) }; }
+            function drawPoly(pts, fill, stroke, w) {
+                ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+                for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+                ctx.closePath();
+                if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+                ctx.strokeStyle = stroke || 'rgba(0,0,0,0.25)'; ctx.lineWidth = w || 1; ctx.stroke();
+            }
+            function drawLine(p1, p2) {
+                ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+                ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1; ctx.stroke();
+            }
+
+            drawPoly([project(0,0,0), project(L,0,0), project(L,W,0), project(0,W,0)], '#1e293b');
+            drawPoly([project(0,0,0), project(L,0,0), project(L,0,H), project(0,0,H)], '#0f172a');
+            drawPoly([project(0,0,0), project(0,W,0), project(0,W,H), project(0,0,H)], '#090d16');
+
+            (data.placedItems || []).forEach(function(b) {
+                var z0 = b.z || 0, z1 = z0 + b.h;
+                if (b.isPallet && z0 > 0) {
+                    drawPoly([project(b.x+b.l, b.y, 0), project(b.x+b.l, b.y+b.w, 0), project(b.x+b.l, b.y+b.w, z0), project(b.x+b.l, b.y, z0)], '#92400e', 'rgba(0,0,0,0.6)');
+                    drawPoly([project(b.x, b.y+b.w, 0), project(b.x+b.l, b.y+b.w, 0), project(b.x+b.l, b.y+b.w, z0), project(b.x, b.y+b.w, z0)], '#78350f', 'rgba(0,0,0,0.6)');
+                    drawPoly([project(b.x, b.y, z0), project(b.x+b.l, b.y, z0), project(b.x+b.l, b.y+b.w, z0), project(b.x, b.y+b.w, z0)], '#b45309', 'rgba(0,0,0,0.6)');
+                }
+
+                drawPoly([project(b.x+b.l, b.y, z0), project(b.x+b.l, b.y+b.w, z0), project(b.x+b.l, b.y+b.w, z1), project(b.x+b.l, b.y, z1)], b.color.right, 'rgba(0,0,0,0.45)');
+                drawPoly([project(b.x, b.y+b.w, z0), project(b.x+b.l, b.y+b.w, z0), project(b.x+b.l, b.y+b.w, z1), project(b.x, b.y+b.w, z1)], b.color.left, 'rgba(0,0,0,0.45)');
+                drawPoly([project(b.x, b.y, z1), project(b.x+b.l, b.y, z1), project(b.x+b.l, b.y+b.w, z1), project(b.x, b.y+b.w, z1)], b.color.top, 'rgba(0,0,0,0.45)');
+
+                for (var l = 1; l < (b.layers || 1); l++) {
+                    var z = z0 + l * b.singleBoxH;
+                    drawLine(project(b.x+b.l, b.y, z), project(b.x+b.l, b.y+b.w, z));
+                    drawLine(project(b.x, b.y+b.w, z), project(b.x+b.l, b.y+b.w, z));
+                }
+                for (var c = 1; c < (b.cols || 1); c++) {
+                    var y = b.y + c * (b.w / b.cols);
+                    drawLine(project(b.x+b.l, y, z0), project(b.x+b.l, y, z1));
+                    drawLine(project(b.x, y, z1), project(b.x+b.l, y, z1));
+                }
+            });
+
+            if (data.placedItems && data.placedItems.length > 0) {
+                var pt = project(data.cogX, W/2, H/2);
+                ctx.beginPath(); ctx.arc(pt.x, pt.y, 5.5, 0, 2*Math.PI);
+                ctx.fillStyle = '#ef4444'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+                ctx.fillStyle = '#fff'; ctx.font = 'bold 9px JetBrains Mono'; ctx.fillText('⌖ CoG', pt.x - 12, pt.y - 9);
+            }
+        };
+
+        window.resetView = function() { window.panX = 0; window.panY = 0; window.zoomLevel = 1; if (window.lastRenderData) window.performRender(window.lastRenderData); };
+
+        window.populateSKU = function() {
+            var rawIdx = parseInt(document.getElementById('skuSelect') && document.getElementById('skuSelect').value);
+            var sku = window.skuDatabase[isNaN(rawIdx) ? 5 : rawIdx] || window.skuDatabase[5];
+            if (!sku) return;
+            var bL = document.getElementById('boxL'); if (bL) bL.value = sku.L;
+            var bW = document.getElementById('boxW'); if (bW) bW.value = sku.W;
+            var bH = document.getElementById('boxH'); if (bH) bH.value = sku.H;
+            var bWt = document.getElementById('boxWt'); if (bWt) bWt.value = sku.Wt;
+        };
+
+        window.autoSyncSingleTargetCapacity = function() {
+            var vType = (document.getElementById('vehicleType') && document.getElementById('vehicleType').value) || '20DC';
+            var vSpec = window.VEHICLE_SPECS[vType] || window.VEHICLE_SPECS['20DC'];
+            var baseType = (document.getElementById('baseType') && document.getElementById('baseType').value) || 'floor';
+            var rawIdx = parseInt(document.getElementById('skuSelect') && document.getElementById('skuSelect').value);
+            var sku = window.skuDatabase[isNaN(rawIdx) ? 5 : rawIdx] || window.skuDatabase[5];
+            var maxWgt = parseInt(document.getElementById('maxWgt') && document.getElementById('maxWgt').value) || vSpec.maxWgt;
+
+            var effL = vSpec.L - 10, effW = vSpec.W - 10;
+            if (document.getElementById('optDoor') && document.getElementById('optDoor').checked) effL -= 80;
+            if (vType === 'TIR' && document.getElementById('optFrontCurve') && document.getElementById('optFrontCurve').checked) effL -= 100;
+            if (document.getElementById('optAirbag') && document.getElementById('optAirbag').checked) effW -= 80;
+            if (document.getElementById('optLashing') && document.getElementById('optLashing').checked) effL -= 150;
+
+            var totalMax = window.calculateMaxVehicleBoxes(effW, effL, vSpec, sku, maxWgt, baseType);
+            var targetEl = document.getElementById('targetBoxes');
+            if (!window.isUserDefinedTarget || !targetEl || !targetEl.value) { if (targetEl) targetEl.value = totalMax; }
+            window.setElText('capacityHintBadge', 'Kapasite: ' + totalMax + ' Adet');
+        };
+
+        window.switchTab = function(mode) {
+            window.currentMode = mode;
+            var tS = document.getElementById('tab-single'); if (tS) tS.className = mode === 'single' ? 'tab-btn active text-center' : 'tab-btn text-slate-500 text-center';
+            var tM = document.getElementById('tab-mixed'); if (tM) tM.className = mode === 'mixed' ? 'tab-btn active text-center' : 'tab-btn text-slate-500 text-center';
+            var pS = document.getElementById('panel-single'); if (pS) pS.style.display = mode === 'single' ? 'block' : 'none';
+            var pM = document.getElementById('panel-mixed'); if (pM) pM.style.display = mode === 'mixed' ? 'block' : 'none';
+            if (mode === 'single') window.autoSyncSingleTargetCapacity();
+            window.runEngine();
+        };
+
+        window.onVehicleChange = function() {
+            window.isUserDefinedTarget = false;
+            var vType = (document.getElementById('vehicleType') && document.getElementById('vehicleType').value) || '20DC';
+            var mW = document.getElementById('maxWgt'); if (mW) mW.value = (window.VEHICLE_SPECS[vType] || window.VEHICLE_SPECS['20DC']).maxWgt;
+            var fc = document.getElementById('optFrontCurveLabel'); if (fc) fc.style.display = vType === 'TIR' ? 'flex' : 'none';
+            window.autoSyncSingleTargetCapacity();
+            window.runEngine();
+        };
+
+        window.onSkuSelectChanged = function() {
+            window.isUserDefinedTarget = false;
+            window.populateSKU();
+            window.autoSyncSingleTargetCapacity();
+            window.runEngine();
+        };
+
+        window.onBaseTypeChange = function() {
+            window.isUserDefinedTarget = false;
+            window.autoSyncSingleTargetCapacity();
+            window.runEngine();
+        };
+
+        window.debouncedRunEngine = function() {
+            clearTimeout(window.debounceTimer);
+            window.debounceTimer = setTimeout(window.runEngine, 40);
+        };
+
+        window.renderMixedList = function() {
+            var list = document.getElementById('mixedList');
+            if (!list) return;
+            list.innerHTML = '';
+            window.mixedItemsState.forEach(function(item, idx) {
+                var row = document.createElement('div');
+                row.className = "p-2.5 bg-white border rounded-xl flex flex-col gap-2";
+                var opts = window.skuDatabase.map(function(s, i) { return '<option value="' + i + '" ' + (i === item.skuIdx ? 'selected' : '') + '>' + window.escapeHtml(s.name) + '</option>'; }).join('');
+                row.innerHTML = '<div class="flex justify-between items-center border-b pb-1"><span class="text-[10px] font-bold uppercase">' + (idx + 1) + '. Blok</span><button type="button" onclick="window.removeMixedRow(' + idx + ')" class="text-rose-500 font-bold text-xs cursor-pointer">✕</button></div><div class="flex gap-2"><select class="w-[62%] p-1.5 border rounded-lg text-xs" onchange="window.mixedItemsState[' + idx + '].skuIdx=parseInt(this.value)||0;window.runEngine();">' + opts + '</select><input type="number" class="w-[38%] p-1.5 border rounded-lg text-xs font-mono font-bold" value="' + item.count + '" oninput="window.mixedItemsState[' + idx + '].count=Math.max(0,parseInt(this.value)||0);window.debouncedRunEngine();"></div>';
+                list.appendChild(row);
+            });
+        };
+
+        window.addNewMixedRow = function() { window.mixedItemsState.push({ skuIdx: 0, count: 100 }); window.renderMixedList(); window.runEngine(); };
+        window.removeMixedRow = function(idx) { if (window.mixedItemsState.length > 1) { window.mixedItemsState.splice(idx, 1); window.renderMixedList(); window.runEngine(); } };
+
+        window.renderSkuManagerList = function() {
+            var container = document.getElementById('skuManagerList');
+            if (!container) return;
+            container.innerHTML = window.skuDatabase.map(function(s, idx) {
+                return '<div class="flex items-center justify-between p-2 bg-slate-50 border rounded-lg"><div><strong class="text-slate-800">' + window.escapeHtml(s.name) + '</strong><span class="text-[10px] text-slate-500 font-mono ml-1">(' + s.W + 'x' + s.L + 'x' + s.H + ' mm &bull; ' + s.Wt + ' kg)</span></div>' + (idx >= window.defaultSkuDatabase.length ? '<button type="button" onclick="window.skuDatabase.splice(' + idx + ',1);window.renderSkuManagerList();window.runEngine();" class="text-rose-500 font-bold px-2 cursor-pointer">Sil</button>' : '<span class="text-[10px] text-slate-400">Standart</span>') + '</div>';
+            }).join('');
+        };
+
+        window.addCustomSku = function() {
+            var name = document.getElementById('newSkuName') && document.getElementById('newSkuName').value.trim();
+            var W = parseInt(document.getElementById('newSkuW') && document.getElementById('newSkuW').value);
+            var L = parseInt(document.getElementById('newSkuL') && document.getElementById('newSkuL').value);
+            var H = parseInt(document.getElementById('newSkuH') && document.getElementById('newSkuH').value);
+            var Wt = parseFloat(document.getElementById('newSkuWt') && document.getElementById('newSkuWt').value);
+            if (!name || !W || !L || !H || !Wt) return alert("Lütfen tüm ürün ölçülerini girin.");
+            window.skuDatabase.push({ name: name, W: W, L: L, H: H, Wt: Wt, maxLayers: 6, shape: "box" });
+            var select = document.getElementById('skuSelect');
+            if (select) select.options.add(new Option('⏹ ' + name + ' (' + W + 'x' + L + 'x' + H + ')', String(window.skuDatabase.length - 1)));
+            window.renderMixedList();
+            window.renderSkuManagerList();
+        };
+
+        // 👑 ADMİN KULLANICI & ROL YÖNETİM PANELİ
+        window.openAdminUsersModal = async function() {
+            if (!window.currentUserProfile || window.currentUserProfile.role !== 'admin') {
+                return alert("Yetkisiz erişim: Rol atamalarını yalnızca Sistem Yöneticisi yapabilir.");
+            }
+            window.openModal('adminUsersModal');
+            var overrides = window.getRoleOverrides();
+
+            if (window.supabaseClient) {
+                try {
+                    var res = await window.supabaseClient.rpc('admin_list_users');
+                    if (!res.error && res.data && res.data.length > 0) {
+                        res.data.forEach(function(su) {
+                            var extractedId = su.out_user_id || su.user_id || su.id;
+                            var extractedEmail = (su.out_email || su.email || '').trim();
+                            var dbRole = su.out_role || su.role || 'sales';
+                            var effectiveRole = overrides[extractedEmail.toLowerCase()] || dbRole;
+                            window.saveUserToLocalDirectory({
+                                id: extractedId,
+                                email: extractedEmail,
+                                full_name: su.out_full_name || su.full_name || extractedEmail.split('@')[0],
+                                role: effectiveRole,
+                                created_at: su.out_created_at || su.created_at
+                            }, true);
+                        });
+                    }
+                } catch (e) {}
+            }
+            window.renderAdminUsersRows();
+        };
+
+        window.renderAdminUsersRows = function() {
+            var tbody = document.getElementById('adminUsersTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            var usersList = window.getLocalDirectory();
+            var overrides = window.getRoleOverrides();
+
+            usersList.forEach(function(u, idx) {
+                var tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition";
+                var emailClean = (u.email || '').trim();
+                var currentRole = overrides[emailClean.toLowerCase()] || u.role || 'sales';
+                var dateStr = u.created_at ? new Date(u.created_at).toLocaleDateString('tr-TR') : '-';
+                var isAdminMaster = emailClean.toLowerCase() === 'admin96@admin.com';
+                var safeId = (u.id && u.id !== 'undefined') ? u.id : '';
+
+                var colorClasses = currentRole === 'admin'
+                    ? 'bg-purple-50 text-purple-900 border-purple-300'
+                    : (currentRole === 'logistics' ? 'bg-indigo-50 text-indigo-900 border-indigo-300' : 'bg-slate-50 text-slate-800 border-slate-300');
+
+                tr.innerHTML = '<td class="p-3 font-bold text-slate-900">' + window.escapeHtml(u.full_name || 'İsimsiz') + '</td>' +
+                    '<td class="p-3 font-mono text-slate-600">' + window.escapeHtml(emailClean) + '</td>' +
+                    '<td class="p-3 text-slate-500 font-mono">' + dateStr + '</td>' +
+                    '<td class="p-3 text-center">' +
+                        '<div class="inline-flex items-center gap-2">' +
+                            '<select id="roleSel_' + idx + '" onchange="window.updateUserRole(\'' + window.escapeHtml(emailClean) + '\', \'' + window.escapeHtml(safeId) + '\', this.value, ' + idx + ')" class="p-1.5 border rounded-lg text-xs font-bold cursor-pointer transition ' + colorClasses + '">' +
+                                '<option value="sales" ' + (currentRole === 'sales' ? 'selected' : '') + '>Satış Ekibi</option>' +
+                                '<option value="logistics" ' + (currentRole === 'logistics' ? 'selected' : '') + '>Lojistik & Saha</option>' +
+                                '<option value="admin" ' + (currentRole === 'admin' ? 'selected' : '') + '>Yönetici (Admin)</option>' +
+                            '</select>' +
+                            '<span id="roleSavedBadge_' + idx + '" class="hidden text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">✓ Kaydedildi</span>' +
+                        '</div>' +
+                        (isAdminMaster ? '<span class="text-[9px] text-purple-600 block font-bold mt-0.5">(Ana Yönetici)</span>' : '') +
+                    '</td>';
+                tbody.appendChild(tr);
+            });
+        };
+
+        window.updateUserRole = async function(targetEmail, targetId, newRole, rowIdx) {
+            if (!window.currentUserProfile || window.currentUserProfile.role !== 'admin') {
+                return alert("Yetkisiz işlem!");
+            }
+            window.setRoleOverride(targetEmail, newRole);
+            window.saveUserToLocalDirectory({ id: targetId, email: targetEmail, role: newRole }, false);
+
+            var selEl = document.getElementById('roleSel_' + rowIdx);
+            if (selEl) {
+                var colorClasses = newRole === 'admin'
+                    ? 'bg-purple-50 text-purple-900 border-purple-300'
+                    : (newRole === 'logistics' ? 'bg-indigo-50 text-indigo-900 border-indigo-300' : 'bg-slate-50 text-slate-800 border-slate-300');
+                selEl.className = 'p-1.5 border rounded-lg text-xs font-bold cursor-pointer transition ' + colorClasses;
+            }
+
+            var badgeEl = document.getElementById('roleSavedBadge_' + rowIdx);
+            if (badgeEl) {
+                badgeEl.classList.remove('hidden');
+                setTimeout(function() { badgeEl.classList.add('hidden'); }, 3500);
+            }
+
+            var bannerEl = document.getElementById('adminUsersStatusBanner');
+            if (bannerEl) {
+                var roleNameTR = newRole === 'admin' ? 'Yönetici (Admin)' : (newRole === 'logistics' ? 'Lojistik & Saha' : 'Satış Ekibi');
+                bannerEl.textContent = "✓ " + targetEmail + " kullanıcısının yetkisi '" + roleNameTR + "' olarak kaydedildi.";
+                bannerEl.classList.remove('hidden');
+            }
+
+            var isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetId || '');
+            if (window.supabaseClient && isUuid) {
+                try { await window.supabaseClient.rpc('admin_set_user_role', { target_user_id: targetId, new_role: newRole }); } catch (e) {}
+                try { await window.supabaseClient.from('profiles').upsert({ id: targetId, full_name: targetEmail.split('@')[0], role: newRole, updated_at: new Date().toISOString() }); } catch (e) {}
+            }
+        };
+
+        window.exportCSV = function() {
+            if (!window.globalFleet || !window.globalFleet[0]) return;
+            var csv = "\uFEFFArac_No,SKU_Adi,Koli_Adedi,Agirlik_kg\n";
+            window.globalFleet.forEach(function(f, i) { f.placedItems.forEach(function(it) { csv += (i + 1) + ',"' + it.id + '",' + it.boxes + ',' + it.wgt + '\n'; }); });
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+            a.download = 'Elita_Yukleme_Manifestosu.csv'; a.click();
+        };
+
+        window.exportPDF = function() {
+            if (typeof html2pdf === 'undefined') return window.print();
+            html2pdf().set({ margin: 10, filename: 'Elita_Yukleme_Manifestosu.pdf', jsPDF: { orientation: 'landscape' } }).from(document.getElementById('printArea')).save();
+        };
+
+        window.initWorkspace = function() {
+            window.populateSKU();
+            window.renderMixedList();
+            window.autoSyncSingleTargetCapacity();
+            var canvas = document.getElementById('contCanvas');
+            if (canvas && !window.canvasInitialized) {
+                window.canvasInitialized = true;
+                canvas.addEventListener('mousedown', function(e) { window.isDragging = true; window.startX = e.clientX - window.panX; window.startY = e.clientY - window.panY; });
+                window.addEventListener('mousemove', function(e) { if (window.isDragging) { window.panX = e.clientX - window.startX; window.panY = e.clientY - window.startY; if (window.lastRenderData) window.performRender(window.lastRenderData); } });
+                window.addEventListener('mouseup', function() { window.isDragging = false; });
+                canvas.addEventListener('wheel', function(e) { e.preventDefault(); window.zoomLevel = Math.max(0.4, Math.min(6, window.zoomLevel * (e.deltaY < 0 ? 1.1 : 0.9))); if (window.lastRenderData) window.performRender(window.lastRenderData); }, { passive: false });
+            }
+        };
+
+        window.addEventListener('DOMContentLoaded', function() {
+            window.initWorkspace();
+            window.runEngine();
+        });
     </script>
 </head>
 <body class="p-2 md:p-3 min-h-[100dvh] lg:h-[100dvh] flex flex-col justify-between antialiased">
 
-<!-- 🔒 GİRİŞ & KAYIT AÇILIŞ SAYFASI (AUTH GATE) -->
+<!-- 🔒 GİRİŞ & KAYIT AÇILIŞ SAYFASI -->
 <div id="authLandingPage" class="flex-grow flex items-center justify-center p-4">
     <div class="bg-white/95 backdrop-blur-xl p-8 rounded-3xl shadow-2xl shadow-slate-900/10 max-w-md w-full border border-slate-100 relative overflow-hidden">
         <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-sky-500 via-indigo-500 to-emerald-500"></div>
@@ -402,7 +1134,7 @@
         <div class="space-y-3">
             <div>
                 <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Kurumsal E-Posta</label>
-                <input type="email" id="authEmail" class="w-full p-2.5 border rounded-xl bg-slate-50/50 text-xs focus:border-sky-500 outline-none transition" placeholder="ornek@elita.com" onkeydown="if(event.key==='Enter') window.handleAuthSubmit()">
+                <input type="email" id="authEmail" class="w-full p-2.5 border rounded-xl bg-slate-50/50 text-xs focus:border-sky-500 outline-none transition" placeholder="admin96@admin.com" onkeydown="if(event.key==='Enter') window.handleAuthSubmit()">
             </div>
             <div>
                 <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Şifre</label>
@@ -411,16 +1143,13 @@
         </div>
 
         <button type="button" id="authSubmitBtn" onclick="window.handleAuthSubmit()" class="w-full bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold py-3 rounded-xl transition-all shadow-md mt-6 text-xs uppercase tracking-wider cursor-pointer active:scale-[0.99]">GİRİŞ YAP</button>
-        
         <p id="authErrorMsg" class="text-rose-600 text-xs font-bold text-center mt-3 hidden p-2.5 bg-rose-50 rounded-xl border border-rose-200"></p>
-        <p id="authSuccessMsg" class="text-emerald-700 text-xs font-bold text-center mt-3 hidden p-2.5 bg-emerald-50 rounded-xl border border-emerald-200"></p>
     </div>
 </div>
 
 <!-- 🔓 KORUMALI ÇALIŞMA ALANI -->
 <div id="protectedApp" style="display: none;" class="hidden flex-col flex-grow">
 
-    <!-- ÜST MENÜ (NAVBAR) -->
     <nav class="bg-slate-900/95 backdrop-blur-md text-white shadow-xl rounded-2xl mx-auto max-w-[1440px] w-full z-10 relative no-print mb-2.5 border border-slate-800">
         <div class="px-4 md:px-5 py-2.5 flex flex-col md:flex-row justify-between items-center gap-2.5">
             <div class="flex items-center gap-3 w-full md:w-auto">
@@ -440,7 +1169,7 @@
 
                 <div class="flex items-center gap-2 flex-wrap">
                     <div id="userProfileBadge" class="flex items-center gap-2 bg-slate-800/90 px-2.5 py-1 rounded-lg border border-slate-700/80 text-xs">
-                        <span id="userRoleBadge" class="px-2 py-0.5 rounded-full font-black text-[9px] bg-purple-500/20 text-purple-400 uppercase">KULLANICI</span>
+                        <span id="userRoleBadge" class="px-2 py-0.5 rounded-full font-black text-[9px] bg-purple-500/20 text-purple-400 uppercase">YÖNETİCİ</span>
                         <span id="userEmailLabel" class="text-slate-300 font-semibold text-[11px]">Kullanıcı</span>
                     </div>
 
@@ -452,7 +1181,7 @@
                         <span id="dashboardBtnText">📥 Talepler</span>
                     </button>
 
-                    <button type="button" id="btnSubmitSales" onclick="window.saveSimulation('bekliyor')" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold items-center gap-1 cursor-pointer">
+                    <button type="button" id="btnSubmitSales" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold items-center gap-1 cursor-pointer">
                         ↗ Onaya Gönder
                     </button>
                     <button type="button" onclick="window.handleLogout()" class="text-[11px] text-slate-400 hover:text-rose-400 font-semibold ml-1 cursor-pointer">Çıkış</button>
@@ -598,7 +1327,6 @@
         <!-- SAĞ PANEL: İZOMETRİK 3D, TEKİL PALET ŞEMASI & RAPOR -->
         <div class="flex-grow flex flex-col gap-2.5 lg:overflow-y-auto print-full-width custom-scrollbar lg:pr-1" id="printArea">
             
-            <div id="salesAdvisorContainer" class="hidden no-print"></div>
             <div id="fleetPaginationContainer" class="no-print"></div>
 
             <!-- 4 ANA METRİK KPI KARTI -->
@@ -696,7 +1424,6 @@
                 </div>
             </div>
 
-            <!-- DETAYLI SAHA OPERASYON VE YÜKLEME TALİMATI -->
             <div id="layerOptimizationInfo"><div id="optimizationDetailsList"></div></div>
 
             <!-- 3D CANVASI -->
@@ -723,7 +1450,6 @@
 </div>
 
 <!-- MODALLER -->
-<!-- 👑 1. SADECE ADMİNİN YETKİ ATAYABİLDİĞİ KULLANICI & ROL YÖNETİM MASASI -->
 <div id="adminUsersModal" class="hidden fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 no-print backdrop-blur-sm">
     <div class="bg-white rounded-3xl shadow-2xl max-w-[850px] w-full max-h-[85vh] flex flex-col overflow-hidden border border-purple-200">
         <div class="bg-purple-950 text-white px-6 py-4 flex justify-between items-center">
@@ -780,886 +1506,5 @@
     </div>
 </div>
 
-<!-- ⚡ BÖLÜM 2: TEKİL PALET DİZİLİM MOTORU + 3D ARAÇ SİMÜLASYONU + ROL ATAMA ÇÖZÜMÜ -->
-<script>
-    window.VEHICLE_SPECS = {
-        'TIR':  { name: 'TIR Dorse', L: 13600, W: 2420, H: 2600, maxWgt: 25000, doorH: 2550, isContainer: false },
-        '40HC': { name: "40' High Cube", L: 12015, W: 2345, H: 2690, maxWgt: 27800, doorH: 2585, isContainer: true },
-        '40DC': { name: "40' Standart DC", L: 12015, W: 2345, H: 2385, maxWgt: 27800, doorH: 2280, isContainer: true },
-        '20DC': { name: "20' Standart DC", L: 5890,  W: 2345, H: 2385, maxWgt: 27800, doorH: 2280, isContainer: true }
-    };
-
-    window.BASE_SPECS = {
-        'floor':           { name: 'Dökme Zemin', baseH: 0, tareWgt: 0, palletW: 0, palletL: 0 },
-        'euro_pallet':     { name: 'Euro Palet (80x120)', baseH: 144, tareWgt: 25, palletW: 800, palletL: 1200 },
-        'std_pallet':      { name: 'Standart Palet (100x120)', baseH: 144, tareWgt: 30, palletW: 1000, palletL: 1200 },
-        'special_97_115':  { name: '97x115 Palet', baseH: 144, tareWgt: 26, palletW: 970, palletL: 1150 },
-        'slipsheet':       { name: 'Slipsheet (100x120)', baseH: 5, tareWgt: 1, palletW: 1000, palletL: 1200 }
-    };
-
-    window.defaultSkuDatabase = [
-        { name: "kızartmalık (285×285×330)", W: 285, L: 285, H: 330, Wt: 16.50, maxLayers: 6, shape: "round" },
-        { name: "1,5LX6 KULPLU", W: 230, L: 272, H: 307, Wt: 9.13, maxLayers: 7, shape: "box" },
-        { name: "3LX6Kare", W: 238, L: 362, H: 333, Wt: 17.64, maxLayers: 6, shape: "box" },
-        { name: "4LX4 Kare", W: 260, L: 296, H: 332, Wt: 15.24, maxLayers: 6, shape: "box" },
-        { name: "4,5LX4 Kare", W: 260, L: 296, H: 363, Wt: 17.32, maxLayers: 6, shape: "box" },
-        { name: "5LX4 Kare", W: 260, L: 296, H: 394, Wt: 19.23, maxLayers: 6, shape: "box" },
-        { name: "1LX12 VK BÜKLÜM", W: 247, L: 328, H: 283, Wt: 11.69, maxLayers: 8, shape: "box" },
-        { name: "2LX6 VK BÜKLÜM", W: 224, L: 329, H: 326, Wt: 11.70, maxLayers: 7, shape: "box" },
-        { name: "5LX4 Kubbeli", W: 336, L: 336, H: 355, Wt: 19.42, maxLayers: 6, shape: "box" },
-        { name: "5LX4 Yaprak", W: 288, L: 402, H: 346, Wt: 19.75, maxLayers: 6, shape: "box" },
-        { name: "1,8LX6 BÜKLÜM", W: 222, L: 326, H: 325, Wt: 10.60, maxLayers: 8, shape: "box" },
-        { name: "5LX4YUVARLAK KAVANOZ", W: 382, L: 382, H: 280, Wt: 19.75, maxLayers: 6, shape: "round" },
-        { name: "4,5LX4 KARE KAVANOZ", W: 272, L: 308, H: 335, Wt: 17.32, maxLayers: 6, shape: "box" },
-        { name: "0,85LX12 YENİ VK BÜKLÜM", W: 232, L: 308, H: 262, Wt: 9.68, maxLayers: 8, shape: "box" },
-        { name: "1LX20 BÜKLÜM (KADOOĞLU)", W: 338, L: 419, H: 294, Wt: 19.63, maxLayers: 8, shape: "box" },
-        { name: "1LX12 BÜKLÜM (KADOOĞLU)", W: 257, L: 338, H: 294, Wt: 11.70, maxLayers: 8, shape: "box" },
-        { name: "1LX12 İNCEBELLİ", W: 296, L: 326, H: 294, Wt: 11.95, maxLayers: 9, shape: "box" },
-        { name: "1LX20 İNCEBELLİ", W: 367, L: 430, H: 294, Wt: 19.73, maxLayers: 8, shape: "box" },
-        { name: "2LX6 incebelli", W: 212, L: 407, H: 326, Wt: 11.81, maxLayers: 7, shape: "box" },
-        { name: "0,75LX12 Yeni Vk Büklüm", W: 226, L: 300, H: 251, Wt: 8.83, maxLayers: 9, shape: "box" },
-        { name: "2LX6 Kare (Abalı-Kırlangıç)", W: 214, L: 314, H: 323, Wt: 11.70, maxLayers: 7, shape: "box" },
-        { name: "1LX12 Kare (Abalı-Kırlangıç)", W: 230, L: 302, H: 297, Wt: 11.66, maxLayers: 6, shape: "box" }
-    ];
-
-    window.colorMap = [
-        { base: '#0284c7', top: '#38bdf8', right: '#0369a1', left: '#075985' },
-        { base: '#16a34a', top: '#4ade80', right: '#15803d', left: '#166534' },
-        { base: '#d97706', top: '#fbbf24', right: '#b45309', left: '#92400e' },
-        { base: '#9333ea', top: '#c084fc', right: '#7e22ce', left: '#6b21a8' },
-        { base: '#ea580c', top: '#fb923c', right: '#c2410c', left: '#9a3412' }
-    ];
-
-    window.skuDatabase = window.defaultSkuDatabase.slice();
-    window.mixedItemsState = [{ skuIdx: 5, count: 400 }, { skuIdx: 13, count: 600 }, { skuIdx: 0, count: 100 }];
-    window.currentMode = 'single';
-    window.globalFleet = [];
-    window.currentVehicleIdx = 0;
-    window.globalEngineContext = {};
-    window.debounceTimer = null;
-    window.isUserDefinedTarget = false;
-    window.panX = 0; window.panY = 0; window.zoomLevel = 1;
-    window.isDragging = false; window.startX = 0; window.startY = 0;
-    window.lastRenderData = null;
-    window.canvasInitialized = false;
-
-    window.escapeHtml = function(str) {
-        if (str === null || str === undefined) return '';
-        return String(str).replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"').replace(/'/g, ''');
-    };
-
-    window.setElText = function(id, text) {
-        var el = document.getElementById(id);
-        if (el) el.textContent = text;
-    };
-
-    window.openModal = function(id) { var el = document.getElementById(id); if (el) el.classList.remove('hidden'); };
-    window.closeModal = function(id) { var el = document.getElementById(id); if (el) el.classList.add('hidden'); };
-    window.openDashboard = function() { window.openModal('adminDashboardModal'); };
-    window.closeDashboard = function() { window.closeModal('adminDashboardModal'); };
-
-    window.applyRolePermissions = function() {
-        var role = (window.currentUserProfile && window.currentUserProfile.role) || 'sales';
-        var roleBadge = document.getElementById('userRoleBadge');
-        var btnSales = document.getElementById('btnSubmitSales');
-        var btnAdminUsers = document.getElementById('btnAdminUsers');
-        window.setElText('userEmailLabel', (window.currentUserProfile && window.currentUserProfile.full_name) || 'Kullanıcı');
-
-        if (role === 'admin') {
-            if (roleBadge) { roleBadge.innerText = "YÖNETİCİ"; roleBadge.className = "px-2 py-0.5 rounded-full font-black text-[9px] bg-purple-500/20 text-purple-400 uppercase"; }
-            if (btnAdminUsers) { btnAdminUsers.classList.remove('hidden'); btnAdminUsers.classList.add('flex'); }
-            if (btnSales) btnSales.classList.add('hidden');
-        } else if (role === 'logistics') {
-            if (roleBadge) { roleBadge.innerText = "LOJİSTİK & SAHA"; roleBadge.className = "px-2 py-0.5 rounded-full font-black text-[9px] bg-indigo-500/20 text-indigo-400 uppercase"; }
-            if (btnAdminUsers) btnAdminUsers.classList.add('hidden');
-            if (btnSales) btnSales.classList.add('hidden');
-        } else {
-            if (roleBadge) { roleBadge.innerText = "SATIŞ EKİBİ"; roleBadge.className = "px-2 py-0.5 rounded-full font-black text-[9px] bg-amber-500/20 text-amber-300 uppercase"; }
-            if (btnAdminUsers) btnAdminUsers.classList.add('hidden');
-            if (btnSales) { btnSales.classList.remove('hidden'); btnSales.classList.add('flex'); }
-        }
-    };
-
-    // =========================================================================
-    // 🪵 TEKİL PALET ÜZERİ OPTİMUM KOMBİNE DİZİLİM HESAPLAYICI
-    // =========================================================================
-    window.calculateSinglePalletLayout = function(sku, baseSpec, contH, doorH) {
-        if (!sku || !baseSpec || !baseSpec.palletW) return null;
-        var pW = baseSpec.palletW;
-        var pL = baseSpec.palletL;
-        var bW = Math.max(1, sku.W), bL = Math.max(1, sku.L), bH = Math.max(1, sku.H), bWt = Math.max(0.01, sku.Wt);
-
-        var netH = Math.max(bH, Math.min(contH, doorH) - baseSpec.baseH - 15);
-        var maxLayers = Math.max(1, Math.min(sku.maxLayers || 8, Math.floor(netH / bH)));
-
-        var bestLayout = null;
-        var maxLayerBoxes = 0;
-
-        var orientations = [
-            { w1: bW, l1: bL, w2: bL, l2: bW },
-            { w1: bL, l1: bW, w2: bW, l2: bL }
-        ];
-
-        orientations.forEach(function(ori) {
-            var maxA = Math.floor(pW / ori.w1);
-            for (var a = 0; a <= maxA; a++) {
-                var remW = pW - (a * ori.w1);
-                var b = Math.floor(remW / ori.w2);
-                if (a === 0 && b === 0) continue;
-
-                var rowsA = a > 0 ? Math.floor(pL / ori.l1) : 0;
-                var rowsB = b > 0 ? Math.floor(pL / ori.l2) : 0;
-                var totalInLayer = (a * rowsA) + (b * rowsB);
-
-                if (totalInLayer > maxLayerBoxes) {
-                    maxLayerBoxes = totalInLayer;
-                    var boxesCoords = [];
-                    for (var cA = 0; cA < a; cA++) {
-                        for (var rA = 0; rA < rowsA; rA++) {
-                            boxesCoords.push({ x: rA * ori.l1, y: cA * ori.w1, l: ori.l1, w: ori.w1, rotated: false });
-                        }
-                    }
-                    var offsetW = a * ori.w1;
-                    for (var cB = 0; cB < b; cB++) {
-                        for (var rB = 0; rB < rowsB; rB++) {
-                            boxesCoords.push({ x: rB * ori.l2, y: offsetW + (cB * ori.w2), l: ori.l2, w: ori.w2, rotated: true });
-                        }
-                    }
-                    bestLayout = {
-                        palletW: pW,
-                        palletL: pL,
-                        colsA: a, rowsA: rowsA, w1: ori.w1, l1: ori.l1,
-                        colsB: b, rowsB: rowsB, w2: ori.w2, l2: ori.l2,
-                        boxesPerLayer: totalInLayer,
-                        layers: maxLayers,
-                        boxesPerPallet: totalInLayer * maxLayers,
-                        netWeight: totalInLayer * maxLayers * bWt,
-                        grossWeight: (totalInLayer * maxLayers * bWt) + baseSpec.tareWgt,
-                        totalHeight: baseSpec.baseH + (maxLayers * bH),
-                        areaEfficiency: Math.min(100, Math.round(((totalInLayer * bW * bL) / (pW * pL)) * 100)),
-                        boxesCoords: boxesCoords
-                    };
-                }
-            }
-        });
-
-        return bestLayout;
-    };
-
-    window.renderSinglePalletCard = function(sku, baseSpec, palLayout, palletsInVehicle) {
-        var card = document.getElementById('singlePalletLayoutCard');
-        if (!card) return;
-
-        if (!palLayout || !baseSpec || !baseSpec.palletW) {
-            card.classList.add('hidden');
-            return;
-        }
-        card.classList.remove('hidden');
-
-        window.setElText('singlePalletTitle', '🪵 ' + baseSpec.name + ' (' + baseSpec.palletW + '×' + baseSpec.palletL + ' mm) — Tekil Palet Dizilim Şeması');
-        window.setElText('singlePalletSubtitle', sku.name + ' (' + sku.W + '×' + sku.L + '×' + sku.H + ' mm) ürünü için 1 palet üzerindeki yerleşim planı');
-        window.setElText('singlePalletEfficiencyBadge', 'Palet Taban Verimi: %' + palLayout.areaEfficiency);
-
-        window.setElText('palBoxesPerLayer', palLayout.boxesPerLayer + ' Koli / Kat');
-        var formulaParts = [];
-        if (palLayout.colsA > 0 && palLayout.rowsA > 0) formulaParts.push(palLayout.colsA + '×' + palLayout.rowsA + ' Düz');
-        if (palLayout.colsB > 0 && palLayout.rowsB > 0) formulaParts.push(palLayout.colsB + '×' + palLayout.rowsB + ' Çevrilmiş');
-        window.setElText('palLayerFormula', formulaParts.join(' + '));
-
-        window.setElText('palLayersCount', palLayout.layers + ' Kat İstif');
-        window.setElText('palTotalHeight', 'Toplam Yükseklik: ' + palLayout.totalHeight + ' mm');
-
-        window.setElText('palTotalBoxes', palLayout.boxesPerPallet + ' Koli / Palet');
-        window.setElText('palGrossWeight', 'Brüt: ' + palLayout.grossWeight.toFixed(1) + ' kg (Dara +' + baseSpec.tareWgt + 'kg)');
-
-        var noteEl = document.getElementById('palOrientationNote');
-        if (noteEl) {
-            noteEl.innerHTML = '🚚 <strong>Araç İçi Palet Özeti:</strong> Seçilen araca toplam <strong>' + palletsInVehicle + ' adet ' + baseSpec.name + '</strong> yüklenir. (1 Palet = ' + palLayout.boxesPerLayer + ' koli/kat × ' + palLayout.layers + ' kat = <strong>' + palLayout.boxesPerPallet + ' koli</strong>).';
-        }
-
-        var topCanvas = document.getElementById('palletTopCanvas');
-        if (topCanvas) {
-            var tCtx = topCanvas.getContext('2d');
-            tCtx.clearRect(0, 0, topCanvas.width, topCanvas.height);
-            var pad = 12;
-            var sc = Math.min((topCanvas.width - pad * 2) / palLayout.palletL, (topCanvas.height - pad * 2) / palLayout.palletW);
-            var ox = (topCanvas.width - palLayout.palletL * sc) / 2;
-            var oy = (topCanvas.height - palLayout.palletW * sc) / 2;
-
-            tCtx.fillStyle = '#78350f';
-            tCtx.fillRect(ox, oy, palLayout.palletL * sc, palLayout.palletW * sc);
-            tCtx.strokeStyle = '#fbbf24';
-            tCtx.lineWidth = 1.5;
-            tCtx.strokeRect(ox, oy, palLayout.palletL * sc, palLayout.palletW * sc);
-
-            palLayout.boxesCoords.forEach(function(b) {
-                tCtx.fillStyle = b.rotated ? '#38bdf8' : '#0284c7';
-                tCtx.fillRect(ox + b.x * sc + 1, oy + b.y * sc + 1, b.l * sc - 2, b.w * sc - 2);
-                tCtx.strokeStyle = '#0f172a';
-                tCtx.lineWidth = 1;
-                tCtx.strokeRect(ox + b.x * sc + 1, oy + b.y * sc + 1, b.l * sc - 2, b.w * sc - 2);
-            });
-        }
-
-        var isoCanvas = document.getElementById('pallet3DCanvas');
-        if (isoCanvas) {
-            var iCtx = isoCanvas.getContext('2d');
-            iCtx.clearRect(0, 0, isoCanvas.width, isoCanvas.height);
-            var cosA = Math.cos(0.523599), sinA = Math.sin(0.523599);
-            var pL = palLayout.palletL, pW = palLayout.palletW, pH = palLayout.totalHeight;
-            var sc3 = Math.min((isoCanvas.width - 24) / ((pL + pW) * cosA), (isoCanvas.height - 24) / ((pL + pW) * sinA + pH));
-            var cx = isoCanvas.width / 2, cy = isoCanvas.height - 16;
-
-            function proj(x, y, z) {
-                return { x: cx + (x - y) * cosA * sc3, y: cy - ((x + y) * sinA * sc3) * 0.35 - (z * sc3 * 0.75) };
-            }
-            function poly(pts, fill, stroke) {
-                iCtx.beginPath(); iCtx.moveTo(pts[0].x, pts[0].y);
-                for (var i = 1; i < pts.length; i++) iCtx.lineTo(pts[i].x, pts[i].y);
-                iCtx.closePath();
-                iCtx.fillStyle = fill; iCtx.fill();
-                iCtx.strokeStyle = stroke || 'rgba(0,0,0,0.4)'; iCtx.lineWidth = 0.8; iCtx.stroke();
-            }
-
-            var bH = Math.max(25, baseSpec.baseH);
-            poly([proj(0,0,bH), proj(pL,0,bH), proj(pL,pW,bH), proj(0,pW,bH)], '#b45309');
-            poly([proj(0,0,0), proj(pL,0,0), proj(pL,0,bH), proj(0,0,bH)], '#92400e');
-            poly([proj(0,0,0), proj(0,pW,0), proj(0,pW,bH), proj(0,0,bH)], '#78350f');
-
-            var boxH = palLayout.layers * sku.H;
-            var z0 = bH, z1 = bH + boxH;
-            var usedL = palLayout.boxesCoords.reduce(function(m, c) { return Math.max(m, c.x + c.l); }, 0) || pL;
-            var usedW = palLayout.boxesCoords.reduce(function(m, c) { return Math.max(m, c.y + c.w); }, 0) || pW;
-
-            poly([proj(0,0,z1), proj(usedL,0,z1), proj(usedL,usedW,z1), proj(0,usedW,z1)], '#38bdf8');
-            poly([proj(0,0,z0), proj(usedL,0,z0), proj(usedL,0,z1), proj(0,0,z1)], '#0284c7');
-            poly([proj(0,0,z0), proj(0,usedW,z0), proj(0,usedW,z1), proj(0,0,z1)], '#0369a1');
-        }
-    };
-
-    window.findOptimalFloorPlan = function(effW, effL, contH, doorH, sku, maxWgt, isContainer, baseH) {
-        if (!sku) return null;
-        var bH = baseH || 0;
-        var boxW = Math.max(1, sku.W), boxL = Math.max(1, sku.L), boxH = Math.max(1, sku.H), boxWt = Math.max(0.01, sku.Wt);
-        var physMaxLayers = Math.max(1, Math.min(sku.maxLayers || 8, Math.floor(Math.max(boxH, contH - bH - 15) / boxH)));
-        var maxDoorLayers = Math.max(1, Math.min(physMaxLayers, Math.floor(Math.max(boxH, doorH - bH - 20) / boxH)));
-        var maxBoxesByWeight = Math.floor(maxWgt / boxWt);
-
-        if (sku.shape === 'round') {
-            var D = Math.max(boxW, boxL), cols = Math.floor(effW / D), rows = Math.floor(effL / D);
-            var lBoxes = cols * rows;
-            return { colsA: cols, rowsA: rows, dimW1: D, dimL1: D, colsB: 0, rowsB: 0, dimW2: 0, dimL2: 0, layerBoxes: lBoxes, maxBoxes: Math.max(0, Math.min(lBoxes * physMaxLayers, maxBoxesByWeight)), physMaxLayers: physMaxLayers, maxDoorLayers: maxDoorLayers };
-        }
-
-        var bestPlan = null, maxBoxesFound = 0, maxA = Math.floor(effW / boxW);
-        for (var a = 0; a <= maxA; a++) {
-            var b = Math.floor((effW - (a * boxW)) / boxL);
-            if (a === 0 && b === 0) continue;
-            var rowsA = a > 0 ? Math.floor(effL / boxL) : 0;
-            var rowsB = b > 0 ? Math.floor(effL / boxW) : 0;
-            var layerBoxes = (a * rowsA) + (b * rowsB);
-            if (layerBoxes <= 0) continue;
-
-            var doorRowsA = isContainer ? Math.min(rowsA, Math.ceil(650 / boxL)) : 0;
-            var doorRowsB = isContainer ? Math.min(rowsB, Math.ceil(650 / boxW)) : 0;
-            var countA = a * ((rowsA - doorRowsA) * physMaxLayers + doorRowsA * maxDoorLayers);
-            var countB = b * ((rowsB - doorRowsB) * physMaxLayers + doorRowsB * maxDoorLayers);
-            var feasible = Math.min(countA + countB, maxBoxesByWeight);
-
-            if (feasible > maxBoxesFound) {
-                maxBoxesFound = feasible;
-                bestPlan = { colsA: a, rowsA: rowsA, dimW1: boxW, dimL1: boxL, colsB: b, rowsB: rowsB, dimW2: boxL, dimL2: boxW, layerBoxes: layerBoxes, maxBoxes: Math.max(0, feasible), physMaxLayers: physMaxLayers, maxDoorLayers: maxDoorLayers };
-            }
-        }
-        return bestPlan;
-    };
-
-    window.packPalletizedVehicle = function(queue, effContL, effContW, contH, doorH, maxWgt, baseType, optFrontCurve) {
-        var baseSpec = window.BASE_SPECS[baseType];
-        var placedItems = [], totalWgt = 0, totalBoxes = 0, totalPallets = 0;
-        var currentX = optFrontCurve ? 100 : 0;
-        var pW = baseSpec.palletW, pL = baseSpec.palletL;
-
-        for (var qIdx = 0; qIdx < queue.length; qIdx++) {
-            var item = queue[qIdx];
-            if (item.remaining <= 0 || currentX >= effContL || totalWgt >= maxWgt) continue;
-            var sku = item.sku;
-            var palLayout = window.calculateSinglePalletLayout(sku, baseSpec, contH, doorH);
-            if (!palLayout || palLayout.boxesPerPallet <= 0) continue;
-
-            var cols1 = Math.floor(effContW / pW), rows1 = Math.floor((effContL - currentX) / pL);
-            var cols2 = Math.floor(effContW / pL), rows2 = Math.floor((effContL - currentX) / pW);
-
-            var useW = pW, useL = pL, pCols = cols1;
-            if (cols2 * rows2 > cols1 * rows1) {
-                useW = pL; useL = pW; pCols = cols2;
-            }
-            if (pCols <= 0) continue;
-
-            var startY = Math.max(0, (effContW - (pCols * useW)) / 2);
-
-            while (item.remaining > 0 && currentX + useL <= effContL) {
-                for (var c = 0; c < pCols; c++) {
-                    if (item.remaining <= 0) break;
-                    var boxesOnThisPallet = Math.min(palLayout.boxesPerPallet, item.remaining);
-                    var maxAllowedByWgt = Math.floor((maxWgt - totalWgt - baseSpec.tareWgt) / sku.Wt);
-                    boxesOnThisPallet = Math.min(boxesOnThisPallet, maxAllowedByWgt);
-                    if (boxesOnThisPallet <= 0) { item.remaining = 0; break; }
-
-                    var actualLayers = Math.max(1, Math.ceil(boxesOnThisPallet / palLayout.boxesPerLayer));
-                    var palWgt = (boxesOnThisPallet * sku.Wt) + baseSpec.tareWgt;
-
-                    placedItems.push({
-                        id: sku.name,
-                        stripTag: 'PALET',
-                        isPallet: true,
-                        x: currentX,
-                        y: startY + (c * useW),
-                        z: baseSpec.baseH,
-                        l: useL - 20,
-                        w: useW - 20,
-                        h: actualLayers * sku.H,
-                        boxes: boxesOnThisPallet,
-                        wgt: palWgt,
-                        color: item.color,
-                        cols: palLayout.colsA + palLayout.colsB,
-                        rows: 1,
-                        layers: actualLayers,
-                        singleBoxL: sku.L,
-                        singleBoxW: sku.W,
-                        singleBoxH: sku.H
-                    });
-
-                    totalWgt += palWgt;
-                    totalBoxes += boxesOnThisPallet;
-                    totalPallets += 1;
-                    item.remaining -= boxesOnThisPallet;
-                }
-                currentX += useL;
-            }
-        }
-        var maxReachX = placedItems.reduce(function(max, it) { return Math.max(max, it.x + it.l); }, 0);
-        return { placedItems: placedItems, totalWgt: totalWgt, totalBoxes: totalBoxes, totalPallets: totalPallets, gapL: Math.max(0, effContL - maxReachX) };
-    };
-
-    window.packSingleVehicle = function(queue, effContL, effContW, contH, doorH, maxWgt, baseType, optFrontCurve, isContainer, loadStrategy) {
-        if (baseType !== 'floor') {
-            return window.packPalletizedVehicle(queue, effContL, effContW, contH, doorH, maxWgt, baseType, optFrontCurve);
-        }
-
-        var placedItems = [], totalWgt = 0, totalBoxes = 0, currentX = optFrontCurve ? 100 : 0;
-        var doorZoneX = effContL - 650;
-        var baseH = 0;
-
-        for (var itemIdx = 0; itemIdx < queue.length; itemIdx++) {
-            var item = queue[itemIdx];
-            if (item.remaining <= 0 || currentX >= effContL || totalWgt >= maxWgt) continue;
-            var sku = item.sku, availableL = effContL - currentX;
-            if (availableL < Math.min(sku.L, sku.W)) break;
-
-            var plan = window.findOptimalFloorPlan(effContW, availableL, contH, doorH, sku, maxWgt - totalWgt, isContainer, baseH);
-            if (!plan || plan.layerBoxes <= 0) continue;
-
-            var boxesForThisTruck = Math.min(item.remaining, Math.floor((maxWgt - totalWgt) / sku.Wt));
-            if (boxesForThisTruck <= 0) break;
-
-            var widthUsed = (plan.colsA * plan.dimW1) + (plan.colsB * plan.dimW2);
-            var startY = Math.max(0, (effContW - widthUsed) / 2);
-            var isSingleOrLast = (itemIdx === queue.length - 1) || queue.slice(itemIdx + 1).every(function(it) { return it.remaining <= 0; });
-
-            if (loadStrategy === 'spread' && isSingleOrLast) {
-                var totalRowsA = plan.colsA > 0 ? Math.floor(availableL / plan.dimL1) : 0;
-                var totalRowsB = plan.colsB > 0 ? Math.floor(availableL / plan.dimL2) : 0;
-                var posPerLayer = (plan.colsA * totalRowsA) + (plan.colsB * totalRowsB);
-                var baseLayers = Math.min(plan.physMaxLayers, Math.max(1, Math.floor(boxesForThisTruck / Math.max(1, posPerLayer))));
-                var rem = boxesForThisTruck;
-
-                if (plan.colsA > 0 && totalRowsA > 0) {
-                    for (var r = 0; r < totalRowsA; r++) {
-                        if (rem <= 0 || item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
-                        var rowX = currentX + (r * plan.dimL1);
-                        var maxPosL = (isContainer && rowX + plan.dimL1 >= doorZoneX) ? plan.maxDoorLayers : plan.physMaxLayers;
-                        var rowL = baseLayers;
-                        if (rowL < maxPosL && rem > (totalRowsA - r) * plan.colsA * rowL) rowL = Math.min(maxPosL, rowL + 1);
-                        var rowBoxes = Math.min(plan.colsA * rowL, rem, Math.floor((maxWgt - totalWgt) / sku.Wt));
-                        if (rowBoxes <= 0) break;
-                        var actualL = Math.max(1, Math.ceil(rowBoxes / plan.colsA)), rowWgt = rowBoxes * sku.Wt;
-                        placedItems.push({ id: sku.name, stripTag: 'A', x: rowX, y: startY, z: baseH, l: plan.dimL1, w: plan.colsA * plan.dimW1, h: actualL * sku.H, boxes: rowBoxes, wgt: rowWgt, color: item.color, cols: plan.colsA, rows: 1, layers: actualL, singleBoxL: plan.dimL1, singleBoxW: plan.dimW1, singleBoxH: sku.H });
-                        totalWgt += rowWgt; totalBoxes += rowBoxes; rem -= rowBoxes; item.remaining -= rowBoxes;
-                    }
-                }
-                if (plan.colsB > 0 && totalRowsB > 0) {
-                    var stripBY = startY + (plan.colsA * plan.dimW1);
-                    for (var r2 = 0; r2 < totalRowsB; r2++) {
-                        if (rem <= 0 || item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
-                        var rowX2 = currentX + (r2 * plan.dimL2);
-                        var maxPosL2 = (isContainer && rowX2 + plan.dimL2 >= doorZoneX) ? plan.maxDoorLayers : plan.physMaxLayers;
-                        var rowL2 = baseLayers;
-                        if (rowL2 < maxPosL2 && rem > (totalRowsB - r2) * plan.colsB * rowL2) rowL2 = Math.min(maxPosL2, rowL2 + 1);
-                        var rowBoxes2 = Math.min(plan.colsB * rowL2, rem, Math.floor((maxWgt - totalWgt) / sku.Wt));
-                        if (rowBoxes2 <= 0) break;
-                        var actualL2 = Math.max(1, Math.ceil(rowBoxes2 / plan.colsB)), rowWgt2 = rowBoxes2 * sku.Wt;
-                        placedItems.push({ id: sku.name, stripTag: 'B', x: rowX2, y: stripBY, z: baseH, l: plan.dimL2, w: plan.colsB * plan.dimW2, h: actualL2 * sku.H, boxes: rowBoxes2, wgt: rowWgt2, color: item.color, cols: plan.colsB, rows: 1, layers: actualL2, singleBoxL: plan.dimL2, singleBoxW: plan.dimW2, singleBoxH: sku.H });
-                        totalWgt += rowWgt2; totalBoxes += rowBoxes2; rem -= rowBoxes2; item.remaining -= rowBoxes2;
-                    }
-                }
-            } else {
-                var curX_A = currentX, curX_B = currentX, stripBY2 = startY + (plan.colsA * plan.dimW1);
-                while (item.remaining > 0 && totalWgt + sku.Wt <= maxWgt) {
-                    var canA = plan.colsA > 0 && (curX_A + plan.dimL1 <= effContL);
-                    var canB = plan.colsB > 0 && (curX_B + plan.dimL2 <= effContL);
-                    if (!canA && !canB) break;
-                    if (canA && (!canB || curX_A <= curX_B)) {
-                        var rMaxL = (isContainer && curX_A + plan.dimL1 >= doorZoneX) ? plan.maxDoorLayers : plan.physMaxLayers;
-                        var rB = Math.min(plan.colsA * rMaxL, item.remaining, Math.floor((maxWgt - totalWgt) / sku.Wt));
-                        if (rB <= 0) break;
-                        var rL = Math.max(1, Math.ceil(rB / plan.colsA)), rW = rB * sku.Wt;
-                        placedItems.push({ id: sku.name, stripTag: 'A', x: curX_A, y: startY, z: baseH, l: plan.dimL1, w: plan.colsA * plan.dimW1, h: rL * sku.H, boxes: rB, wgt: rW, color: item.color, cols: plan.colsA, rows: 1, layers: rL, singleBoxL: plan.dimL1, singleBoxW: plan.dimW1, singleBoxH: sku.H });
-                        totalWgt += rW; totalBoxes += rB; item.remaining -= rB; curX_A += plan.dimL1;
-                    } else {
-                        var rMaxL2 = (isContainer && curX_B + plan.dimL2 >= doorZoneX) ? plan.maxDoorLayers : plan.physMaxLayers;
-                        var rB2 = Math.min(plan.colsB * rMaxL2, item.remaining, Math.floor((maxWgt - totalWgt) / sku.Wt));
-                        if (rB2 <= 0) break;
-                        var rL2 = Math.max(1, Math.ceil(rB2 / plan.colsB)), rW2 = rB2 * sku.Wt;
-                        placedItems.push({ id: sku.name, stripTag: 'B', x: curX_B, y: stripBY2, z: baseH, l: plan.dimL2, w: plan.colsB * plan.dimW2, h: rL2 * sku.H, boxes: rB2, wgt: rW2, color: item.color, cols: plan.colsB, rows: 1, layers: rL2, singleBoxL: plan.dimL2, singleBoxW: plan.dimW2, singleBoxH: sku.H });
-                        totalWgt += rW2; totalBoxes += rB2; item.remaining -= rB2; curX_B += plan.dimL2;
-                    }
-                }
-            }
-            currentX = placedItems.reduce(function(max, it) { return Math.max(max, it.x + it.l); }, 0);
-        }
-        var maxReachX = placedItems.reduce(function(max, it) { return Math.max(max, it.x + it.l); }, 0);
-        return { placedItems: placedItems, totalWgt: totalWgt, totalBoxes: totalBoxes, totalPallets: 0, gapL: Math.max(0, effContL - maxReachX) };
-    };
-
-    window.runEngine = function() {
-        var vType = (document.getElementById('vehicleType') && document.getElementById('vehicleType').value) || '20DC';
-        var vSpec = window.VEHICLE_SPECS[vType] || window.VEHICLE_SPECS['20DC'];
-        var baseType = (document.getElementById('baseType') && document.getElementById('baseType').value) || 'floor';
-        var baseSpec = window.BASE_SPECS[baseType] || window.BASE_SPECS['floor'];
-        var loadStrategy = (document.getElementById('loadDistributionStrategy') && document.getElementById('loadDistributionStrategy').value) || 'spread';
-        var maxWgt = parseInt(document.getElementById('maxWgt') && document.getElementById('maxWgt').value) || vSpec.maxWgt;
-
-        var effContL = vSpec.L - 10, effContW = vSpec.W - 10;
-        var optFrontCurve = (vType === 'TIR') && (document.getElementById('optFrontCurve') && document.getElementById('optFrontCurve').checked);
-        if (optFrontCurve) effContL -= 100;
-        if (document.getElementById('optDoor') && document.getElementById('optDoor').checked) effContL -= 80;
-        if (document.getElementById('optAirbag') && document.getElementById('optAirbag').checked) effContW -= 80;
-        if (document.getElementById('optLashing') && document.getElementById('optLashing').checked) effContL -= 150;
-
-        var rawIdx = parseInt(document.getElementById('skuSelect') && document.getElementById('skuSelect').value);
-        var activeSku = window.skuDatabase[isNaN(rawIdx) ? 5 : rawIdx] || window.skuDatabase[5];
-
-        var queue = [];
-        if (window.currentMode === 'single') {
-            var targetBoxes = parseInt(document.getElementById('targetBoxes') && document.getElementById('targetBoxes').value);
-            if (isNaN(targetBoxes) || targetBoxes <= 0) {
-                targetBoxes = window.calculateMaxVehicleBoxes(effContW, effContL, vSpec, activeSku, maxWgt, baseType);
-            }
-            queue.push({ sku: activeSku, target: targetBoxes, color: window.colorMap[0], itemStateIndex: 0 });
-        } else {
-            window.mixedItemsState.forEach(function(item, idx) {
-                var sku = window.skuDatabase[item.skuIdx];
-                if (sku && item.count > 0) queue.push({ sku: sku, target: item.count, color: window.colorMap[idx % window.colorMap.length], itemStateIndex: idx });
-            });
-            if (queue.length > 0) activeSku = queue[0].sku;
-        }
-
-        window.globalFleet = [];
-        var remQueue = queue.map(function(q) { return { sku: q.sku, target: q.target, remaining: q.target, color: q.color, itemStateIndex: q.itemStateIndex }; });
-        var safety = 0;
-        while (remQueue.some(function(q) { return q.remaining > 0; }) && safety < 20) {
-            safety++;
-            var res = window.packSingleVehicle(remQueue, effContL, effContW, vSpec.H, vSpec.doorH, maxWgt, baseType, optFrontCurve, vSpec.isContainer, loadStrategy);
-            if (res.placedItems.length === 0) break;
-            window.globalFleet.push(res);
-        }
-        if (window.globalFleet.length === 0) window.globalFleet.push({ placedItems: [], totalBoxes: 0, totalWgt: 0, totalPallets: 0, gapL: effContL });
-
-        var singlePalLayout = (baseType !== 'floor') ? window.calculateSinglePalletLayout(activeSku, baseSpec, vSpec.H, vSpec.doorH) : null;
-        var firstTruckPallets = window.globalFleet[0] ? (window.globalFleet[0].totalPallets || window.globalFleet[0].placedItems.length) : 0;
-        window.renderSinglePalletCard(activeSku, baseSpec, singlePalLayout, firstTruckPallets);
-
-        window.globalEngineContext = { contL: vSpec.L, contW: vSpec.W, contH: vSpec.H, maxWgt: maxWgt, baseType: baseType, baseSpec: baseSpec, optFrontCurve: optFrontCurve };
-        window.currentVehicleIdx = 0;
-        window.updateFleetUI();
-    };
-
-    window.calculateMaxVehicleBoxes = function(effW, effL, vSpec, sku, maxWgt, baseType) {
-        var baseSpec = window.BASE_SPECS[baseType] || window.BASE_SPECS['floor'];
-        if (baseType === 'floor') {
-            var plan = window.findOptimalFloorPlan(effW, effL, vSpec.H, vSpec.doorH, sku, maxWgt, vSpec.isContainer, 0);
-            return plan ? plan.maxBoxes : Math.floor(maxWgt / sku.Wt);
-        }
-        var palLayout = window.calculateSinglePalletLayout(sku, baseSpec, vSpec.H, vSpec.doorH);
-        if (!palLayout || palLayout.boxesPerPallet <= 0) return 0;
-        var pW = baseSpec.palletW, pL = baseSpec.palletL;
-        var count1 = Math.floor(effW / pW) * Math.floor(effL / pL);
-        var count2 = Math.floor(effW / pL) * Math.floor(effL / pW);
-        var maxPalletsInCont = Math.max(count1, count2);
-        var maxByWgt = Math.floor(maxWgt / (sku.Wt + (baseSpec.tareWgt / palLayout.boxesPerPallet)));
-        return Math.min(maxPalletsInCont * palLayout.boxesPerPallet, maxByWgt);
-    };
-
-    window.updateFleetUI = function() {
-        var pag = document.getElementById('fleetPaginationContainer');
-        if (pag) {
-            if (window.globalFleet.length > 1) {
-                pag.innerHTML = '<div class="flex gap-1.5 mb-2.5 p-1.5 bg-white rounded-2xl border overflow-x-auto">' +
-                    window.globalFleet.map(function(v, i) {
-                        return '<button type="button" onclick="window.currentVehicleIdx=' + i + ';window.updateFleetUI();" class="px-3.5 py-1.5 rounded-xl font-bold text-xs cursor-pointer ' + (i === window.currentVehicleIdx ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-600') + '">🚚 Araç #' + (i + 1) + ' (' + v.totalBoxes + ' Koli)</button>';
-                    }).join('') + '</div>';
-            } else pag.innerHTML = '';
-        }
-
-        var truck = window.globalFleet[window.currentVehicleIdx] || { placedItems: [], totalBoxes: 0, totalWgt: 0, totalPallets: 0 };
-        var ctx = window.globalEngineContext;
-        var baseSpec = ctx.baseSpec || window.BASE_SPECS['floor'];
-        var isPalletMode = ctx.baseType !== 'floor';
-
-        window.setElText('resTotalBoxes', truck.totalBoxes.toLocaleString() + ' Adet');
-        window.setElText('resTotalBoxesSub', baseSpec.name + ' Modu');
-        window.setElText('resWeight', truck.totalWgt.toLocaleString(undefined, { maximumFractionDigits: 1 }) + ' kg');
-        window.setElText('resWeightSub', 'Yasal Sınır: ' + (ctx.maxWgt || 27800).toLocaleString() + ' kg (%' + Math.min(100, Math.round((truck.totalWgt / (ctx.maxWgt || 27800)) * 100)) + ' Dolu)');
-        window.setElText('resLoads', isPalletMode ? (truck.placedItems.length + ' Palet') : (truck.placedItems.length + ' Sıra'));
-        window.setElText('resLoadsSub', isPalletMode ? (baseSpec.name + ' İstifi') : 'Dorse Boyunca Sıralı');
-
-        var momentX = 0;
-        truck.placedItems.forEach(function(p) { momentX += (p.x + p.l / 2) * p.wgt; });
-        var cogX = truck.totalWgt > 0 ? (momentX / truck.totalWgt) : 0;
-        window.setElText('resStatusSub', 'Dengeli Yük (CoG: ' + (cogX / 1000).toFixed(1) + 'm)');
-
-        var grouped = {};
-        truck.placedItems.forEach(function(it) {
-            if (!grouped[it.id]) grouped[it.id] = { name: it.id, totalBoxes: 0, totalWgt: 0, strips: {} };
-            grouped[it.id].totalBoxes += it.boxes;
-            grouped[it.id].totalWgt += it.wgt;
-            var tag = it.stripTag || 'A';
-            if (!grouped[it.id].strips[tag]) grouped[it.id].strips[tag] = { cols: it.cols, rows: 0, layers: it.layers, boxes: 0 };
-            grouped[it.id].strips[tag].rows += 1;
-            grouped[it.id].strips[tag].boxes += it.boxes;
-            grouped[it.id].strips[tag].layers = Math.max(grouped[it.id].strips[tag].layers, it.layers);
-        });
-
-        var optListEl = document.getElementById('optimizationDetailsList');
-        if (optListEl) {
-            var blocksHtml = Object.keys(grouped).map(function(key, idx) {
-                var g = grouped[key];
-                var stHtml = Object.keys(g.strips).map(function(k) {
-                    var s = g.strips[k];
-                    var headerLabel = k === 'PALET' ? ('Paletli İstif (' + baseSpec.name + ')') : (k === 'B' ? 'Şerit B (Enine Çevrilmiş)' : 'Şerit A (Boyuna Düz)');
-                    return '<div class="bg-white p-2.5 rounded-xl border text-center font-mono"><span class="text-[10px] text-slate-500 font-bold block mb-1">' + headerLabel + '</span><div class="grid grid-cols-4 gap-1 text-xs"><div><small class="block text-[9px] text-slate-400">En</small><b>' + s.cols + '</b></div><div><small class="block text-[9px] text-slate-400">' + (k === 'PALET' ? 'Palet' : 'Sıra') + '</small><b>' + s.rows + '</b></div><div><small class="block text-[9px] text-slate-400">Kat</small><b>' + s.layers + ' Kat</b></div><div class="text-emerald-700"><small class="block text-[9px]">Toplam</small><b>' + s.boxes + '</b></div></div></div>';
-                }).join('');
-                return '<div class="p-3 bg-slate-50 rounded-xl border space-y-2"><div class="flex justify-between items-center"><b class="text-xs">' + (idx + 1) + '. Blok: ' + window.escapeHtml(g.name) + '</b><span class="text-xs font-mono font-bold text-emerald-700">' + g.totalBoxes + ' Adet • ' + g.totalWgt.toFixed(1) + ' kg</span></div><div class="grid grid-cols-1 md:grid-cols-2 gap-2">' + stHtml + '</div></div>';
-            }).join('');
-            optListEl.innerHTML = '<div class="bg-white p-3.5 rounded-2xl border text-xs space-y-2"><div class="flex justify-between border-b pb-1.5"><b class="uppercase">🚚 ' + baseSpec.name + ' Yerleşim Planı (Araç ' + (window.currentVehicleIdx + 1) + '/' + window.globalFleet.length + ')</b></div>' + blocksHtml + '</div>';
-        }
-
-        window.lastRenderData = { placedItems: truck.placedItems, contL: ctx.contL, contW: ctx.contW, contH: ctx.contH, cogX: cogX, baseH: baseSpec.baseH };
-        window.performRender(window.lastRenderData);
-    };
-
-    window.performRender = function(data) {
-        if (!data) return;
-        var canvas = document.getElementById('contCanvas');
-        if (!canvas) return;
-        var ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        var cosA = Math.cos(0.523599), sinA = Math.sin(0.523599);
-        var L = data.contL || 5890, W = data.contW || 2345, H = data.contH || 2385;
-        var scale = Math.min((canvas.width - 100) / ((L + W) * cosA), (canvas.height - 100) / ((L + W) * sinA + H)) * (window.zoomLevel || 1);
-        if (!isFinite(scale) || scale <= 0) scale = 0.035;
-
-        var cx = canvas.width / 2 + (window.panX || 0), cy = canvas.height / 2 + 50 + (window.panY || 0);
-        function project(x, y, z) { return { x: cx + (x - y) * cosA * scale, y: cy + (x + y) * sinA * scale - (z * scale) }; }
-        function drawPoly(pts, fill, stroke, w) {
-            ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
-            for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-            ctx.closePath();
-            if (fill) { ctx.fillStyle = fill; ctx.fill(); }
-            ctx.strokeStyle = stroke || 'rgba(0,0,0,0.25)'; ctx.lineWidth = w || 1; ctx.stroke();
-        }
-        function drawLine(p1, p2) {
-            ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
-            ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1; ctx.stroke();
-        }
-
-        drawPoly([project(0,0,0), project(L,0,0), project(L,W,0), project(0,W,0)], '#1e293b');
-        drawPoly([project(0,0,0), project(L,0,0), project(L,0,H), project(0,0,H)], '#0f172a');
-        drawPoly([project(0,0,0), project(0,W,0), project(0,W,H), project(0,0,H)], '#090d16');
-
-        (data.placedItems || []).forEach(function(b) {
-            var z0 = b.z || 0, z1 = z0 + b.h;
-            if (b.isPallet && z0 > 0) {
-                drawPoly([project(b.x+b.l, b.y, 0), project(b.x+b.l, b.y+b.w, 0), project(b.x+b.l, b.y+b.w, z0), project(b.x+b.l, b.y, z0)], '#92400e', 'rgba(0,0,0,0.6)');
-                drawPoly([project(b.x, b.y+b.w, 0), project(b.x+b.l, b.y+b.w, 0), project(b.x+b.l, b.y+b.w, z0), project(b.x, b.y+b.w, z0)], '#78350f', 'rgba(0,0,0,0.6)');
-                drawPoly([project(b.x, b.y, z0), project(b.x+b.l, b.y, z0), project(b.x+b.l, b.y+b.w, z0), project(b.x, b.y+b.w, z0)], '#b45309', 'rgba(0,0,0,0.6)');
-            }
-
-            drawPoly([project(b.x+b.l, b.y, z0), project(b.x+b.l, b.y+b.w, z0), project(b.x+b.l, b.y+b.w, z1), project(b.x+b.l, b.y, z1)], b.color.right, 'rgba(0,0,0,0.45)');
-            drawPoly([project(b.x, b.y+b.w, z0), project(b.x+b.l, b.y+b.w, z0), project(b.x+b.l, b.y+b.w, z1), project(b.x, b.y+b.w, z1)], b.color.left, 'rgba(0,0,0,0.45)');
-            drawPoly([project(b.x, b.y, z1), project(b.x+b.l, b.y, z1), project(b.x+b.l, b.y+b.w, z1), project(b.x, b.y+b.w, z1)], b.color.top, 'rgba(0,0,0,0.45)');
-
-            for (var l = 1; l < (b.layers || 1); l++) {
-                var z = z0 + l * b.singleBoxH;
-                drawLine(project(b.x+b.l, b.y, z), project(b.x+b.l, b.y+b.w, z));
-                drawLine(project(b.x, b.y+b.w, z), project(b.x+b.l, b.y+b.w, z));
-            }
-            for (var c = 1; c < (b.cols || 1); c++) {
-                var y = b.y + c * (b.w / b.cols);
-                drawLine(project(b.x+b.l, y, z0), project(b.x+b.l, y, z1));
-                drawLine(project(b.x, y, z1), project(b.x+b.l, y, z1));
-            }
-        });
-
-        if (data.placedItems && data.placedItems.length > 0) {
-            var pt = project(data.cogX, W/2, H/2);
-            ctx.beginPath(); ctx.arc(pt.x, pt.y, 5.5, 0, 2*Math.PI);
-            ctx.fillStyle = '#ef4444'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
-            ctx.fillStyle = '#fff'; ctx.font = 'bold 9px JetBrains Mono'; ctx.fillText('⌖ CoG', pt.x - 12, pt.y - 9);
-        }
-    };
-
-    window.resetView = function() { window.panX = 0; window.panY = 0; window.zoomLevel = 1; if (window.lastRenderData) window.performRender(window.lastRenderData); };
-
-    window.populateSKU = function() {
-        var rawIdx = parseInt(document.getElementById('skuSelect') && document.getElementById('skuSelect').value);
-        var sku = window.skuDatabase[isNaN(rawIdx) ? 5 : rawIdx] || window.skuDatabase[5];
-        if (!sku) return;
-        var bL = document.getElementById('boxL'); if (bL) bL.value = sku.L;
-        var bW = document.getElementById('boxW'); if (bW) bW.value = sku.W;
-        var bH = document.getElementById('boxH'); if (bH) bH.value = sku.H;
-        var bWt = document.getElementById('boxWt'); if (bWt) bWt.value = sku.Wt;
-    };
-
-    window.autoSyncSingleTargetCapacity = function() {
-        var vType = (document.getElementById('vehicleType') && document.getElementById('vehicleType').value) || '20DC';
-        var vSpec = window.VEHICLE_SPECS[vType] || window.VEHICLE_SPECS['20DC'];
-        var baseType = (document.getElementById('baseType') && document.getElementById('baseType').value) || 'floor';
-        var rawIdx = parseInt(document.getElementById('skuSelect') && document.getElementById('skuSelect').value);
-        var sku = window.skuDatabase[isNaN(rawIdx) ? 5 : rawIdx] || window.skuDatabase[5];
-        var maxWgt = parseInt(document.getElementById('maxWgt') && document.getElementById('maxWgt').value) || vSpec.maxWgt;
-
-        var effL = vSpec.L - 10, effW = vSpec.W - 10;
-        if (document.getElementById('optDoor') && document.getElementById('optDoor').checked) effL -= 80;
-        if (vType === 'TIR' && document.getElementById('optFrontCurve') && document.getElementById('optFrontCurve').checked) effL -= 100;
-        if (document.getElementById('optAirbag') && document.getElementById('optAirbag').checked) effW -= 80;
-        if (document.getElementById('optLashing') && document.getElementById('optLashing').checked) effL -= 150;
-
-        var totalMax = window.calculateMaxVehicleBoxes(effW, effL, vSpec, sku, maxWgt, baseType);
-        var targetEl = document.getElementById('targetBoxes');
-        if (!window.isUserDefinedTarget || !targetEl || !targetEl.value) { if (targetEl) targetEl.value = totalMax; }
-        window.setElText('capacityHintBadge', 'Kapasite: ' + totalMax + ' Adet');
-    };
-
-    window.switchTab = function(mode) {
-        window.currentMode = mode;
-        var tS = document.getElementById('tab-single'); if (tS) tS.className = mode === 'single' ? 'tab-btn active text-center' : 'tab-btn text-slate-500 text-center';
-        var tM = document.getElementById('tab-mixed'); if (tM) tM.className = mode === 'mixed' ? 'tab-btn active text-center' : 'tab-btn text-slate-500 text-center';
-        var pS = document.getElementById('panel-single'); if (pS) pS.style.display = mode === 'single' ? 'block' : 'none';
-        var pM = document.getElementById('panel-mixed'); if (pM) pM.style.display = mode === 'mixed' ? 'block' : 'none';
-        if (mode === 'single') window.autoSyncSingleTargetCapacity();
-        window.runEngine();
-    };
-
-    window.onVehicleChange = function() {
-        window.isUserDefinedTarget = false;
-        var vType = (document.getElementById('vehicleType') && document.getElementById('vehicleType').value) || '20DC';
-        var mW = document.getElementById('maxWgt'); if (mW) mW.value = (window.VEHICLE_SPECS[vType] || window.VEHICLE_SPECS['20DC']).maxWgt;
-        var fc = document.getElementById('optFrontCurveLabel'); if (fc) fc.style.display = vType === 'TIR' ? 'flex' : 'none';
-        window.autoSyncSingleTargetCapacity();
-        window.runEngine();
-    };
-
-    window.onSkuSelectChanged = function() {
-        window.isUserDefinedTarget = false;
-        window.populateSKU();
-        window.autoSyncSingleTargetCapacity();
-        window.runEngine();
-    };
-
-    window.onBaseTypeChange = function() {
-        window.isUserDefinedTarget = false;
-        window.autoSyncSingleTargetCapacity();
-        window.runEngine();
-    };
-
-    window.debouncedRunEngine = function() {
-        clearTimeout(window.debounceTimer);
-        window.debounceTimer = setTimeout(window.runEngine, 40);
-    };
-
-    window.renderMixedList = function() {
-        var list = document.getElementById('mixedList');
-        if (!list) return;
-        list.innerHTML = '';
-        window.mixedItemsState.forEach(function(item, idx) {
-            var row = document.createElement('div');
-            row.className = "p-2.5 bg-white border rounded-xl flex flex-col gap-2";
-            var opts = window.skuDatabase.map(function(s, i) { return '<option value="' + i + '" ' + (i === item.skuIdx ? 'selected' : '') + '>' + window.escapeHtml(s.name) + '</option>'; }).join('');
-            row.innerHTML = '<div class="flex justify-between items-center border-b pb-1"><span class="text-[10px] font-bold uppercase">' + (idx + 1) + '. Blok</span><button type="button" onclick="window.removeMixedRow(' + idx + ')" class="text-rose-500 font-bold text-xs cursor-pointer">✕</button></div><div class="flex gap-2"><select class="w-[62%] p-1.5 border rounded-lg text-xs" onchange="window.mixedItemsState[' + idx + '].skuIdx=parseInt(this.value)||0;window.runEngine();">' + opts + '</select><input type="number" class="w-[38%] p-1.5 border rounded-lg text-xs font-mono font-bold" value="' + item.count + '" oninput="window.mixedItemsState[' + idx + '].count=Math.max(0,parseInt(this.value)||0);window.debouncedRunEngine();"></div>';
-            list.appendChild(row);
-        });
-    };
-
-    window.addNewMixedRow = function() { window.mixedItemsState.push({ skuIdx: 0, count: 100 }); window.renderMixedList(); window.runEngine(); };
-    window.removeMixedRow = function(idx) { if (window.mixedItemsState.length > 1) { window.mixedItemsState.splice(idx, 1); window.renderMixedList(); window.runEngine(); } };
-    window.openSkuManager = function() { window.openModal('skuManagerModal'); };
-
-    // 👑 SADECE ADMİNİN KULLANABİLDİĞİ ROL YÖNETİM PANELİ (TAM SENKRON & KALICI)
-    window.openAdminUsersModal = async function() {
-        if (!window.currentUserProfile || window.currentUserProfile.role !== 'admin') {
-            return alert("Yetkisiz erişim: Rol atamalarını yalnızca Sistem Yöneticisi yapabilir.");
-        }
-        window.openModal('adminUsersModal');
-        var tbody = document.getElementById('adminUsersTableBody');
-        if (!tbody) return;
-        tbody.innerHTML = '';
-
-        var overrides = window.getRoleOverrides();
-
-        if (window.supabaseClient) {
-            try {
-                var res = await window.supabaseClient.rpc('admin_list_users');
-                if (!res.error && res.data && res.data.length > 0) {
-                    res.data.forEach(function(su) {
-                        var extractedId = su.out_user_id || su.user_id || su.id || su.uid;
-                        var extractedEmail = (su.out_email || su.email || '').trim();
-                        var dbRole = su.out_role || su.role || 'sales';
-                        // Eğer admin yerel olarak rol değiştirdiyse onu koru, yoksa veritabanı rolünü al
-                        var effectiveRole = overrides[extractedEmail.toLowerCase()] || dbRole;
-                        window.saveUserToLocalDirectory({
-                            id: extractedId,
-                            email: extractedEmail,
-                            full_name: su.out_full_name || su.full_name || extractedEmail.split('@')[0],
-                            role: effectiveRole,
-                            created_at: su.out_created_at || su.created_at
-                        }, true);
-                    });
-                }
-            } catch (e) {}
-        }
-
-        window.renderAdminUsersRows();
-    };
-
-    window.renderAdminUsersRows = function() {
-        var tbody = document.getElementById('adminUsersTableBody');
-        if (!tbody) return;
-        tbody.innerHTML = '';
-        var usersList = window.getLocalDirectory();
-        var overrides = window.getRoleOverrides();
-
-        usersList.forEach(function(u, idx) {
-            var tr = document.createElement('tr');
-            tr.className = "hover:bg-slate-50 transition";
-            var emailClean = (u.email || '').trim();
-            var currentRole = overrides[emailClean.toLowerCase()] || u.role || 'sales';
-            var dateStr = u.created_at ? new Date(u.created_at).toLocaleDateString('tr-TR') : '-';
-            var isAdminMaster = emailClean.toLowerCase() === 'admin96@admin.com';
-            var safeId = (u.id && u.id !== 'undefined') ? u.id : '';
-
-            var colorClasses = currentRole === 'admin'
-                ? 'bg-purple-50 text-purple-900 border-purple-300'
-                : (currentRole === 'logistics' ? 'bg-indigo-50 text-indigo-900 border-indigo-300' : 'bg-slate-50 text-slate-800 border-slate-300');
-
-            tr.innerHTML = '<td class="p-3 font-bold text-slate-900">' + window.escapeHtml(u.full_name || 'İsimsiz') + '</td>' +
-                '<td class="p-3 font-mono text-slate-600">' + window.escapeHtml(emailClean) + '</td>' +
-                '<td class="p-3 text-slate-500 font-mono">' + dateStr + '</td>' +
-                '<td class="p-3 text-center">' +
-                    '<div class="inline-flex items-center gap-2">' +
-                        '<select id="roleSel_' + idx + '" onchange="window.updateUserRole(\'' + window.escapeHtml(emailClean) + '\', \'' + window.escapeHtml(safeId) + '\', this.value, ' + idx + ')" class="p-1.5 border rounded-lg text-xs font-bold cursor-pointer transition ' + colorClasses + '">' +
-                            '<option value="sales" ' + (currentRole === 'sales' ? 'selected' : '') + '>Satış Ekibi</option>' +
-                            '<option value="logistics" ' + (currentRole === 'logistics' ? 'selected' : '') + '>Lojistik & Saha</option>' +
-                            '<option value="admin" ' + (currentRole === 'admin' ? 'selected' : '') + '>Yönetici (Admin)</option>' +
-                        '</select>' +
-                        '<span id="roleSavedBadge_' + idx + '" class="hidden text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">✓ Kaydedildi</span>' +
-                    '</div>' +
-                    (isAdminMaster ? '<span class="text-[9px] text-purple-600 block font-bold mt-0.5">(Ana Yönetici)</span>' : '') +
-                '</td>';
-            tbody.appendChild(tr);
-        });
-    };
-
-    window.updateUserRole = async function(targetEmail, targetId, newRole, rowIdx) {
-        if (!window.currentUserProfile || window.currentUserProfile.role !== 'admin') {
-            return alert("Yetkisiz işlem!");
-        }
-
-        // 1. Kalıcı rol tablosuna ve yerel dizine anında kaydet (asla geri sekmez)
-        window.setRoleOverride(targetEmail, newRole);
-        window.saveUserToLocalDirectory({ id: targetId, email: targetEmail, role: newRole }, false);
-
-        // 2. Seçim kutusunun rengini ve onay rozetini anında güncelle
-        var selEl = document.getElementById('roleSel_' + rowIdx);
-        if (selEl) {
-            var colorClasses = newRole === 'admin'
-                ? 'bg-purple-50 text-purple-900 border-purple-300'
-                : (newRole === 'logistics' ? 'bg-indigo-50 text-indigo-900 border-indigo-300' : 'bg-slate-50 text-slate-800 border-slate-300');
-            selEl.className = 'p-1.5 border rounded-lg text-xs font-bold cursor-pointer transition ' + colorClasses;
-        }
-
-        var badgeEl = document.getElementById('roleSavedBadge_' + rowIdx);
-        if (badgeEl) {
-            badgeEl.classList.remove('hidden');
-            setTimeout(function() { badgeEl.classList.add('hidden'); }, 3500);
-        }
-
-        var bannerEl = document.getElementById('adminUsersStatusBanner');
-        if (bannerEl) {
-            var roleNameTR = newRole === 'admin' ? 'Yönetici (Admin)' : (newRole === 'logistics' ? 'Lojistik & Saha' : 'Satış Ekibi');
-            bannerEl.textContent = "✓ " + targetEmail + " kullanıcısının yetkisi '" + roleNameTR + "' olarak atandı.";
-            bannerEl.classList.remove('hidden');
-        }
-
-        // 3. Supabase veritabanına hem RPC hem doğrudan profiles upsert ile kaydet
-        var isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetId || '');
-        if (window.supabaseClient && isUuid) {
-            try {
-                await window.supabaseClient.rpc('admin_set_user_role', { target_user_id: targetId, new_role: newRole });
-            } catch (e) {}
-            try {
-                await window.supabaseClient.from('profiles').upsert({
-                    id: targetId,
-                    full_name: targetEmail.split('@')[0],
-                    role: newRole,
-                    updated_at: new Date().toISOString()
-                });
-            } catch (e) {}
-        }
-    };
-
-    window.exportCSV = function() {
-        if (!window.globalFleet || !window.globalFleet[0]) return;
-        var csv = "\uFEFFArac_No,SKU_Adi,Koli_Adedi,Agirlik_kg\n";
-        window.globalFleet.forEach(function(f, i) { f.placedItems.forEach(function(it) { csv += (i + 1) + ',"' + it.id + '",' + it.boxes + ',' + it.wgt + '\n'; }); });
-        var a = document.createElement('a');
-        a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
-        a.download = 'Elita_Yukleme_Manifestosu.csv'; a.click();
-    };
-
-    window.exportPDF = function() {
-        if (typeof html2pdf === 'undefined') return window.print();
-        html2pdf().set({ margin: 10, filename: 'Elita_Yukleme_Manifestosu.pdf', jsPDF: { orientation: 'landscape' } }).from(document.getElementById('printArea')).save();
-    };
-
-    window.initWorkspace = function() {
-        window.populateSKU();
-        window.renderMixedList();
-        window.autoSyncSingleTargetCapacity();
-        var canvas = document.getElementById('contCanvas');
-        if (canvas && !window.canvasInitialized) {
-            window.canvasInitialized = true;
-            canvas.addEventListener('mousedown', function(e) { window.isDragging = true; window.startX = e.clientX - window.panX; window.startY = e.clientY - window.panY; });
-            window.addEventListener('mousemove', function(e) { if (window.isDragging) { window.panX = e.clientX - window.startX; window.panY = e.clientY - window.startY; if (window.lastRenderData) window.performRender(window.lastRenderData); } });
-            window.addEventListener('mouseup', function() { window.isDragging = false; });
-            canvas.addEventListener('wheel', function(e) { e.preventDefault(); window.zoomLevel = Math.max(0.4, Math.min(6, window.zoomLevel * (e.deltaY < 0 ? 1.1 : 0.9))); if (window.lastRenderData) window.performRender(window.lastRenderData); }, { passive: false });
-        }
-    };
-
-    window.initWorkspace();
-    window.runEngine();
-</script>
 </body>
 </html>
