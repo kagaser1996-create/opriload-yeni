@@ -214,6 +214,7 @@
 
             if (typeof window.applyRolePermissions === 'function') window.applyRolePermissions();
             if (typeof window.initWorkspace === 'function') window.initWorkspace();
+            if (typeof window.refreshCommunicationBadges === 'function') window.refreshCommunicationBadges();
             if (typeof window.runEngine === 'function') {
                 window.runEngine();
                 setTimeout(function() { window.runEngine(); }, 60);
@@ -223,8 +224,12 @@
         window.handleLogout = function() {
             window.currentUser = null;
             window.currentUserProfile = null;
+            window.currentReviewTalepId = null;
+            window.currentEditingRevisionId = null;
             var passEl = document.getElementById('authPassword');
             if (passEl) passEl.value = '';
+            var revBar = document.getElementById('activeReviewBar');
+            if (revBar) revBar.classList.add('hidden');
             var landing = document.getElementById('authLandingPage');
             var app = document.getElementById('protectedApp');
             if (landing) { landing.classList.remove('hidden'); landing.style.display = 'flex'; }
@@ -307,18 +312,43 @@
                         👥 Kullanıcılar & Roller
                     </button>
                     
-                    <button type="button" id="btnDashboard" onclick="window.openDashboard()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 cursor-pointer">
+                    <button type="button" id="btnDashboard" onclick="window.openDashboard()" class="relative bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 cursor-pointer">
                         <span id="dashboardBtnText">📥 Talepler</span>
+                        <span id="pendingBadgeBubble" class="hidden absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full shadow-md animate-pulse">0</span>
                     </button>
 
-                    <button type="button" id="btnSubmitSales" class="hidden bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold items-center gap-1 cursor-pointer">
-                        ↗ Onaya Gönder
+                    <button type="button" id="btnSubmitSales" onclick="window.openSalesSubmitModal()" class="flex bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-lg text-[11px] font-bold shadow-md items-center gap-1 cursor-pointer">
+                        <span id="btnSubmitSalesText">↗ Onaya Gönder</span>
                     </button>
                     <button type="button" onclick="window.handleLogout()" class="text-[11px] text-slate-400 hover:text-rose-400 font-semibold ml-1 cursor-pointer">Çıkış</button>
                 </div>
             </div>
         </div>
     </nav>
+
+    <!-- 🔔 SATIŞ & LOJİSTİK CANLI GERİ BİLDİRİM ÇUBUĞU (İKİ YÖNLÜ İLETİŞİM DURUMU) -->
+    <div id="salesFeedbackBanner" class="hidden max-w-[1440px] mx-auto w-full mb-2.5 no-print"></div>
+
+    <!-- 📋 LOJİSTİK SAHA İNCELEME & ONAY ÇUBUĞU (3B İNCELEME MODUNDA AÇILIR) -->
+    <div id="activeReviewBar" class="hidden max-w-[1440px] mx-auto w-full mb-2.5 bg-slate-900 border-2 border-indigo-500 rounded-2xl p-3 md:p-4 text-white shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-3 no-print">
+        <div class="flex items-start gap-3">
+            <span class="text-2xl animate-pulse">📋</span>
+            <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="bg-amber-400 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded uppercase">Lojistik Saha İnceleme Modu</span>
+                    <span id="reviewBarTalepMeta" class="text-xs font-bold text-white">Talep #--</span>
+                    <span id="reviewBarStatusBadge" class="text-[10px] font-black px-2 py-0.5 rounded-full bg-slate-800 text-amber-300">Bekliyor</span>
+                </div>
+                <p id="reviewBarSalesNote" class="text-xs text-indigo-200 mt-1 font-medium"></p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
+            <button type="button" onclick="window.openReviewDecisionModal('onaylandi')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-xl text-xs font-black transition cursor-pointer shadow-md">✓ Onayla & Bildir</button>
+            <button type="button" onclick="window.openReviewDecisionModal('duzeltme_istendi')" class="bg-purple-600 hover:bg-purple-500 text-white px-3.5 py-1.5 rounded-xl text-xs font-black transition cursor-pointer shadow-md">↺ Düzeltme İste</button>
+            <button type="button" onclick="window.openReviewDecisionModal('reddedildi')" class="bg-rose-600 hover:bg-rose-500 text-white px-3.5 py-1.5 rounded-xl text-xs font-black transition cursor-pointer shadow-md">✕ Reddet</button>
+            <button type="button" onclick="window.exitReviewMode()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer">İncelemeyi Kapat</button>
+        </div>
+    </div>
 
     <!-- WORKSPACE BODY: 2 SÜTUN -->
     <div class="flex-grow flex flex-col lg:flex-row max-w-[1440px] mx-auto w-full gap-3 print-full-width lg:overflow-hidden">
@@ -334,7 +364,10 @@
 
             <div class="p-3.5 md:p-4 lg:overflow-y-auto flex-grow custom-scrollbar">
                 <div class="mb-3 bg-slate-50/80 border border-slate-200/80 p-2.5 rounded-xl">
-                    <label class="text-[9px] font-bold text-slate-500 uppercase mb-1 block">Sipariş / Talep Tanımı</label>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="text-[9px] font-bold text-slate-500 uppercase block">Sipariş / Talep Tanımı</label>
+                        <span id="revisionModeBadge" class="hidden text-[9px] bg-purple-100 text-purple-800 border border-purple-300 px-1.5 py-0.2 rounded font-black">✏️ Revizyon Modu</span>
+                    </div>
                     <input type="text" id="orderTitle" maxlength="100" placeholder="Örn: Sipariş #1042 - ABC Dağıtım" class="w-full p-2 border border-slate-200 rounded-lg bg-white text-xs font-bold text-slate-800">
                 </div>
 
@@ -598,7 +631,104 @@
     </div>
 </div>
 
-<!-- MODALLER -->
+<!-- ========================================================================= -->
+<!-- MODALLER (SATIŞ GÖNDERİM, LOJİSTİK ONAY/GERİ BİLDİRİM, KULLANICILAR)     -->
+<!-- ========================================================================= -->
+
+<!-- 1. SATIŞ EKİBİ: ONAYA GÖNDERİM & LOJİSTİĞE NOT EKLEME MODALI -->
+<div id="salesSubmitModal" class="hidden fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 no-print backdrop-blur-sm">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border-t-8 border-emerald-600 space-y-4">
+        <div class="flex justify-between items-start">
+            <div>
+                <h3 class="text-sm font-black text-slate-900 uppercase" id="salesSubmitModalHeader">↗ Sevk Planını Lojistik Onayına Gönder</h3>
+                <p class="text-[11px] text-slate-500 mt-0.5">Hazırladığınız yükleme planı Lojistik & Saha ekibinin ekranına düşecektir.</p>
+            </div>
+            <button type="button" onclick="window.closeModal('salesSubmitModal')" class="text-slate-400 hover:text-rose-500 font-bold cursor-pointer">✕</button>
+        </div>
+
+        <div id="salesSubmitSummaryBox" class="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1 font-mono"></div>
+
+        <div>
+            <label class="text-[10px] font-bold text-slate-600 uppercase mb-1 block">Sipariş / Müşteri Başlığı</label>
+            <input type="text" id="modalOrderTitleInput" class="w-full p-2.5 border rounded-xl bg-white text-xs font-bold text-slate-800 focus:border-emerald-500 outline-none" placeholder="Örn: Sipariş #1042 - ABC Gıda Sevk">
+        </div>
+
+        <div>
+            <label class="text-[10px] font-bold text-slate-600 uppercase mb-1 block">Lojistik Ekibine Notunuz (Opsiyonel)</label>
+            <textarea id="salesNoteToLogisticsInput" rows="3" class="w-full p-2.5 border rounded-xl bg-slate-50 text-xs focus:border-emerald-500 outline-none" placeholder="Örn: Müşteri Cuma sabahı teslimat bekliyor, paletli yükleme yapılması rica olunur..."></textarea>
+        </div>
+
+        <div class="flex gap-2 pt-1">
+            <button type="button" onclick="window.closeModal('salesSubmitModal')" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition cursor-pointer">İptal</button>
+            <button type="button" onclick="window.confirmSalesSubmission()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2.5 rounded-xl text-xs transition shadow-md cursor-pointer">🚀 Lojistiğe Gönder</button>
+        </div>
+    </div>
+</div>
+
+<!-- 2. SEVK TALEPLERİ & ÇİFT YÖNLÜ GERİ BİLDİRİM DASHBOARD MODALI -->
+<div id="adminDashboardModal" class="hidden fixed inset-0 bg-slate-900/80 z-40 flex items-center justify-center p-4 no-print backdrop-blur-sm">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-[1200px] w-full max-h-[88vh] flex flex-col overflow-hidden border border-slate-200">
+        <div class="bg-slate-900 text-white px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div>
+                <h3 class="font-bold text-sm uppercase tracking-wide" id="dashboardModalHeader">📥 Sevk Talepleri & Lojistik Geri Bildirim Merkezi</h3>
+                <p class="text-[10px] text-slate-400" id="dashboardModalSubheader">Satış ve Lojistik ekipleri arasındaki canlı onay, düzeltme ve iletişim akışı</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="flex bg-slate-800 p-1 rounded-xl border border-slate-700 text-[10px] font-bold">
+                    <button type="button" id="flt_all" onclick="window.setDashboardFilter('all')" class="px-2.5 py-1 rounded-lg bg-sky-600 text-white cursor-pointer">Tümü</button>
+                    <button type="button" id="flt_bekliyor" onclick="window.setDashboardFilter('bekliyor')" class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white cursor-pointer">⏳ Bekleyen</button>
+                    <button type="button" id="flt_duzeltme_istendi" onclick="window.setDashboardFilter('duzeltme_istendi')" class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white cursor-pointer">↺ Düzeltme</button>
+                    <button type="button" id="flt_onaylandi" onclick="window.setDashboardFilter('onaylandi')" class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white cursor-pointer">✓ Onaylı</button>
+                </div>
+                <button type="button" onclick="window.closeDashboard()" class="text-slate-400 hover:text-white font-black text-lg ml-2 cursor-pointer">✕</button>
+            </div>
+        </div>
+        <div class="p-4 md:p-6 overflow-y-auto flex-grow custom-scrollbar">
+            <div id="dashboardActionBanner" class="hidden mb-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold"></div>
+            <div id="dashboardLoading" class="text-center text-slate-400 py-8 font-semibold hidden">Henüz bekleyen sevk talebi bulunmuyor.</div>
+            <div class="overflow-x-auto">
+                <table id="dashboardTable" class="w-full text-left text-xs bg-white rounded-xl border border-slate-200 min-w-[900px]">
+                    <thead class="bg-slate-100 text-slate-700 uppercase font-bold border-b">
+                        <tr>
+                            <th class="p-3">Talep & Tarih</th>
+                            <th class="p-3">Sipariş Başlığı & Satış Temsilcisi</th>
+                            <th class="p-3">Araç, Mod & Yük Özeti</th>
+                            <th class="p-3">Güncel Durum</th>
+                            <th class="p-3">İletişim & Geri Bildirim Notları</th>
+                            <th class="p-3 text-center">İşlem / Aksiyon</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dashboardTableBody" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 3. LOJİSTİK KARAR & GERİ BİLDİRİM NOTU MODALI -->
+<div id="reviewReasonModal" class="hidden fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 no-print backdrop-blur-sm">
+    <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border-t-8 border-indigo-600 space-y-4">
+        <div class="flex justify-between items-start">
+            <div>
+                <h3 class="text-sm font-black text-slate-900 uppercase" id="reviewReasonModalTitle">Lojistik Kararı & Geri Bildirim</h3>
+                <p class="text-[11px] text-slate-500 mt-0.5" id="reviewReasonModalSub">Bu not doğrudan Satış Temsilcisinin ekranına iletilecektir.</p>
+            </div>
+            <button type="button" onclick="window.closeModal('reviewReasonModal')" class="text-slate-400 hover:text-rose-500 font-bold cursor-pointer">✕</button>
+        </div>
+        <input type="hidden" id="pendingActionType">
+        <input type="hidden" id="pendingActionTargetId">
+        <div>
+            <label class="text-[10px] font-bold text-slate-600 uppercase mb-1 block">Satış Temsilcisine İletilecek Lojistik Notu:</label>
+            <textarea id="reviewReasonInput" rows="3" class="w-full p-2.5 border rounded-xl bg-slate-50 text-xs focus:border-indigo-500 outline-none" placeholder="Örn: Yük dengesi uygun, Rampa 2'den yükleme onaylandı / VEYA: 2. araç çok boş, lütfen 40'HC seçip tekrar gönderin..."></textarea>
+        </div>
+        <div class="flex gap-2">
+            <button type="button" onclick="window.closeModal('reviewReasonModal')" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition cursor-pointer">İptal</button>
+            <button type="button" onclick="window.executeFinalDecision()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black py-2.5 rounded-xl text-xs transition shadow-md cursor-pointer">Kaydet & Satışa Bildir</button>
+        </div>
+    </div>
+</div>
+
+<!-- 4. KULLANICI & ROL YÖNETİM MASASI -->
 <div id="adminUsersModal" class="hidden fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 no-print backdrop-blur-sm">
     <div class="bg-white rounded-3xl shadow-2xl max-w-[850px] w-full max-h-[85vh] flex flex-col overflow-hidden border border-purple-200">
         <div class="bg-purple-950 text-white px-6 py-4 flex justify-between items-center">
@@ -620,18 +750,7 @@
     </div>
 </div>
 
-<div id="adminDashboardModal" class="hidden fixed inset-0 bg-slate-900/80 z-40 flex items-center justify-center p-4 no-print backdrop-blur-sm">
-    <div class="bg-white rounded-3xl shadow-2xl max-w-[1150px] w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-200">
-        <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
-            <h3 class="font-bold text-sm uppercase">📥 Sevk Talepleri & Onay Paneli</h3>
-            <button type="button" onclick="window.closeDashboard()" class="text-slate-400 hover:text-white font-black text-lg cursor-pointer">✕</button>
-        </div>
-        <div class="p-4 md:p-6 overflow-y-auto flex-grow">
-            <div id="dashboardLoading" class="text-center text-slate-400 py-8 font-semibold">Henüz bekleyen sevk talebi bulunmuyor.</div>
-        </div>
-    </div>
-</div>
-
+<!-- 5. SKU YÖNETİM MODALI -->
 <div id="skuManagerModal" class="hidden fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 no-print backdrop-blur-sm">
     <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-200">
         <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
@@ -655,7 +774,7 @@
     </div>
 </div>
 
-<!-- ⚡ BÖLÜM 2: 3B SİMÜLASYON, PALET ŞEMASI VE DÖNGÜ KORUMALI AKILLI KARAR MOTORU -->
+<!-- ⚡ BÖLÜM 2: 3B SİMÜLASYON, PALET ŞEMASI, AKILLI DANIŞMAN VE SATIŞ↔LOJİSTİK İLETİŞİM MOTORU -->
 <script>
     window.VEHICLE_SPECS = {
         'TIR':  { name: 'TIR Dorse', L: 13600, W: 2420, H: 2600, maxWgt: 25000, doorH: 2550, isContainer: false },
@@ -715,6 +834,9 @@
     window.isUserDefinedTarget = false;
     window.lastAdvisorSignature = '';
     window.advisorSuccessMessage = '';
+    window.currentReviewTalepId = null;
+    window.currentEditingRevisionId = null;
+    window.dashboardFilter = 'all';
     window.panX = 0; window.panY = 0; window.zoomLevel = 1;
     window.isDragging = false; window.startX = 0; window.startY = 0;
     window.lastRenderData = null;
@@ -729,9 +851,27 @@
     window.setElText = function(id, text) { var el = document.getElementById(id); if (el) el.textContent = text; };
     window.openModal = function(id) { var el = document.getElementById(id); if (el) el.classList.remove('hidden'); };
     window.closeModal = function(id) { var el = document.getElementById(id); if (el) el.classList.add('hidden'); };
-    window.openDashboard = function() { window.openModal('adminDashboardModal'); };
     window.closeDashboard = function() { window.closeModal('adminDashboardModal'); };
     window.openSkuManager = function() { window.openModal('skuManagerModal'); window.renderSkuManagerList(); };
+
+    // =========================================================================
+    // 🔄 İKİ YÖNLÜ SATIŞ ↔ LOJİSTİK VERİTABANI VE BİLDİRİM SİSTEMİ
+    // =========================================================================
+    window.getDispatchRequests = function() {
+        try {
+            var raw = localStorage.getItem('elita_dispatch_requests');
+            var list = raw ? JSON.parse(raw) : [];
+            return Array.isArray(list) ? list : [];
+        } catch (e) {
+            return [];
+        }
+    };
+
+    window.saveDispatchRequestsList = function(list) {
+        try {
+            localStorage.setItem('elita_dispatch_requests', JSON.stringify(list));
+        } catch (e) {}
+    };
 
     window.applyRolePermissions = function() {
         var role = (window.currentUserProfile && window.currentUserProfile.role) || 'admin';
@@ -743,18 +883,535 @@
         if (role === 'admin') {
             if (roleBadge) { roleBadge.innerText = "YÖNETİCİ"; roleBadge.className = "px-2 py-0.5 rounded-full font-black text-[9px] bg-purple-500/20 text-purple-400 uppercase"; }
             if (btnAdminUsers) { btnAdminUsers.classList.remove('hidden'); btnAdminUsers.classList.add('flex'); }
-            if (btnSales) btnSales.classList.add('hidden');
+            window.setElText('dashboardBtnText', "📥 Tüm Sevk Talepleri");
+            if (btnSales) { btnSales.classList.remove('hidden'); btnSales.classList.add('flex'); }
         } else if (role === 'logistics') {
             if (roleBadge) { roleBadge.innerText = "LOJİSTİK & SAHA"; roleBadge.className = "px-2 py-0.5 rounded-full font-black text-[9px] bg-indigo-500/20 text-indigo-400 uppercase"; }
             if (btnAdminUsers) btnAdminUsers.classList.add('hidden');
+            window.setElText('dashboardBtnText', "📥 Gelen Sevk Talepleri");
             if (btnSales) btnSales.classList.add('hidden');
         } else {
             if (roleBadge) { roleBadge.innerText = "SATIŞ EKİBİ"; roleBadge.className = "px-2 py-0.5 rounded-full font-black text-[9px] bg-amber-500/20 text-amber-300 uppercase"; }
             if (btnAdminUsers) btnAdminUsers.classList.add('hidden');
+            window.setElText('dashboardBtnText', "📥 Sevk Taleplerim");
             if (btnSales) { btnSales.classList.remove('hidden'); btnSales.classList.add('flex'); }
+        }
+        window.refreshCommunicationBadges();
+    };
+
+    // Üst bildirim balonu ve Satış/Lojistik canlı geri bildirim çubuğunu günceller
+    window.refreshCommunicationBadges = function() {
+        var list = window.getDispatchRequests();
+        var role = (window.currentUserProfile && window.currentUserProfile.role) || 'sales';
+        var myEmail = (window.currentUser && window.currentUser.email ? window.currentUser.email.toLowerCase() : '');
+        var bubble = document.getElementById('pendingBadgeBubble');
+        var banner = document.getElementById('salesFeedbackBanner');
+
+        if (role === 'logistics' || role === 'admin') {
+            var pendingList = list.filter(function(r) { return r.status === 'bekliyor'; });
+            if (bubble) {
+                if (pendingList.length > 0) {
+                    bubble.textContent = String(pendingList.length);
+                    bubble.classList.remove('hidden');
+                } else {
+                    bubble.classList.add('hidden');
+                }
+            }
+            if (banner) {
+                if (pendingList.length > 0) {
+                    var latestPending = pendingList[0];
+                    banner.innerHTML = '<div class="bg-indigo-950 text-white border-2 border-indigo-500 rounded-2xl p-3 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">' +
+                        '<div class="flex items-center gap-2.5">' +
+                            '<span class="bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase animate-pulse">' + pendingList.length + ' Bekleyen Talep</span>' +
+                            '<span class="text-xs text-indigo-100">Son talep: <strong>' + window.escapeHtml(latestPending.order_title) + '</strong> (' + window.escapeHtml(latestPending.sales_user_name) + ' • ' + latestPending.truck_count + 'x ' + latestPending.vehicle_type + ')</span>' +
+                        '</div>' +
+                        '<div class="flex gap-2">' +
+                            '<button type="button" onclick="window.inspectRequestIn3D(' + latestPending.id + ')" class="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-3 py-1 rounded-xl text-xs cursor-pointer">🔍 3B İncele & Karar Ver</button>' +
+                            '<button type="button" onclick="window.openDashboard()" class="bg-indigo-700 hover:bg-indigo-600 text-white font-bold px-3 py-1 rounded-xl text-xs cursor-pointer">📥 Tümünü Gör</button>' +
+                        '</div>' +
+                    '</div>';
+                    banner.classList.remove('hidden');
+                } else {
+                    banner.classList.add('hidden');
+                }
+            }
+        } else {
+            // Satış Temsilcisi Görünümü: Kendi taleplerindeki Lojistik kararlarını görür
+            var myRequests = list.filter(function(r) { return !myEmail || (r.sales_user_email && r.sales_user_email.toLowerCase() === myEmail); });
+            var actionNeeded = myRequests.filter(function(r) { return r.status === 'duzeltme_istendi' || r.status === 'onaylandi' || r.status === 'reddedildi'; });
+            if (bubble) {
+                if (myRequests.length > 0) {
+                    bubble.textContent = String(myRequests.length);
+                    bubble.classList.remove('hidden');
+                } else {
+                    bubble.classList.add('hidden');
+                }
+            }
+            if (banner) {
+                if (myRequests.length > 0) {
+                    var latest = myRequests[0];
+                    var stBadge = '';
+                    var boxColors = 'bg-slate-900 border-slate-700 text-white';
+                    if (latest.status === 'onaylandi') {
+                        stBadge = '<span class="bg-emerald-400 text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase">✓ LOJİSTİK ONAYLADI</span>';
+                        boxColors = 'bg-emerald-950 border-emerald-500 text-white';
+                    } else if (latest.status === 'duzeltme_istendi') {
+                        stBadge = '<span class="bg-purple-400 text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase animate-bounce">↺ DÜZELTME İSTENDİ</span>';
+                        boxColors = 'bg-purple-950 border-purple-400 text-white';
+                    } else if (latest.status === 'reddedildi') {
+                        stBadge = '<span class="bg-rose-500 text-white font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase">✕ REDDEDİLDİ</span>';
+                        boxColors = 'bg-rose-950 border-rose-500 text-white';
+                    } else {
+                        stBadge = '<span class="bg-amber-400 text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase">⏳ LOJİSTİK İNCELEMESİNDE</span>';
+                        boxColors = 'bg-slate-900 border-amber-500/60 text-white';
+                    }
+
+                    var feedbackText = latest.reviewer_notes
+                        ? ('💬 Lojistik Notu (' + window.escapeHtml(latest.reviewed_by || 'Lojistik') + '): "' + window.escapeHtml(latest.reviewer_notes) + '"')
+                        : 'Henüz lojistik inceleme notu girilmedi, onay bekleniyor.';
+
+                    banner.innerHTML = '<div class="' + boxColors + ' border-2 rounded-2xl p-3 shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-2">' +
+                        '<div class="space-y-0.5">' +
+                            '<div class="flex items-center gap-2 flex-wrap">' +
+                                stBadge +
+                                '<strong class="text-xs">Talep #' + latest.id + ': ' + window.escapeHtml(latest.order_title) + '</strong>' +
+                                '<span class="text-[11px] opacity-80">(' + latest.truck_count + 'x ' + latest.vehicle_type + ' • ' + latest.total_boxes + ' Koli)</span>' +
+                            '</div>' +
+                            '<p class="text-xs font-medium text-amber-200">' + feedbackText + '</p>' +
+                        '</div>' +
+                        '<div class="flex items-center gap-2 self-end md:self-center">' +
+                            (latest.status === 'duzeltme_istendi' || latest.status === 'reddedildi' ? (
+                                '<button type="button" onclick="window.editRequestAsSales(' + latest.id + ')" class="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-3 py-1.5 rounded-xl text-xs cursor-pointer whitespace-nowrap">✏️ Yükü Düzenle & Yeniden Gönder</button>'
+                            ) : '') +
+                            '<button type="button" onclick="window.openDashboard()" class="bg-white/15 hover:bg-white/25 text-white font-bold px-3 py-1.5 rounded-xl text-xs cursor-pointer whitespace-nowrap">📥 Tüm Taleplerim (' + myRequests.length + ')</button>' +
+                        '</div>' +
+                    '</div>';
+                    banner.classList.remove('hidden');
+                } else {
+                    banner.classList.add('hidden');
+                }
+            }
         }
     };
 
+    // 1. SATIŞ GÖNDERİM MODALI AÇMA
+    window.openSalesSubmitModal = function() {
+        var totalBoxes = window.globalFleet.reduce(function(s, v) { return s + v.totalBoxes; }, 0);
+        var totalWgt = window.globalFleet.reduce(function(s, v) { return s + v.totalWgt; }, 0);
+        if (totalBoxes <= 0) return alert("Lütfen onaya göndermeden önce geçerli bir yük oluşturun.");
+
+        var vType = (document.getElementById('vehicleType') && document.getElementById('vehicleType').value) || '20DC';
+        var vSpec = window.VEHICLE_SPECS[vType] || window.VEHICLE_SPECS['20DC'];
+        var baseType = (document.getElementById('baseType') && document.getElementById('baseType').value) || 'floor';
+        var baseSpec = window.BASE_SPECS[baseType] || window.BASE_SPECS['floor'];
+        var curTitle = (document.getElementById('orderTitle') && document.getElementById('orderTitle').value.trim()) || ('Sipariş #' + Math.floor(1000 + Math.random() * 9000));
+
+        var modalTitleInput = document.getElementById('modalOrderTitleInput');
+        if (modalTitleInput) modalTitleInput.value = curTitle;
+
+        var headerEl = document.getElementById('salesSubmitModalHeader');
+        if (headerEl) {
+            headerEl.textContent = window.currentEditingRevisionId
+                ? ('↻ Talep #' + window.currentEditingRevisionId + ' Revizyonunu Lojistiğe Gönder')
+                : '↗ Sevk Planını Lojistik Onayına Gönder';
+        }
+
+        var sumBox = document.getElementById('salesSubmitSummaryBox');
+        if (sumBox) {
+            sumBox.innerHTML = '<div class="flex justify-between"><span>Araç & Filo:</span><strong>' + window.globalFleet.length + ' Adet ' + window.escapeHtml(vSpec.name) + '</strong></div>' +
+                '<div class="flex justify-between"><span>Taşıma Tabanı:</span><strong>' + window.escapeHtml(baseSpec.name) + '</strong></div>' +
+                '<div class="flex justify-between"><span>Toplam Yük:</span><strong class="text-emerald-700">' + totalBoxes.toLocaleString() + ' Koli (' + totalWgt.toFixed(1) + ' kg)</strong></div>' +
+                '<div class="flex justify-between"><span>Yükleme Tipi:</span><strong>' + (window.currentMode === 'single' ? 'Tekil SKU' : ('Karma Yük (' + window.mixedItemsState.length + ' Blok)')) + '</strong></div>';
+        }
+
+        window.openModal('salesSubmitModal');
+    };
+
+    // 2. SATIŞ TALEBİNİ KAYDETME VE LOJİSTİĞE İLETME
+    window.confirmSalesSubmission = function() {
+        var titleVal = (document.getElementById('modalOrderTitleInput') && document.getElementById('modalOrderTitleInput').value.trim()) || 'İsimsiz Sevk Talebi';
+        var salesNote = (document.getElementById('salesNoteToLogisticsInput') && document.getElementById('salesNoteToLogisticsInput').value.trim()) || '';
+
+        var mainTitleEl = document.getElementById('orderTitle');
+        if (mainTitleEl) mainTitleEl.value = titleVal;
+
+        var vType = (document.getElementById('vehicleType') && document.getElementById('vehicleType').value) || '20DC';
+        var baseType = (document.getElementById('baseType') && document.getElementById('baseType').value) || 'floor';
+        var loadStrategy = (document.getElementById('loadDistributionStrategy') && document.getElementById('loadDistributionStrategy').value) || 'spread';
+        var rawSkuIdx = parseInt(document.getElementById('skuSelect') && document.getElementById('skuSelect').value);
+        var singleSkuIdx = isNaN(rawSkuIdx) ? 5 : rawSkuIdx;
+        var totalBoxes = window.globalFleet.reduce(function(s, v) { return s + v.totalBoxes; }, 0);
+        var totalWgt = window.globalFleet.reduce(function(s, v) { return s + v.totalWgt; }, 0);
+
+        var skuSummaryText = '';
+        if (window.currentMode === 'single') {
+            var sObj = window.skuDatabase[singleSkuIdx] || window.skuDatabase[5];
+            skuSummaryText = totalBoxes + 'x ' + sObj.name;
+        } else {
+            skuSummaryText = window.mixedItemsState.map(function(m) {
+                var sObj = window.skuDatabase[m.skuIdx];
+                return m.count + 'x ' + (sObj ? sObj.name : 'SKU');
+            }).join(' + ');
+        }
+
+        var list = window.getDispatchRequests();
+        var nowIso = new Date().toISOString();
+        var userEmail = (window.currentUser && window.currentUser.email) || 'sales@elita.com';
+        var userName = (window.currentUserProfile && window.currentUserProfile.full_name) || userEmail.split('@')[0];
+
+        var payloadSnapshot = {
+            currentMode: window.currentMode,
+            vehicleType: vType,
+            baseType: baseType,
+            loadStrategy: loadStrategy,
+            singleSkuIdx: singleSkuIdx,
+            singleTargetBoxes: parseInt(document.getElementById('targetBoxes') && document.getElementById('targetBoxes').value) || totalBoxes,
+            mixedItemsState: JSON.parse(JSON.stringify(window.mixedItemsState)),
+            optDoor: !!(document.getElementById('optDoor') && document.getElementById('optDoor').checked),
+            optFrontCurve: !!(document.getElementById('optFrontCurve') && document.getElementById('optFrontCurve').checked),
+            optAirbag: !!(document.getElementById('optAirbag') && document.getElementById('optAirbag').checked),
+            optLashing: !!(document.getElementById('optLashing') && document.getElementById('optLashing').checked),
+            optStepOver: !!(document.getElementById('optStepOver') && document.getElementById('optStepOver').checked)
+        };
+
+        if (window.currentEditingRevisionId) {
+            var idx = list.findIndex(function(r) { return Number(r.id) === Number(window.currentEditingRevisionId); });
+            if (idx !== -1) {
+                list[idx].order_title = titleVal;
+                list[idx].vehicle_type = vType;
+                list[idx].base_type = baseType;
+                list[idx].truck_count = window.globalFleet.length;
+                list[idx].total_boxes = totalBoxes;
+                list[idx].total_weight = totalWgt;
+                list[idx].sku_summary = skuSummaryText;
+                list[idx].sales_note = salesNote || list[idx].sales_note;
+                list[idx].status = 'bekliyor';
+                list[idx].updated_at = nowIso;
+                list[idx].snapshot = payloadSnapshot;
+                list[idx].history = list[idx].history || [];
+                list[idx].history.push({
+                    sender: userName + ' (Satış - Revizyon)',
+                    note: salesNote || 'Yükleme planı revize edilerek yeniden onaya gönderildi.',
+                    time: nowIso
+                });
+            }
+            window.currentEditingRevisionId = null;
+            var revBadge = document.getElementById('revisionModeBadge');
+            if (revBadge) revBadge.classList.add('hidden');
+            window.setElText('btnSubmitSalesText', '↗ Onaya Gönder');
+        } else {
+            var newId = 1040 + list.length + 1;
+            var newReq = {
+                id: newId,
+                order_title: titleVal,
+                sales_user_email: userEmail,
+                sales_user_name: userName,
+                vehicle_type: vType,
+                base_type: baseType,
+                truck_count: window.globalFleet.length,
+                total_boxes: totalBoxes,
+                total_weight: totalWgt,
+                sku_summary: skuSummaryText,
+                sales_note: salesNote,
+                reviewer_notes: '',
+                reviewed_by: '',
+                status: 'bekliyor',
+                created_at: nowIso,
+                updated_at: nowIso,
+                snapshot: payloadSnapshot,
+                history: [
+                    { sender: userName + ' (Satış)', note: salesNote || 'Sevk talebi oluşturuldu ve Lojistik onayına sunuldu.', time: nowIso }
+                ]
+            };
+            list.unshift(newReq);
+        }
+
+        window.saveDispatchRequestsList(list);
+        window.closeModal('salesSubmitModal');
+        var noteInput = document.getElementById('salesNoteToLogisticsInput');
+        if (noteInput) noteInput.value = '';
+
+        window.refreshCommunicationBadges();
+        window.openDashboard();
+        var actBanner = document.getElementById('dashboardActionBanner');
+        if (actBanner) {
+            actBanner.textContent = "✓ Sevk talebiniz başarıyla Lojistik & Saha ekibine iletildi! Lojistik ekibi incelediğinde karar ve notlar bu ekranda güncellenecektir.";
+            actBanner.classList.remove('hidden');
+            setTimeout(function() { actBanner.classList.add('hidden'); }, 5000);
+        }
+    };
+
+    // 3. DASHBOARD (SEVK TALEPLERİ & GERİ BİLDİRİM MERKEZİ) AÇMA VE LİSTELEME
+    window.setDashboardFilter = function(flt) {
+        window.dashboardFilter = flt;
+        ['all', 'bekliyor', 'duzeltme_istendi', 'onaylandi'].forEach(function(k) {
+            var btn = document.getElementById('flt_' + k);
+            if (btn) {
+                btn.className = (k === flt)
+                    ? 'px-2.5 py-1 rounded-lg bg-sky-600 text-white cursor-pointer'
+                    : 'px-2.5 py-1 rounded-lg text-slate-300 hover:text-white cursor-pointer';
+            }
+        });
+        window.renderDashboardRows();
+    };
+
+    window.openDashboard = function() {
+        window.openModal('adminDashboardModal');
+        window.renderDashboardRows();
+    };
+
+    window.renderDashboardRows = function() {
+        var list = window.getDispatchRequests();
+        var role = (window.currentUserProfile && window.currentUserProfile.role) || 'sales';
+        var myEmail = (window.currentUser && window.currentUser.email ? window.currentUser.email.toLowerCase() : '');
+
+        var filtered = list.filter(function(r) {
+            if (role === 'sales' && myEmail && r.sales_user_email && r.sales_user_email.toLowerCase() !== myEmail) {
+                return false;
+            }
+            if (window.dashboardFilter !== 'all' && r.status !== window.dashboardFilter) {
+                return false;
+            }
+            return true;
+        });
+
+        var loadingEl = document.getElementById('dashboardLoading');
+        var tableEl = document.getElementById('dashboardTable');
+        var tbody = document.getElementById('dashboardTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        if (filtered.length === 0) {
+            if (loadingEl) {
+                loadingEl.textContent = "Bu filtrede görüntülenecek sevk talebi bulunmuyor.";
+                loadingEl.classList.remove('hidden');
+            }
+            if (tableEl) tableEl.classList.add('hidden');
+            return;
+        }
+
+        if (loadingEl) loadingEl.classList.add('hidden');
+        if (tableEl) tableEl.classList.remove('hidden');
+
+        var canReview = (role === 'logistics' || role === 'admin');
+
+        filtered.forEach(function(item) {
+            var tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-50 transition align-top";
+
+            var badgeClass = "bg-amber-100 text-amber-800 border border-amber-300";
+            var statusLabel = "⏳ Lojistik Onayı Bekliyor";
+            if (item.status === 'onaylandi') {
+                badgeClass = "bg-emerald-100 text-emerald-800 border border-emerald-300";
+                statusLabel = "✓ Lojistik Onayladı";
+            } else if (item.status === 'duzeltme_istendi') {
+                badgeClass = "bg-purple-100 text-purple-800 border border-purple-300";
+                statusLabel = "↺ Düzeltme İstendi";
+            } else if (item.status === 'reddedildi') {
+                badgeClass = "bg-rose-100 text-rose-800 border border-rose-300";
+                statusLabel = "✕ Reddedildi";
+            }
+
+            var dateStr = item.created_at ? new Date(item.created_at).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
+            var baseSpec = window.BASE_SPECS[item.base_type] || window.BASE_SPECS['floor'];
+
+            // İletişim geçmişi (Satış Notu + Lojistik Geri Bildirimi)
+            var commHtml = '<div class="space-y-1.5 max-w-[320px]">';
+            if (item.sales_note) {
+                commHtml += '<div class="p-2 rounded-lg bg-sky-50 border border-sky-200 text-[11px] text-sky-950">' +
+                    '<strong class="block text-[9px] uppercase text-sky-700">📤 Satış Notu (' + window.escapeHtml(item.sales_user_name) + '):</strong>' +
+                    window.escapeHtml(item.sales_note) +
+                '</div>';
+            }
+            if (item.reviewer_notes) {
+                var revBoxColor = item.status === 'onaylandi' ? 'bg-emerald-50 border-emerald-200 text-emerald-950' : (item.status === 'duzeltme_istendi' ? 'bg-purple-50 border-purple-200 text-purple-950' : 'bg-rose-50 border-rose-200 text-rose-950');
+                commHtml += '<div class="p-2 rounded-lg border text-[11px] ' + revBoxColor + '">' +
+                    '<strong class="block text-[9px] uppercase opacity-75">📥 Lojistik Yanıtı (' + window.escapeHtml(item.reviewed_by || 'Lojistik Ekibi') + '):</strong>' +
+                    window.escapeHtml(item.reviewer_notes) +
+                '</div>';
+            }
+            if (!item.sales_note && !item.reviewer_notes) {
+                commHtml += '<span class="text-slate-400 italic text-[11px]">Not eklenmedi</span>';
+            }
+            commHtml += '</div>';
+
+            // Aksiyon butonları (Lojistik vs Satış)
+            var actionsHtml = '<div class="flex flex-col gap-1.5 items-center justify-center">';
+            actionsHtml += '<button type="button" onclick="window.inspectRequestIn3D(' + item.id + ')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-1.5 rounded-lg text-[11px] transition cursor-pointer shadow-xs">🔍 3B Simülatörde Aç</button>';
+
+            if (canReview) {
+                actionsHtml += '<div class="flex gap-1 w-full">' +
+                    '<button type="button" onclick="window.openReviewDecisionModal(\'onaylandi\', ' + item.id + ')" class="flex-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-black py-1 px-1.5 rounded text-[10px] cursor-pointer" title="Onayla">✓ Onayla</button>' +
+                    '<button type="button" onclick="window.openReviewDecisionModal(\'duzeltme_istendi\', ' + item.id + ')" class="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-800 font-black py-1 px-1.5 rounded text-[10px] cursor-pointer" title="Düzeltme İste">↺ Düzelt</button>' +
+                    '<button type="button" onclick="window.openReviewDecisionModal(\'reddedildi\', ' + item.id + ')" class="flex-1 bg-rose-100 hover:bg-rose-200 text-rose-800 font-black py-1 px-1.5 rounded text-[10px] cursor-pointer" title="Reddet">✕ Red</button>' +
+                '</div>';
+            } else {
+                actionsHtml += '<button type="button" onclick="window.editRequestAsSales(' + item.id + ')" class="w-full bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-bold px-2.5 py-1 rounded-lg text-[10px] cursor-pointer">✏️ Düzenle & Yeniden Gönder</button>';
+            }
+            actionsHtml += '</div>';
+
+            tr.innerHTML = '<td class="p-3 font-mono text-slate-600"><strong class="text-slate-900 block">#' + item.id + '</strong><span class="text-[10px]">' + dateStr + '</span></td>' +
+                '<td class="p-3"><strong class="text-slate-900 block text-xs">' + window.escapeHtml(item.order_title) + '</strong><span class="text-[10px] text-slate-500">👤 ' + window.escapeHtml(item.sales_user_name) + ' (' + window.escapeHtml(item.sales_user_email) + ')</span></td>' +
+                '<td class="p-3 font-mono"><strong class="text-indigo-900 block">' + (item.truck_count || 1) + 'x ' + window.escapeHtml(item.vehicle_type) + ' (' + window.escapeHtml(baseSpec.name) + ')</strong><span class="text-emerald-700 font-bold">' + Number(item.total_boxes).toLocaleString() + ' Koli • ' + Number(item.total_weight).toFixed(1) + ' kg</span><span class="block text-[10px] text-slate-500 font-sans mt-0.5">' + window.escapeHtml(item.sku_summary || '') + '</span></td>' +
+                '<td class="p-3"><span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase inline-block ' + badgeClass + '">' + statusLabel + '</span></td>' +
+                '<td class="p-3">' + commHtml + '</td>' +
+                '<td class="p-3 text-center">' + actionsHtml + '</td>';
+
+            tbody.appendChild(tr);
+        });
+    };
+
+    // 4. TALEBİ 3B SİMÜLATÖRE YÜKLEME (LOJİSTİK İNCELEME VEYA SATIŞ REVİZYON)
+    window.loadRequestSnapshotIntoEngine = function(reqObj) {
+        if (!reqObj || !reqObj.snapshot) return;
+        var snap = reqObj.snapshot;
+
+        var titleEl = document.getElementById('orderTitle');
+        if (titleEl) titleEl.value = reqObj.order_title || '';
+
+        var vehEl = document.getElementById('vehicleType');
+        if (vehEl) vehEl.value = snap.vehicleType || reqObj.vehicle_type || '20DC';
+        var vSpec = window.VEHICLE_SPECS[vehEl.value] || window.VEHICLE_SPECS['20DC'];
+        var mW = document.getElementById('maxWgt'); if (mW) mW.value = vSpec.maxWgt;
+
+        var baseEl = document.getElementById('baseType');
+        if (baseEl && snap.baseType) baseEl.value = snap.baseType;
+
+        var stratEl = document.getElementById('loadDistributionStrategy');
+        if (stratEl && snap.loadStrategy) stratEl.value = snap.loadStrategy;
+
+        if (document.getElementById('optDoor')) document.getElementById('optDoor').checked = snap.optDoor !== undefined ? snap.optDoor : true;
+        if (document.getElementById('optFrontCurve')) document.getElementById('optFrontCurve').checked = !!snap.optFrontCurve;
+        if (document.getElementById('optAirbag')) document.getElementById('optAirbag').checked = !!snap.optAirbag;
+        if (document.getElementById('optLashing')) document.getElementById('optLashing').checked = !!snap.optLashing;
+        if (document.getElementById('optStepOver')) document.getElementById('optStepOver').checked = snap.optStepOver !== undefined ? snap.optStepOver : true;
+
+        if (snap.currentMode === 'mixed') {
+            window.mixedItemsState = JSON.parse(JSON.stringify(snap.mixedItemsState || []));
+            window.renderMixedList();
+            window.switchTab('mixed');
+        } else {
+            var skuEl = document.getElementById('skuSelect');
+            if (skuEl && snap.singleSkuIdx !== undefined) skuEl.value = String(snap.singleSkuIdx);
+            window.populateSKU();
+            window.isUserDefinedTarget = true;
+            var targetEl = document.getElementById('targetBoxes');
+            if (targetEl) targetEl.value = snap.singleTargetBoxes || reqObj.total_boxes;
+            window.switchTab('single');
+        }
+        window.runEngine();
+    };
+
+    window.inspectRequestIn3D = function(talepId) {
+        var list = window.getDispatchRequests();
+        var reqObj = list.find(function(r) { return Number(r.id) === Number(talepId); });
+        if (!reqObj) return alert("Talep bulunamadı.");
+
+        window.closeDashboard();
+        window.currentReviewTalepId = reqObj.id;
+        window.loadRequestSnapshotIntoEngine(reqObj);
+
+        var role = (window.currentUserProfile && window.currentUserProfile.role) || 'sales';
+        if (role === 'logistics' || role === 'admin') {
+            var bar = document.getElementById('activeReviewBar');
+            window.setElText('reviewBarTalepMeta', 'Talep #' + reqObj.id + ' — ' + reqObj.order_title + ' (' + reqObj.sales_user_name + ')');
+            var stLabel = reqObj.status === 'onaylandi' ? '✓ Onaylandı' : (reqObj.status === 'duzeltme_istendi' ? '↺ Düzeltme İstendi' : (reqObj.status === 'reddedildi' ? '✕ Reddedildi' : '⏳ Onay Bekliyor'));
+            window.setElText('reviewBarStatusBadge', stLabel);
+            window.setElText('reviewBarSalesNote', reqObj.sales_note ? ('💬 Satış Temsilcisi Notu: "' + reqObj.sales_note + '"') : 'Satış temsilcisi ek not bırakmadı. 3B yük dengesini inceleyip kararınızı bildirin.');
+            if (bar) bar.classList.remove('hidden');
+        }
+    };
+
+    window.editRequestAsSales = function(talepId) {
+        var list = window.getDispatchRequests();
+        var reqObj = list.find(function(r) { return Number(r.id) === Number(talepId); });
+        if (!reqObj) return;
+
+        window.closeDashboard();
+        window.currentEditingRevisionId = reqObj.id;
+        window.loadRequestSnapshotIntoEngine(reqObj);
+
+        var revBadge = document.getElementById('revisionModeBadge');
+        if (revBadge) revBadge.classList.remove('hidden');
+        window.setElText('btnSubmitSalesText', '↻ Talep #' + reqObj.id + ' Güncelle & Gönder');
+    };
+
+    window.exitReviewMode = function() {
+        window.currentReviewTalepId = null;
+        var bar = document.getElementById('activeReviewBar');
+        if (bar) bar.classList.add('hidden');
+    };
+
+    // 5. LOJİSTİK KARAR & GERİ BİLDİRİM KAYDETME
+    window.openReviewDecisionModal = function(actionType, explicitTalepId) {
+        var targetId = explicitTalepId || window.currentReviewTalepId;
+        if (!targetId) return;
+
+        document.getElementById('pendingActionType').value = actionType;
+        document.getElementById('pendingActionTargetId').value = String(targetId);
+
+        var titleMap = {
+            'onaylandi': '✓ Sevk Planını Onayla & Satışa Bildir',
+            'duzeltme_istendi': '↺ Satış Ekibinden Düzeltme / Revizyon İste',
+            'reddedildi': '✕ Sevk Talebini Reddet & Gerekçe Bildir'
+        };
+        window.setElText('reviewReasonModalTitle', titleMap[actionType] || 'Karar Gerekçesi');
+
+        var defaultNoteMap = {
+            'onaylandi': 'Yükleme planı ve aks dengesi kontrol edildi, sevkiyata uygundur.',
+            'duzeltme_istendi': 'Son araçta boş kapasite mevcut, lütfen danışman önerisine göre adetleri veya araç tipini güncelleyip tekrar gönderin.',
+            'reddedildi': 'Seçilen araç tipi ve tonaj saha kriterlerine uygun değil.'
+        };
+        var inputEl = document.getElementById('reviewReasonInput');
+        if (inputEl) inputEl.value = defaultNoteMap[actionType] || '';
+
+        window.openModal('reviewReasonModal');
+    };
+
+    window.executeFinalDecision = function() {
+        var actionType = document.getElementById('pendingActionType').value;
+        var targetId = Number(document.getElementById('pendingActionTargetId').value);
+        var notes = (document.getElementById('reviewReasonInput') && document.getElementById('reviewReasonInput').value.trim()) || '';
+
+        var list = window.getDispatchRequests();
+        var idx = list.findIndex(function(r) { return Number(r.id) === targetId; });
+        if (idx === -1) {
+            window.closeModal('reviewReasonModal');
+            return;
+        }
+
+        var reviewerName = (window.currentUserProfile && window.currentUserProfile.full_name) || 'Lojistik Uzmanı';
+        var nowIso = new Date().toISOString();
+
+        list[idx].status = actionType;
+        list[idx].reviewer_notes = notes;
+        list[idx].reviewed_by = reviewerName;
+        list[idx].updated_at = nowIso;
+        list[idx].history = list[idx].history || [];
+        list[idx].history.push({
+            sender: reviewerName + ' (Lojistik Kararı: ' + actionType.toUpperCase() + ')',
+            note: notes,
+            time: nowIso
+        });
+
+        window.saveDispatchRequestsList(list);
+        window.closeModal('reviewReasonModal');
+        window.exitReviewMode();
+        window.refreshCommunicationBadges();
+        window.openDashboard();
+
+        var actBanner = document.getElementById('dashboardActionBanner');
+        if (actBanner) {
+            var stText = actionType === 'onaylandi' ? 'ONAYLANDI' : (actionType === 'duzeltme_istendi' ? 'DÜZELTME İSTENDİ' : 'REDDEDİLDİ');
+            actBanner.textContent = "✓ Talep #" + targetId + " durumu '" + stText + "' olarak güncellendi ve geri bildirim notunuz Satış Temsilcisine iletildi.";
+            actBanner.classList.remove('hidden');
+            setTimeout(function() { actBanner.classList.add('hidden'); }, 5000);
+        }
+    };
+
+    // =========================================================================
+    // 📐 SİMÜLASYON, PALET VE KARAR MOTORU FONKSİYONLARI
+    // =========================================================================
     window.getEffectiveClearances = function(vType) {
         var vSpec = window.VEHICLE_SPECS[vType] || window.VEHICLE_SPECS['20DC'];
         var effL = vSpec.L - 10;
@@ -1188,9 +1845,6 @@
         return { placedItems: placedItems, totalWgt: totalWgt, totalBoxes: totalBoxes, totalPallets: 0, stepOverWarnings: stepOverWarnings, gapL: Math.max(0, effContL - maxReachX) };
     };
 
-    // =========================================================================
-    // 💡 AKILLI FİLO VE SATIŞ KARAR MOTORU (TEKİL & KARMA + DÖNGÜ KORUMALI)
-    // =========================================================================
     window.simulateFleetDryRun = function(simQueue, vType, baseType) {
         var vSpec = window.VEHICLE_SPECS[vType] || window.VEHICLE_SPECS['20DC'];
         var clr = window.getEffectiveClearances(vType);
@@ -1221,7 +1875,6 @@
         };
     };
 
-    // 1. İKİLİ ARAMA: Mevcut N. aracı (1., 2. veya 3. araç) bir sonraki araca TAŞIRMADAN %100 dolduracak tam ek koli adedi
     window.findExactUpsellForSku = function(queue, qIdx, targetFleetCount, vType, baseType) {
         var low = 1, high = 6000, bestExtra = 0;
         while (low <= high) {
@@ -1240,7 +1893,6 @@
         return bestExtra;
     };
 
-    // 2. İKİLİ ARAMA: Fazla aracı iptal edip tam (N-1) dolu araçta kalmak için düşülmesi gereken tam koli adedi
     window.findExactDownscaleForSku = function(queue, qIdx, targetMaxContainers, vType, baseType) {
         var origTarget = queue[qIdx].target;
         var minAllowed = (queue.length === 1) ? 1 : 0;
@@ -1274,7 +1926,6 @@
             return;
         }
 
-        // Eğer kullanıcı danışmandaki bir aksiyon butonuna yeni tıkladıysa döngüye girmemek için başarı mesajı göster
         var currentSig = vType + '|' + baseType + '|' + queue.map(function(q) { return q.sku.name + ':' + q.target; }).join(',');
         if (window.lastAdvisorSignature === currentSig && window.advisorSuccessMessage) {
             container.innerHTML = '<div class="bg-emerald-950 text-emerald-100 border-2 border-emerald-500 rounded-2xl p-3.5 shadow-md flex items-center justify-between gap-3">' +
@@ -1291,7 +1942,6 @@
             return;
         }
 
-        // 1. SEÇENEK 2 HESAPLAMASI: Son aracı (1., 2. veya N. araç) %100 doldurmak için gereken kesin ek adetler
         var upsellOptions = [];
         queue.forEach(function(item, qIdx) {
             var addBoxes = window.findExactUpsellForSku(queue, qIdx, N, vType, baseType);
@@ -1307,18 +1957,15 @@
             }
         });
 
-        // Eğer N === 1 ise ve son araca hiçbir SKU'dan 1 koli bile eklenemiyorsa (1. araç %100 tam doluysa), danışmanı gizle!
         if (N === 1 && upsellOptions.length === 0) {
             container.innerHTML = '';
             container.classList.add('hidden');
             return;
         }
 
-        // Son aracın tahmini doluluk yüzdesini hesapla
         var refAddBoxes = upsellOptions.length > 0 ? upsellOptions[0].addBoxes : 0;
         var lastTruckFillPct = Math.min(100, Math.round((lastTruck.totalBoxes / Math.max(1, lastTruck.totalBoxes + refAddBoxes)) * 100));
 
-        // 2. SEÇENEK 3 HESAPLAMASI: Fazla aracı iptal edip (N-1) tam araçta kalmak için düşülecek kesin adetler (N > 1 ise)
         var downscaleOptions = [];
         var targetMaxContainers = Math.max(1, N - 1);
         if (N > 1) {
@@ -1337,7 +1984,6 @@
             });
         }
 
-        // 3. SEÇENEK 1 HESAPLAMASI: Daha büyük araca geçiş (20DC -> 40DC -> 40HC -> TIR)
         var upgradeChain = (vType === '20DC') ? ['40DC', '40HC'] : ((vType === '40DC') ? ['40HC', 'TIR'] : ((vType === '40HC') ? ['TIR'] : []));
         var upgradeRecommendations = [];
 
@@ -1358,8 +2004,7 @@
             }
         });
 
-        // 🧠 EN İYİ KARAR (BEST DECISION) SEÇİM MOTORU
-        var bestOptionNumber = 2; // Varsayılan: Mevcut aracı %100 tamamla
+        var bestOptionNumber = 2;
         var bestReasonText = '';
 
         var canConsolidateWithUpgrade = upgradeRecommendations.some(function(u) { return u.savesTrucks; });
@@ -1377,10 +2022,9 @@
                 : (N + '. aracınız %' + lastTruckFillPct + ' doluluğa ulaşmış durumda. Müşteriden ek sipariş alarak ' + N + '. aracı %100 tam kapasiteye tamamlamak en kârlı seçenektir.');
         }
 
-        // KART 1 HTML (BÜYÜK ARACA GEÇİŞ)
         var card1Html = '';
         if (upgradeRecommendations.length > 0) {
-            var upButtons = upgradeRecommendations.map(function(u) {
+            card1Html = upgradeRecommendations.map(function(u) {
                 return '<div class="bg-slate-800/90 p-2.5 rounded-xl border border-slate-700 space-y-1.5 text-xs">' +
                     '<div class="flex items-center justify-between">' +
                         '<strong class="text-sky-300 font-bold">' + u.neededTrucks + 'x ' + window.escapeHtml(u.vehName) + '</strong>' +
@@ -1398,12 +2042,10 @@
                     '</div>' +
                 '</div>';
             }).join('');
-            card1Html = upButtons;
         } else {
             card1Html = '<div class="p-3 bg-slate-800/50 rounded-xl border border-slate-800 text-[11px] text-slate-400">Şu an en büyük araç tipini (' + window.VEHICLE_SPECS[vType].name + ') kullanıyorsunuz.</div>';
         }
 
-        // KART 2 HTML (SKU ARTIRARAK N. ARACI %100 DOLDURMA)
         var card2Html = '';
         if (upsellOptions.length > 0) {
             card2Html = upsellOptions.map(function(u) {
@@ -1422,7 +2064,6 @@
             card2Html = '<div class="p-3 bg-slate-800/50 rounded-xl border border-slate-800 text-[11px] text-emerald-400 font-semibold">✓ Mevcut araç tonaj veya hacim sınırında (%100 Dolu).</div>';
         }
 
-        // KART 3 HTML (SKU AZALTARAK N-1 TAM ARAÇTA KALMA)
         var card3Html = '';
         if (N > 1 && downscaleOptions.length > 0) {
             card3Html = downscaleOptions.map(function(d) {
@@ -1462,7 +2103,6 @@
             '</div>' +
 
             '<div class="grid grid-cols-1 md:grid-cols-3 gap-3">' +
-                '<!-- 1. SEÇENEK: BÜYÜK ARACA GEÇİŞ -->' +
                 '<div class="bg-slate-900/75 border-2 ' + (bestOptionNumber === 1 ? 'border-sky-400 ring-2 ring-sky-400/20' : 'border-slate-800') + ' p-3.5 rounded-2xl flex flex-col justify-between space-y-2">' +
                     '<div class="space-y-1.5">' +
                         '<div class="flex items-center justify-between">' +
@@ -1475,7 +2115,6 @@
                     '</div>' +
                 '</div>' +
 
-                '<!-- 2. SEÇENEK: SKU ARTIRARAK ARACI %100 DOLDUR -->' +
                 '<div class="bg-slate-900/75 border-2 ' + (bestOptionNumber === 2 ? 'border-emerald-400 ring-2 ring-emerald-400/20' : 'border-slate-800') + ' p-3.5 rounded-2xl flex flex-col justify-between space-y-2">' +
                     '<div class="space-y-1.5">' +
                         '<div class="flex items-center justify-between">' +
@@ -1488,7 +2127,6 @@
                     '</div>' +
                 '</div>' +
 
-                '<!-- 3. SEÇENEK: FAZLA ARACI İPTAL ET (DOWNSCALE) -->' +
                 '<div class="bg-slate-900/75 border-2 ' + (bestOptionNumber === 3 ? 'border-amber-400 ring-2 ring-amber-400/20' : 'border-slate-800') + ' p-3.5 rounded-2xl flex flex-col justify-between space-y-2">' +
                     '<div class="space-y-1.5">' +
                         '<div class="flex items-center justify-between">' +
@@ -1506,7 +2144,6 @@
         container.classList.remove('hidden');
     };
 
-    // DANIŞMAN AKSİYON FONKSİYONLARI (DÖNGÜ KORUMALI)
     window.buildCurrentSignature = function() {
         var vType = (document.getElementById('vehicleType') && document.getElementById('vehicleType').value) || '20DC';
         var baseType = (document.getElementById('baseType') && document.getElementById('baseType').value) || 'floor';
@@ -1525,7 +2162,7 @@
     window.applyAdvisorUpgradeOnly = function(targetVehCode) {
         var sel = document.getElementById('vehicleType');
         if (sel) sel.value = targetVehCode;
-        window.isUserDefinedTarget = true; // Kullanıcının koli adedini koru!
+        window.isUserDefinedTarget = true;
         var vSpec = window.VEHICLE_SPECS[targetVehCode] || window.VEHICLE_SPECS['20DC'];
         var mW = document.getElementById('maxWgt'); if (mW) mW.value = vSpec.maxWgt;
         var fc = document.getElementById('optFrontCurveLabel'); if (fc) fc.style.display = targetVehCode === 'TIR' ? 'flex' : 'none';
@@ -2086,6 +2723,7 @@
         window.populateSKU();
         window.renderMixedList();
         window.autoSyncSingleTargetCapacity();
+        window.refreshCommunicationBadges();
         var canvas = document.getElementById('contCanvas');
         if (canvas && !window.canvasInitialized) {
             window.canvasInitialized = true;
