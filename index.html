@@ -155,7 +155,7 @@
                 if (emailLower === 'admin96@admin.com' || emailLower === 'admin96@admin.co') {
                     if (password !== 'admin96' && password !== 'Admin12345!') {
                         if (errLabel) {
-                            errLabel.textContent = "Yönetici şifresi hatalı! Lütfen tekrar deneyin.";
+                            errLabel.textContent = "Yönetici şifresi hatalı!";
                             errLabel.classList.remove('hidden');
                         }
                         return;
@@ -201,18 +201,18 @@
         };
 
         window.enterApplication = function(userProfileObj) {
-            // Sayfa yenilendiğinde (F5) oturumun korunması için aktif kullanıcıyı kaydet ve güncel rolünü kontrol et
             var overrides = window.getRoleOverrides();
             var emailKey = (userProfileObj.email || '').toLowerCase().trim();
             var latestRole = overrides[emailKey] || userProfileObj.role || 'sales';
-
             userProfileObj.role = latestRole;
+
             window.currentUser = userProfileObj;
             window.currentUserProfile = {
                 role: latestRole,
                 full_name: userProfileObj.full_name || userProfileObj.email
             };
 
+            // Oturumu localStorage içine kaydet (Sayfa yenilendiğinde oturum düşmez!)
             try {
                 localStorage.setItem('elita_active_session', JSON.stringify(userProfileObj));
             } catch (e) {}
@@ -236,6 +236,8 @@
             window.currentUserProfile = null;
             window.currentReviewTalepId = null;
             window.currentEditingRevisionId = null;
+
+            // Aktif oturumu sil ve giriş kutularını temizle
             try {
                 localStorage.removeItem('elita_active_session');
             } catch (e) {}
@@ -1247,9 +1249,9 @@
 
             if (canReview) {
                 actionsHtml += '<div class="flex gap-1 w-full">' +
-                    '<button type="button" onclick="window.openReviewDecisionModal(\'onaylandi\', ' + item.id + ')" class="flex-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-black py-1 px-1.5 rounded text-[10px] cursor-pointer" title="Onayla">✓ Onayla</button>' +
-                    '<button type="button" onclick="window.openReviewDecisionModal(\'duzeltme_istendi\', ' + item.id + ')" class="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-800 font-black py-1 px-1.5 rounded text-[10px] cursor-pointer" title="Düzeltme İste">↺ Düzelt</button>' +
-                    '<button type="button" onclick="window.openReviewDecisionModal(\'reddedildi\', ' + item.id + ')" class="flex-1 bg-rose-100 hover:bg-rose-200 text-rose-800 font-black py-1 px-1.5 rounded text-[10px] cursor-pointer" title="Reddet">✕ Red</button>' +
+                    '<button type="button" onclick="window.openReviewDecisionModal(\'onaylandi\', ' + item.id + ')" class="flex-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-black py-1 px-1.5 rounded text-[10px] cursor-pointer">✓ Onayla</button>' +
+                    '<button type="button" onclick="window.openReviewDecisionModal(\'duzeltme_istendi\', ' + item.id + ')" class="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-800 font-black py-1 px-1.5 rounded text-[10px] cursor-pointer">↺ Düzelt</button>' +
+                    '<button type="button" onclick="window.openReviewDecisionModal(\'reddedildi\', ' + item.id + ')" class="flex-1 bg-rose-100 hover:bg-rose-200 text-rose-800 font-black py-1 px-1.5 rounded text-[10px] cursor-pointer">✕ Red</button>' +
                 '</div>';
             } else {
                 actionsHtml += '<button type="button" onclick="window.editRequestAsSales(' + item.id + ')" class="w-full bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-bold px-2.5 py-1 rounded-lg text-[10px] cursor-pointer">✏️ Düzenle & Yeniden Gönder</button>';
@@ -1413,9 +1415,6 @@
         }
     };
 
-    // =========================================================================
-    // 📐 SİMÜLASYON, PALET VE KARAR MOTORU FONKSİYONLARI
-    // =========================================================================
     window.getEffectiveClearances = function(vType) {
         var vSpec = window.VEHICLE_SPECS[vType] || window.VEHICLE_SPECS['20DC'];
         var effL = vSpec.L - 10;
@@ -1511,4 +1510,863 @@
         var usedL = palLayout.boxesCoords.reduce(function(m, c) { return Math.max(m, c.x + c.l); }, 0) || palLayout.palletL;
         var usedW = palLayout.boxesCoords.reduce(function(m, c) { return Math.max(m, c.y + c.w); }, 0) || palLayout.palletW;
         var offsetX = Math.max(0, (palLayout.palletL - usedL) / 2);
-        var offsetY = Math.max(0,
+        var offsetY = Math.max(0, (palLayout.palletW - usedW) / 2);
+
+        var topCanvas = document.getElementById('palletTopCanvas');
+        if (topCanvas) {
+            var tCtx = topCanvas.getContext('2d');
+            tCtx.clearRect(0, 0, topCanvas.width, topCanvas.height);
+            var pad = 12;
+            var sc = Math.min((topCanvas.width - pad * 2) / palLayout.palletL, (topCanvas.height - pad * 2) / palLayout.palletW);
+            var ox = (topCanvas.width - palLayout.palletL * sc) / 2;
+            var oy = (topCanvas.height - palLayout.palletW * sc) / 2;
+
+            tCtx.fillStyle = '#78350f';
+            tCtx.fillRect(ox, oy, palLayout.palletL * sc, palLayout.palletW * sc);
+            tCtx.strokeStyle = '#fbbf24'; tCtx.lineWidth = 1.5;
+            tCtx.strokeRect(ox, oy, palLayout.palletL * sc, palLayout.palletW * sc);
+
+            palLayout.boxesCoords.forEach(function(b) {
+                tCtx.fillStyle = b.rotated ? '#38bdf8' : '#0284c7';
+                tCtx.fillRect(ox + (b.x + offsetX) * sc + 1, oy + (b.y + offsetY) * sc + 1, b.l * sc - 2, b.w * sc - 2);
+                tCtx.strokeStyle = '#0f172a'; tCtx.lineWidth = 1;
+                tCtx.strokeRect(ox + (b.x + offsetX) * sc + 1, oy + (b.y + offsetY) * sc + 1, b.l * sc - 2, b.w * sc - 2);
+            });
+        }
+
+        var isoCanvas = document.getElementById('pallet3DCanvas');
+        if (isoCanvas) {
+            var iCtx = isoCanvas.getContext('2d');
+            iCtx.clearRect(0, 0, isoCanvas.width, isoCanvas.height);
+            var cosA = Math.cos(0.523599), sinA = Math.sin(0.523599);
+            var pL = palLayout.palletL, pW = palLayout.palletW, pH = palLayout.totalHeight;
+            var sc3 = Math.min((isoCanvas.width - 24) / ((pL + pW) * cosA), (isoCanvas.height - 24) / ((pL + pW) * sinA + pH));
+
+            var bH = Math.max(25, baseSpec.baseH);
+            var z0 = bH, z1 = bH + palLayout.layers * sku.H;
+            var totalVisualH = ((pL + pW) * sinA * sc3) * 0.35 + (z1 * sc3 * 0.75);
+
+            var cx = (isoCanvas.width / 2) - (((pL - pW) * cosA * sc3) / 2);
+            var cy = (isoCanvas.height + totalVisualH) / 2;
+
+            function proj(x, y, z) { return { x: cx + (x - y) * cosA * sc3, y: cy - ((x + y) * sinA * sc3) * 0.35 - (z * sc3 * 0.75) }; }
+            function poly(pts, fill) {
+                iCtx.beginPath(); iCtx.moveTo(pts[0].x, pts[0].y);
+                for (var i = 1; i < pts.length; i++) iCtx.lineTo(pts[i].x, pts[i].y);
+                iCtx.closePath(); iCtx.fillStyle = fill; iCtx.fill();
+                iCtx.strokeStyle = 'rgba(0,0,0,0.4)'; iCtx.lineWidth = 0.8; iCtx.stroke();
+            }
+
+            poly([proj(0,0,bH), proj(pL,0,bH), proj(pL,pW,bH), proj(0,pW,bH)], '#b45309');
+            poly([proj(0,0,0), proj(pL,0,0), proj(pL,0,bH), proj(0,0,bH)], '#92400e');
+            poly([proj(0,0,0), proj(0,pW,0), proj(0,pW,bH), proj(0,0,bH)], '#78350f');
+
+            var x0 = offsetX, x1 = offsetX + usedL;
+            var y0 = offsetY, y1 = offsetY + usedW;
+
+            poly([proj(x0,y0,z1), proj(x1,y0,z1), proj(x1,y1,z1), proj(x0,y1,z1)], '#38bdf8');
+            poly([proj(x0,y0,z0), proj(x1,y0,z0), proj(x1,y0,z1), proj(x0,y0,z1)], '#0284c7');
+            poly([proj(x0,y0,z0), proj(x0,y1,z0), proj(x0,y1,z1), proj(x0,y0,z1)], '#0369a1');
+
+            iCtx.strokeStyle = 'rgba(0,0,0,0.35)';
+            iCtx.lineWidth = 0.75;
+            for (var l = 1; l < palLayout.layers; l++) {
+                var zl = z0 + (l * sku.H);
+                var pA = proj(x1, y0, zl), pB = proj(x0, y0, zl), pC = proj(x0, y1, zl);
+                iCtx.beginPath(); iCtx.moveTo(pA.x, pA.y); iCtx.lineTo(pB.x, pB.y); iCtx.lineTo(pC.x, pC.y); iCtx.stroke();
+            }
+        }
+    };
+
+    window.findOptimalFloorPlan = function(effW, effL, contH, doorH, sku, maxWgt, isContainer, baseH) {
+        if (!sku) return null;
+        var bH = baseH || 0;
+        var boxW = Math.max(1, sku.W), boxL = Math.max(1, sku.L), boxH = Math.max(1, sku.H), boxWt = Math.max(0.01, sku.Wt);
+        var physMaxLayers = Math.max(1, Math.min(sku.maxLayers || 8, Math.floor(Math.max(boxH, contH - bH - 15) / boxH)));
+        var maxDoorLayers = Math.max(1, Math.min(physMaxLayers, Math.floor(Math.max(boxH, doorH - bH - 20) / boxH)));
+        var maxBoxesByWeight = Math.floor(maxWgt / boxWt);
+
+        if (sku.shape === 'round') {
+            var D = Math.max(boxW, boxL), cols = Math.floor(effW / D), rows = Math.floor(effL / D);
+            var lBoxes = cols * rows;
+            return { colsA: cols, rowsA: rows, dimW1: D, dimL1: D, colsB: 0, rowsB: 0, dimW2: 0, dimL2: 0, layerBoxes: lBoxes, maxBoxes: Math.max(0, Math.min(lBoxes * physMaxLayers, maxBoxesByWeight)), physMaxLayers: physMaxLayers, maxDoorLayers: maxDoorLayers };
+        }
+
+        var bestPlan = null, maxBoxesFound = 0, maxA = Math.floor(effW / boxW);
+        for (var a = 0; a <= maxA; a++) {
+            var b = Math.floor((effW - (a * boxW)) / boxL);
+            if (a === 0 && b === 0) continue;
+            var rowsA = a > 0 ? Math.floor(effL / boxL) : 0;
+            var rowsB = b > 0 ? Math.floor(effL / boxW) : 0;
+            var layerBoxes = (a * rowsA) + (b * rowsB);
+            if (layerBoxes <= 0) continue;
+
+            var doorRowsA = isContainer ? Math.min(rowsA, Math.ceil(650 / boxL)) : 0;
+            var doorRowsB = isContainer ? Math.min(rowsB, Math.ceil(650 / boxW)) : 0;
+            var countA = a * ((rowsA - doorRowsA) * physMaxLayers + doorRowsA * maxDoorLayers);
+            var countB = b * ((rowsB - doorRowsB) * physMaxLayers + doorRowsB * maxDoorLayers);
+            var feasible = Math.min(countA + countB, maxBoxesByWeight);
+
+            if (feasible > maxBoxesFound) {
+                maxBoxesFound = feasible;
+                bestPlan = { colsA: a, rowsA: rowsA, dimW1: boxW, dimL1: boxL, colsB: b, rowsB: rowsB, dimW2: boxL, dimL2: boxW, layerBoxes: layerBoxes, maxBoxes: Math.max(0, feasible), physMaxLayers: physMaxLayers, maxDoorLayers: maxDoorLayers };
+            }
+        }
+        return bestPlan;
+    };
+
+    window.packPalletizedVehicle = function(queue, effContL, effContW, contH, doorH, maxWgt, baseType, optFrontCurve) {
+        var baseSpec = window.BASE_SPECS[baseType];
+        var placedItems = [], totalWgt = 0, totalBoxes = 0, totalPallets = 0;
+        var currentX = optFrontCurve ? 100 : 0;
+        var pW = baseSpec.palletW, pL = baseSpec.palletL;
+
+        for (var qIdx = 0; qIdx < queue.length; qIdx++) {
+            var item = queue[qIdx];
+            if (item.remaining <= 0 || currentX >= effContL || totalWgt >= maxWgt) continue;
+            var sku = item.sku;
+            var palLayout = window.calculateSinglePalletLayout(sku, baseSpec, contH, doorH);
+            if (!palLayout || palLayout.boxesPerPallet <= 0) continue;
+
+            var cols1 = Math.floor(effContW / pW), rows1 = Math.floor((effContL - currentX) / pL);
+            var cols2 = Math.floor(effContW / pL), rows2 = Math.floor((effContL - currentX) / pW);
+            var useW = pW, useL = pL, pCols = cols1;
+            if (cols2 * rows2 > cols1 * rows1) { useW = pL; useL = pW; pCols = cols2; }
+            if (pCols <= 0) continue;
+
+            var startY = Math.max(0, (effContW - (pCols * useW)) / 2);
+            var weightLimitHit = false;
+
+            while (item.remaining > 0 && currentX + useL <= effContL && !weightLimitHit) {
+                for (var c = 0; c < pCols; c++) {
+                    if (item.remaining <= 0) break;
+                    var maxAllowedByWgt = Math.floor((maxWgt - totalWgt - baseSpec.tareWgt) / sku.Wt);
+                    var boxesOnThisPallet = Math.min(palLayout.boxesPerPallet, item.remaining, maxAllowedByWgt);
+                    if (boxesOnThisPallet <= 0) { weightLimitHit = true; break; }
+
+                    var actualLayers = Math.max(1, Math.ceil(boxesOnThisPallet / palLayout.boxesPerLayer));
+                    var palWgt = (boxesOnThisPallet * sku.Wt) + baseSpec.tareWgt;
+
+                    placedItems.push({
+                        id: sku.name, stripTag: 'PALET', isPallet: true,
+                        x: currentX, y: startY + (c * useW), z: baseSpec.baseH,
+                        l: useL - 20, w: useW - 20, h: actualLayers * sku.H,
+                        boxes: boxesOnThisPallet, wgt: palWgt, color: item.color,
+                        cols: Math.max(1, palLayout.colsA + palLayout.colsB), rows: 1, layers: actualLayers,
+                        singleBoxL: sku.L, singleBoxW: sku.W, singleBoxH: sku.H
+                    });
+
+                    totalWgt += palWgt; totalBoxes += boxesOnThisPallet; totalPallets += 1;
+                    item.remaining -= boxesOnThisPallet;
+                }
+                currentX += useL;
+            }
+        }
+        var maxReachX = placedItems.reduce(function(max, it) { return Math.max(max, it.x + it.l); }, 0);
+        return { placedItems: placedItems, totalWgt: totalWgt, totalBoxes: totalBoxes, totalPallets: totalPallets, stepOverWarnings: [], gapL: Math.max(0, effContL - maxReachX) };
+    };
+
+    window.packSingleVehicle = function(queue, effContL, effContW, contH, doorH, maxWgt, baseType, optFrontCurve, isContainer, loadStrategy) {
+        if (baseType !== 'floor') {
+            return window.packPalletizedVehicle(queue, effContL, effContW, contH, doorH, maxWgt, baseType, optFrontCurve);
+        }
+
+        var placedItems = [], totalWgt = 0, totalBoxes = 0, currentX = optFrontCurve ? 100 : 0;
+        var doorZoneX = effContL - 650;
+        var stepOverEnabled = document.getElementById('optStepOver') ? document.getElementById('optStepOver').checked : true;
+        var stepOverWarnings = [];
+        var prevStepDownRows = [];
+
+        for (var itemIdx = 0; itemIdx < queue.length; itemIdx++) {
+            var item = queue[itemIdx];
+            if (item.remaining <= 0 || totalWgt >= maxWgt) continue;
+            var sku = item.sku;
+
+            if (stepOverEnabled && prevStepDownRows.length > 0 && item.remaining > 0) {
+                for (var sIdx = 0; sIdx < prevStepDownRows.length; sIdx++) {
+                    if (item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
+                    var baseRow = prevStepDownRows[sIdx];
+                    var zStart = (baseRow.z || 0) + baseRow.h;
+                    var isNearDoorTop = isContainer && (baseRow.x + baseRow.l >= doorZoneX);
+                    var availH = (isNearDoorTop ? doorH - 20 : contH - 15) - zStart;
+
+                    if (availH >= sku.H) {
+                        var fitCols1 = Math.floor(baseRow.w / sku.W), fitRows1 = Math.floor(baseRow.l / sku.L);
+                        var fitCols2 = Math.floor(baseRow.w / sku.L), fitRows2 = Math.floor(baseRow.l / sku.W);
+                        var topCols = fitCols1, topRows = fitRows1, topBoxW = sku.W, topBoxL = sku.L;
+                        if (fitCols2 * fitRows2 > fitCols1 * fitRows1) {
+                            topCols = fitCols2; topRows = fitRows2; topBoxW = sku.L; topBoxL = sku.W;
+                        }
+                        if (topRows === 0 && topCols > 0 && baseRow.x + topBoxL <= effContL) topRows = 1;
+
+                        if (topCols > 0 && topRows > 0) {
+                            var maxTopLayers = Math.min(sku.maxLayers || 8, Math.floor(availH / sku.H));
+                            var boxesPerTopLayer = topCols * topRows;
+                            var topBoxesToPlace = Math.min(boxesPerTopLayer * maxTopLayers, item.remaining, Math.floor((maxWgt - totalWgt) / sku.Wt));
+
+                            if (topBoxesToPlace > 0) {
+                                var actualTopLayers = Math.max(1, Math.ceil(topBoxesToPlace / boxesPerTopLayer));
+                                var topWgt = topBoxesToPlace * sku.Wt;
+
+                                placedItems.push({
+                                    id: sku.name, stripTag: baseRow.stripTag + '-ÜST', isStepOver: true, underSkuName: baseRow.id,
+                                    x: baseRow.x, y: baseRow.y, z: zStart,
+                                    l: topRows * topBoxL, w: topCols * topBoxW, h: actualTopLayers * sku.H,
+                                    boxes: topBoxesToPlace, wgt: topWgt, color: item.color,
+                                    cols: topCols, rows: topRows, layers: actualTopLayers,
+                                    singleBoxL: topBoxL, singleBoxW: topBoxW, singleBoxH: sku.H
+                                });
+
+                                totalWgt += topWgt; totalBoxes += topBoxesToPlace; item.remaining -= topBoxesToPlace;
+
+                                if (sku.Wt > baseRow.skuWt) {
+                                    stepOverWarnings.push({
+                                        heavySku: sku.name, heavyWt: sku.Wt,
+                                        lightSku: baseRow.id, lightWt: baseRow.skuWt,
+                                        diffWt: (sku.Wt - baseRow.skuWt).toFixed(2),
+                                        boxesOnTop: topBoxesToPlace
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (itemIdx > 0) {
+                var prevQueueItem = queue[itemIdx - 1];
+                if (prevQueueItem && sku.Wt > prevQueueItem.sku.Wt) {
+                    var alreadyWarned = stepOverWarnings.some(function(w) { return w.heavySku === sku.name && w.lightSku === prevQueueItem.sku.name; });
+                    if (!alreadyWarned) {
+                        stepOverWarnings.push({
+                            heavySku: sku.name, heavyWt: sku.Wt,
+                            lightSku: prevQueueItem.sku.name, lightWt: prevQueueItem.sku.Wt,
+                            diffWt: (sku.Wt - prevQueueItem.sku.Wt).toFixed(2),
+                            boxesOnTop: 0
+                        });
+                    }
+                }
+            }
+
+            prevStepDownRows = [];
+            if (item.remaining <= 0 || currentX >= effContL || totalWgt >= maxWgt) continue;
+
+            var availableL = effContL - currentX;
+            if (availableL < Math.min(sku.L, sku.W)) break;
+
+            var plan = window.findOptimalFloorPlan(effContW, availableL, contH, doorH, sku, maxWgt - totalWgt, isContainer, 0);
+            if (!plan || plan.layerBoxes <= 0) continue;
+
+            var boxesForThisTruck = Math.min(item.remaining, Math.floor((maxWgt - totalWgt) / sku.Wt));
+            if (boxesForThisTruck <= 0) break;
+
+            var widthUsed = (plan.colsA * plan.dimW1) + (plan.colsB * plan.dimW2);
+            var startY = Math.max(0, (effContW - widthUsed) / 2);
+            var isSingleModeAndSpread = (window.currentMode === 'single') && (loadStrategy === 'spread');
+
+            if (isSingleModeAndSpread) {
+                var totalRowsA = plan.colsA > 0 ? Math.floor(availableL / plan.dimL1) : 0;
+                var totalRowsB = plan.colsB > 0 ? Math.floor(availableL / plan.dimL2) : 0;
+                var posPerLayer = (plan.colsA * totalRowsA) + (plan.colsB * totalRowsB);
+                var baseLayers = Math.min(plan.physMaxLayers, Math.max(1, Math.floor(boxesForThisTruck / Math.max(1, posPerLayer))));
+                var rem = boxesForThisTruck;
+
+                if (plan.colsA > 0 && totalRowsA > 0) {
+                    for (var r = 0; r < totalRowsA; r++) {
+                        if (rem <= 0 || item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
+                        var rowX = currentX + (r * plan.dimL1);
+                        var maxPosL = (isContainer && rowX + plan.dimL1 >= doorZoneX) ? plan.maxDoorLayers : plan.physMaxLayers;
+                        var rowL = baseLayers;
+                        if (rowL < maxPosL && rem > (totalRowsA - r) * plan.colsA * rowL) rowL = Math.min(maxPosL, rowL + 1);
+                        var rowBoxes = Math.min(plan.colsA * rowL, rem, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                        if (rowBoxes <= 0) break;
+                        var actualL = Math.max(1, Math.ceil(rowBoxes / plan.colsA)), rowWgt = rowBoxes * sku.Wt;
+                        placedItems.push({ id: sku.name, stripTag: 'A', x: rowX, y: startY, z: 0, l: plan.dimL1, w: plan.colsA * plan.dimW1, h: actualL * sku.H, boxes: rowBoxes, wgt: rowWgt, color: item.color, cols: plan.colsA, rows: 1, layers: actualL, singleBoxL: plan.dimL1, singleBoxW: plan.dimW1, singleBoxH: sku.H, skuWt: sku.Wt });
+                        totalWgt += rowWgt; totalBoxes += rowBoxes; rem -= rowBoxes; item.remaining -= rowBoxes;
+                    }
+                }
+                if (plan.colsB > 0 && totalRowsB > 0) {
+                    var stripBY = startY + (plan.colsA * plan.dimW1);
+                    for (var r2 = 0; r2 < totalRowsB; r2++) {
+                        if (rem <= 0 || item.remaining <= 0 || totalWgt + sku.Wt > maxWgt) break;
+                        var rowX2 = currentX + (r2 * plan.dimL2);
+                        var maxPosL2 = (isContainer && rowX2 + plan.dimL2 >= doorZoneX) ? plan.maxDoorLayers : plan.physMaxLayers;
+                        var rowL2 = baseLayers;
+                        if (rowL2 < maxPosL2 && rem > (totalRowsB - r2) * plan.colsB * rowL2) rowL2 = Math.min(maxPosL2, rowL2 + 1);
+                        var rowBoxes2 = Math.min(plan.colsB * rowL2, rem, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                        if (rowBoxes2 <= 0) break;
+                        var actualL2 = Math.max(1, Math.ceil(rowBoxes2 / plan.colsB)), rowWgt2 = rowBoxes2 * sku.Wt;
+                        placedItems.push({ id: sku.name, stripTag: 'B', x: rowX2, y: stripBY, z: 0, l: plan.dimL2, w: plan.colsB * plan.dimW2, h: actualL2 * sku.H, boxes: rowBoxes2, wgt: rowWgt2, color: item.color, cols: plan.colsB, rows: 1, layers: actualL2, singleBoxL: plan.dimL2, singleBoxW: plan.dimW2, singleBoxH: sku.H, skuWt: sku.Wt });
+                        totalWgt += rowWgt2; totalBoxes += rowBoxes2; rem -= rowBoxes2; item.remaining -= rowBoxes2;
+                    }
+                }
+            } else {
+                var curX_A = currentX, curX_B = currentX, stripBY2 = startY + (plan.colsA * plan.dimW1);
+                var lastRowA = null, lastRowB = null;
+
+                while (item.remaining > 0 && totalWgt + sku.Wt <= maxWgt) {
+                    var canA = plan.colsA > 0 && (curX_A + plan.dimL1 <= effContL);
+                    var canB = plan.colsB > 0 && (curX_B + plan.dimL2 <= effContL);
+                    if (!canA && !canB) break;
+
+                    if (canA && (!canB || curX_A <= curX_B)) {
+                        var rMaxL = (isContainer && curX_A + plan.dimL1 >= doorZoneX) ? plan.maxDoorLayers : plan.physMaxLayers;
+                        var rB = Math.min(plan.colsA * rMaxL, item.remaining, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                        if (rB <= 0) break;
+                        var rL = Math.max(1, Math.ceil(rB / plan.colsA)), rW = rB * sku.Wt;
+                        var objA = { id: sku.name, stripTag: 'A', x: curX_A, y: startY, z: 0, l: plan.dimL1, w: plan.colsA * plan.dimW1, h: rL * sku.H, boxes: rB, wgt: rW, color: item.color, cols: plan.colsA, rows: 1, layers: rL, singleBoxL: plan.dimL1, singleBoxW: plan.dimW1, singleBoxH: sku.H, skuWt: sku.Wt };
+                        placedItems.push(objA);
+                        lastRowA = objA;
+                        totalWgt += rW; totalBoxes += rB; item.remaining -= rB; curX_A += plan.dimL1;
+                    } else {
+                        var rMaxL2 = (isContainer && curX_B + plan.dimL2 >= doorZoneX) ? plan.maxDoorLayers : plan.physMaxLayers;
+                        var rB2 = Math.min(plan.colsB * rMaxL2, item.remaining, Math.floor((maxWgt - totalWgt) / sku.Wt));
+                        if (rB2 <= 0) break;
+                        var rL2 = Math.max(1, Math.ceil(rB2 / plan.colsB)), rW2 = rB2 * sku.Wt;
+                        var objB = { id: sku.name, stripTag: 'B', x: curX_B, y: stripBY2, z: 0, l: plan.dimL2, w: plan.colsB * plan.dimW2, h: rL2 * sku.H, boxes: rB2, wgt: rW2, color: item.color, cols: plan.colsB, rows: 1, layers: rL2, singleBoxL: plan.dimL2, singleBoxW: plan.dimW2, singleBoxH: sku.H, skuWt: sku.Wt };
+                        placedItems.push(objB);
+                        lastRowB = objB;
+                        totalWgt += rW2; totalBoxes += rB2; item.remaining -= rB2; curX_B += plan.dimL2;
+                    }
+                }
+
+                if (lastRowA && (contH - 15 - lastRowA.h) >= 200) prevStepDownRows.push(lastRowA);
+                if (lastRowB && (contH - 15 - lastRowB.h) >= 200) prevStepDownRows.push(lastRowB);
+
+                var maxStripX = Math.max(curX_A, curX_B);
+                if (plan.colsA > 0 && maxStripX - curX_A >= 200) {
+                    prevStepDownRows.push({ id: sku.name, stripTag: 'A', x: curX_A, y: startY, z: 0, l: maxStripX - curX_A, w: plan.colsA * plan.dimW1, h: 0, skuWt: 999999 });
+                }
+                if (plan.colsB > 0 && maxStripX - curX_B >= 200) {
+                    prevStepDownRows.push({ id: sku.name, stripTag: 'B', x: curX_B, y: stripBY2, z: 0, l: maxStripX - curX_B, w: plan.colsB * plan.dimW2, h: 0, skuWt: 999999 });
+                }
+            }
+
+            currentX = placedItems.reduce(function(max, it) { return Math.max(max, it.x + it.l); }, 0);
+        }
+        var maxReachX = placedItems.reduce(function(max, it) { return Math.max(max, it.x + it.l); }, 0);
+        return { placedItems: placedItems, totalWgt: totalWgt, totalBoxes: totalBoxes, totalPallets: 0, stepOverWarnings: stepOverWarnings, gapL: Math.max(0, effContL - maxReachX) };
+    };
+
+    window.autoSortMixedByWeightDesc = function() {
+        window.mixedItemsState.sort(function(a, b) {
+            var skuA = window.skuDatabase[a.skuIdx] || { Wt: 0 };
+            var skuB = window.skuDatabase[b.skuIdx] || { Wt: 0 };
+            return skuB.Wt - skuA.Wt;
+        });
+        window.lastAdvisorSignature = '';
+        window.renderMixedList();
+        window.runEngine();
+    };
+
+    window.calculateMaxVehicleBoxes = function(effW, effL, vSpec, sku, maxWgt, baseType) {
+        var baseSpec = window.BASE_SPECS[baseType] || window.BASE_SPECS['floor'];
+        if (baseType === 'floor') {
+            var plan = window.findOptimalFloorPlan(effW, effL, vSpec.H, vSpec.doorH, sku, maxWgt, vSpec.isContainer, 0);
+            return plan ? plan.maxBoxes : Math.floor(maxWgt / sku.Wt);
+        }
+        var palLayout = window.calculateSinglePalletLayout(sku, baseSpec, vSpec.H, vSpec.doorH);
+        if (!palLayout || palLayout.boxesPerPallet <= 0) return 0;
+        var pW = baseSpec.palletW, pL = baseSpec.palletL;
+        var count1 = Math.floor(effW / pW) * Math.floor(effL / pL);
+        var count2 = Math.floor(effW / pL) * Math.floor(effL / pW);
+        var maxPalletsInCont = Math.max(count1, count2);
+        var maxByWgt = Math.floor(maxWgt / (sku.Wt + (baseSpec.tareWgt / palLayout.boxesPerPallet)));
+        return Math.min(maxPalletsInCont * palLayout.boxesPerPallet, maxByWgt);
+    };
+
+    window.runEngine = function() {
+        var vType = (document.getElementById('vehicleType') && document.getElementById('vehicleType').value) || '20DC';
+        var vSpec = window.VEHICLE_SPECS[vType] || window.VEHICLE_SPECS['20DC'];
+        var baseType = (document.getElementById('baseType') && document.getElementById('baseType').value) || 'floor';
+        var baseSpec = window.BASE_SPECS[baseType] || window.BASE_SPECS['floor'];
+        var loadStrategy = (document.getElementById('loadDistributionStrategy') && document.getElementById('loadDistributionStrategy').value) || 'spread';
+        var maxWgt = parseInt(document.getElementById('maxWgt') && document.getElementById('maxWgt').value) || vSpec.maxWgt;
+
+        var clr = window.getEffectiveClearances(vType);
+        var effContL = clr.effL, effContW = clr.effW, optFrontCurve = clr.optFrontCurve;
+
+        var rawIdx = parseInt(document.getElementById('skuSelect') && document.getElementById('skuSelect').value);
+        var activeSku = window.skuDatabase[isNaN(rawIdx) ? 5 : rawIdx] || window.skuDatabase[5];
+
+        var queue = [];
+        if (window.currentMode === 'single') {
+            var targetBoxes = parseInt(document.getElementById('targetBoxes') && document.getElementById('targetBoxes').value);
+            if (isNaN(targetBoxes) || targetBoxes <= 0) {
+                targetBoxes = window.calculateMaxVehicleBoxes(effContW, effContL, vSpec, activeSku, maxWgt, baseType);
+            }
+            queue.push({ sku: activeSku, target: targetBoxes, color: window.colorMap[0], itemStateIndex: 0 });
+        } else {
+            window.mixedItemsState.forEach(function(item, idx) {
+                var sku = window.skuDatabase[item.skuIdx];
+                if (sku && item.count > 0) queue.push({ sku: sku, target: item.count, color: window.colorMap[idx % window.colorMap.length], itemStateIndex: idx });
+            });
+            if (queue.length > 0) activeSku = queue[0].sku;
+        }
+
+        window.globalFleet = [];
+        var remQueue = queue.map(function(q) { return { sku: q.sku, target: q.target, remaining: q.target, color: q.color, itemStateIndex: q.itemStateIndex }; });
+        var safety = 0;
+        while (remQueue.some(function(q) { return q.remaining > 0; }) && safety < 25) {
+            safety++;
+            var res = window.packSingleVehicle(remQueue, effContL, effContW, vSpec.H, vSpec.doorH, maxWgt, baseType, optFrontCurve, vSpec.isContainer, loadStrategy);
+            if (res.placedItems.length === 0) break;
+            window.globalFleet.push(res);
+        }
+        if (window.globalFleet.length === 0) window.globalFleet.push({ placedItems: [], totalBoxes: 0, totalWgt: 0, totalPallets: 0, stepOverWarnings: [], gapL: effContL });
+
+        var singlePalLayout = (baseType !== 'floor') ? window.calculateSinglePalletLayout(activeSku, baseSpec, vSpec.H, vSpec.doorH) : null;
+        var firstTruckPallets = window.globalFleet[0] ? (window.globalFleet[0].totalPallets || window.globalFleet[0].placedItems.length) : 0;
+        window.renderSinglePalletCard(activeSku, baseSpec, singlePalLayout, firstTruckPallets);
+
+        window.globalEngineContext = { contL: vSpec.L, contW: vSpec.W, contH: vSpec.H, maxWgt: maxWgt, baseType: baseType, baseSpec: baseSpec, optFrontCurve: optFrontCurve };
+        window.currentVehicleIdx = 0;
+        window.updateFleetUI();
+        window.evaluateSalesAdvisor(queue, vType, baseType);
+    };
+
+    window.updateFleetUI = function() {
+        var pag = document.getElementById('fleetPaginationContainer');
+        if (pag) {
+            if (window.globalFleet.length > 1) {
+                pag.innerHTML = '<div class="flex gap-1.5 mb-2.5 p-1.5 bg-white rounded-2xl border overflow-x-auto">' +
+                    window.globalFleet.map(function(v, i) {
+                        return '<button type="button" onclick="window.currentVehicleIdx=' + i + ';window.updateFleetUI();" class="px-3.5 py-1.5 rounded-xl font-bold text-xs cursor-pointer ' + (i === window.currentVehicleIdx ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-600') + '">🚚 Araç #' + (i + 1) + ' (' + v.totalBoxes + ' Koli)</button>';
+                    }).join('') + '</div>';
+            } else pag.innerHTML = '';
+        }
+
+        var truck = window.globalFleet[window.currentVehicleIdx] || { placedItems: [], totalBoxes: 0, totalWgt: 0, totalPallets: 0, stepOverWarnings: [] };
+        var ctx = window.globalEngineContext;
+        var baseSpec = ctx.baseSpec || window.BASE_SPECS['floor'];
+        var isPalletMode = ctx.baseType !== 'floor';
+
+        window.setElText('resTotalBoxes', truck.totalBoxes.toLocaleString() + ' Adet');
+        window.setElText('resTotalBoxesSub', baseSpec.name + ' Modu (Araç ' + (window.currentVehicleIdx + 1) + '/' + window.globalFleet.length + ')');
+        window.setElText('resWeight', truck.totalWgt.toLocaleString(undefined, { maximumFractionDigits: 1 }) + ' kg');
+        window.setElText('resWeightSub', 'Yasal Sınır: ' + (ctx.maxWgt || 27800).toLocaleString() + ' kg (%' + Math.min(100, Math.round((truck.totalWgt / (ctx.maxWgt || 27800)) * 100)) + ' Dolu)');
+        window.setElText('resLoads', isPalletMode ? (truck.placedItems.length + ' Palet') : (truck.placedItems.length + ' Sıra/Blok'));
+        window.setElText('resLoadsSub', isPalletMode ? (baseSpec.name + ' İstifi') : 'Kademe Tamamlamalı Dizilim');
+
+        var momentX = 0;
+        truck.placedItems.forEach(function(p) { momentX += (p.x + p.l / 2) * p.wgt; });
+        var cogX = truck.totalWgt > 0 ? (momentX / truck.totalWgt) : 0;
+
+        var warnContainer = document.getElementById('weightWarningBanner');
+        var statusEl = document.getElementById('resStatus');
+        var warnings = truck.stepOverWarnings || [];
+
+        if (window.currentMode === 'mixed' && warnings.length > 0) {
+            if (statusEl) {
+                statusEl.textContent = "⚠️ Üst İstif Ağırlık Uyarısı";
+                statusEl.className = "text-xs md:text-sm font-bold text-amber-600 leading-tight";
+            }
+            window.setElText('resStatusSub', 'Ağır SKU Hafif SKU Üstünde! (CoG: ' + (cogX / 1000).toFixed(1) + 'm)');
+
+            if (warnContainer) {
+                var warnRowsHtml = warnings.map(function(w) {
+                    var stepText = w.boxesOnTop > 0
+                        ? ('<strong>' + w.boxesOnTop + ' adet</strong> koli doğrudan alt kademenin üstüne bindirildi')
+                        : 'Hafif bloğun hemen arkasına/üst sınırına yerleştirildi';
+                    return '<li class="bg-amber-950/50 p-2 rounded-xl border border-amber-500/30">' +
+                        '⚠️ <strong>' + window.escapeHtml(w.heavySku) + ' (' + w.heavyWt + ' kg)</strong> ürünü, kendisinden daha hafif olan <strong>' + window.escapeHtml(w.lightSku) + ' (' + w.lightWt + ' kg)</strong> ürününden <strong>+' + w.diffWt + ' kg daha ağırdır!</strong> (' + stepText + ')' +
+                    '</li>';
+                }).join('');
+
+                warnContainer.innerHTML = '<div class="bg-gradient-to-r from-amber-950 via-rose-950 to-slate-900 text-white border-2 border-amber-500 rounded-2xl p-3.5 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-3">' +
+                    '<div class="space-y-1.5 flex-grow">' +
+                        '<div class="flex items-center gap-2">' +
+                            '<span class="bg-amber-400 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded uppercase">Ezilme & İstif Emniyet Uyarısı</span>' +
+                            '<strong class="text-xs text-amber-200">Sonraki SKU Önceki SKU\'dan Daha Ağır!</strong>' +
+                        '</div>' +
+                        '<ul class="text-[11px] text-amber-100 space-y-1">' + warnRowsHtml + '</ul>' +
+                    '</div>' +
+                    '<button type="button" onclick="window.autoSortMixedByWeightDesc()" class="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-3.5 py-2 rounded-xl text-xs shadow-md transition whitespace-nowrap cursor-pointer">' +
+                        '🔄 Ağırdan Hafife Otomatik Sırala' +
+                    '</button>' +
+                '</div>';
+                warnContainer.classList.remove('hidden');
+            }
+        } else {
+            if (statusEl) {
+                statusEl.textContent = "✓ Sevkiyata Uygun";
+                statusEl.className = "text-xs md:text-sm font-bold text-emerald-700 leading-tight";
+            }
+            window.setElText('resStatusSub', 'Dengeli Yük (CoG: ' + (cogX / 1000).toFixed(1) + 'm)');
+            if (warnContainer) {
+                warnContainer.innerHTML = '';
+                warnContainer.classList.add('hidden');
+            }
+        }
+
+        var grouped = {};
+        truck.placedItems.forEach(function(it) {
+            if (!grouped[it.id]) grouped[it.id] = { name: it.id, totalBoxes: 0, totalWgt: 0, strips: {} };
+            grouped[it.id].totalBoxes += it.boxes;
+            grouped[it.id].totalWgt += it.wgt;
+            var tag = it.stripTag || 'A';
+            if (!grouped[it.id].strips[tag]) grouped[it.id].strips[tag] = { cols: it.cols, rows: 0, layers: it.layers, boxes: 0, isStepOver: it.isStepOver, underSkuName: it.underSkuName };
+            grouped[it.id].strips[tag].rows += (it.rows || 1);
+            grouped[it.id].strips[tag].boxes += it.boxes;
+            grouped[it.id].strips[tag].layers = Math.max(grouped[it.id].strips[tag].layers, it.layers);
+        });
+
+        var optListEl = document.getElementById('optimizationDetailsList');
+        if (optListEl) {
+            var blocksHtml = Object.keys(grouped).map(function(key, idx) {
+                var g = grouped[key];
+                var stHtml = Object.keys(g.strips).map(function(k) {
+                    var s = g.strips[k];
+                    var headerLabel = k === 'PALET'
+                        ? ('Paletli İstif (' + baseSpec.name + ')')
+                        : (s.isStepOver ? ('🔼 Kademe Üstü Tamamlama (' + window.escapeHtml(s.underSkuName) + ' Üstü)') : (k === 'B' ? 'Şerit B (Enine Çevrilmiş)' : 'Şerit A (Boyuna Düz)'));
+                    return '<div class="bg-white p-2.5 rounded-xl border ' + (s.isStepOver ? 'border-amber-300 bg-amber-50/30' : '') + ' text-center font-mono"><span class="text-[10px] ' + (s.isStepOver ? 'text-amber-800' : 'text-slate-500') + ' font-bold block mb-1">' + headerLabel + '</span><div class="grid grid-cols-4 gap-1 text-xs"><div><small class="block text-[9px] text-slate-400">En</small><b>' + s.cols + '</b></div><div><small class="block text-[9px] text-slate-400">' + (k === 'PALET' ? 'Palet' : 'Sıra') + '</small><b>' + s.rows + '</b></div><div><small class="block text-[9px] text-slate-400">Kat</small><b>' + s.layers + ' Kat</b></div><div class="text-emerald-700"><small class="block text-[9px]">Toplam</small><b>' + s.boxes + '</b></div></div></div>';
+                }).join('');
+                return '<div class="p-3 bg-slate-50 rounded-xl border space-y-2"><div class="flex justify-between items-center"><b class="text-xs">' + (idx + 1) + '. Blok: ' + window.escapeHtml(g.name) + '</b><span class="text-xs font-mono font-bold text-emerald-700">' + g.totalBoxes + ' Adet - ' + g.totalWgt.toFixed(1) + ' kg</span></div><div class="grid grid-cols-1 md:grid-cols-2 gap-2">' + stHtml + '</div></div>';
+            }).join('');
+            optListEl.innerHTML = '<div class="bg-white p-3.5 rounded-2xl border text-xs space-y-2"><div class="flex justify-between border-b pb-1.5"><b class="uppercase">🚚 ' + baseSpec.name + ' Yerleşim Planı (Araç ' + (window.currentVehicleIdx + 1) + '/' + window.globalFleet.length + ')</b></div>' + blocksHtml + '</div>';
+        }
+
+        window.lastRenderData = { placedItems: truck.placedItems, contL: ctx.contL, contW: ctx.contW, contH: ctx.contH, cogX: cogX, baseH: baseSpec.baseH };
+        window.performRender(window.lastRenderData);
+    };
+
+    window.performRender = function(data) {
+        if (!data) return;
+        var canvas = document.getElementById('contCanvas');
+        if (!canvas) return;
+        var ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        var cosA = Math.cos(0.523599), sinA = Math.sin(0.523599);
+        var L = data.contL || 5890, W = data.contW || 2345, H = data.contH || 2385;
+        var scale = Math.min((canvas.width - 100) / ((L + W) * cosA), (canvas.height - 100) / ((L + W) * sinA + H)) * (window.zoomLevel || 1);
+        if (!isFinite(scale) || scale <= 0) scale = 0.035;
+
+        var cx = canvas.width / 2 + (window.panX || 0), cy = canvas.height / 2 + 50 + (window.panY || 0);
+        function project(x, y, z) { return { x: cx + (x - y) * cosA * scale, y: cy + (x + y) * sinA * scale - (z * scale) }; }
+        function drawPoly(pts, fill, stroke, w) {
+            ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+            for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+            ctx.closePath();
+            if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+            ctx.strokeStyle = stroke || 'rgba(0,0,0,0.25)'; ctx.lineWidth = w || 1; ctx.stroke();
+        }
+        function drawLine(p1, p2) {
+            ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1; ctx.stroke();
+        }
+
+        drawPoly([project(0,0,0), project(L,0,0), project(L,W,0), project(0,W,0)], '#1e293b');
+        drawPoly([project(0,0,0), project(L,0,0), project(L,0,H), project(0,0,H)], '#0f172a');
+        drawPoly([project(0,0,0), project(0,W,0), project(0,W,H), project(0,0,H)], '#090d16');
+
+        var sortedItems = (data.placedItems || []).slice().sort(function(a, b) {
+            var depthA = (a.x + a.l / 2) + (a.y + a.w / 2);
+            var depthB = (b.x + b.l / 2) + (b.y + b.w / 2);
+            if (Math.abs(depthA - depthB) > 5) return depthA - depthB;
+            return (a.z || 0) - (b.z || 0);
+        });
+
+        sortedItems.forEach(function(b) {
+            var z0 = b.z || 0, z1 = z0 + b.h;
+            if (b.isPallet && z0 > 0) {
+                drawPoly([project(b.x+b.l, b.y, 0), project(b.x+b.l, b.y+b.w, 0), project(b.x+b.l, b.y+b.w, z0), project(b.x+b.l, b.y, z0)], '#92400e', 'rgba(0,0,0,0.6)');
+                drawPoly([project(b.x, b.y+b.w, 0), project(b.x+b.l, b.y+b.w, 0), project(b.x+b.l, b.y+b.w, z0), project(b.x, b.y+b.w, z0)], '#78350f', 'rgba(0,0,0,0.6)');
+                drawPoly([project(b.x, b.y, z0), project(b.x+b.l, b.y, z0), project(b.x+b.l, b.y+b.w, z0), project(b.x, b.y+b.w, z0)], '#b45309', 'rgba(0,0,0,0.6)');
+            }
+
+            drawPoly([project(b.x+b.l, b.y, z0), project(b.x+b.l, b.y+b.w, z0), project(b.x+b.l, b.y+b.w, z1), project(b.x+b.l, b.y, z1)], b.color.right, 'rgba(0,0,0,0.45)');
+            drawPoly([project(b.x, b.y+b.w, z0), project(b.x+b.l, b.y+b.w, z0), project(b.x+b.l, b.y+b.w, z1), project(b.x, b.y+b.w, z1)], b.color.left, 'rgba(0,0,0,0.45)');
+            drawPoly([project(b.x, b.y, z1), project(b.x+b.l, b.y, z1), project(b.x+b.l, b.y+b.w, z1), project(b.x, b.y+b.w, z1)], b.color.top, 'rgba(0,0,0,0.45)');
+
+            for (var l = 1; l < (b.layers || 1); l++) {
+                var z = z0 + l * b.singleBoxH;
+                drawLine(project(b.x+b.l, b.y, z), project(b.x+b.l, b.y+b.w, z));
+                drawLine(project(b.x, b.y+b.w, z), project(b.x+b.l, b.y+b.w, z));
+            }
+            for (var c = 1; c < (b.cols || 1); c++) {
+                var y = b.y + c * (b.w / b.cols);
+                drawLine(project(b.x+b.l, y, z0), project(b.x+b.l, y, z1));
+                drawLine(project(b.x, y, z1), project(b.x+b.l, y, z1));
+            }
+            for (var r = 1; r < (b.rows || 1); r++) {
+                var xLine = b.x + r * (b.l / b.rows);
+                drawLine(project(xLine, b.y+b.w, z0), project(xLine, b.y+b.w, z1));
+                drawLine(project(xLine, b.y, z1), project(xLine, b.y+b.w, z1));
+            }
+        });
+
+        if (data.placedItems && data.placedItems.length > 0) {
+            var pt = project(data.cogX, W/2, H/2);
+            ctx.beginPath(); ctx.arc(pt.x, pt.y, 5.5, 0, 2*Math.PI);
+            ctx.fillStyle = '#ef4444'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 9px JetBrains Mono'; ctx.fillText('⌖ CoG', pt.x - 12, pt.y - 9);
+        }
+    };
+
+    window.resetView = function() { window.panX = 0; window.panY = 0; window.zoomLevel = 1; if (window.lastRenderData) window.performRender(window.lastRenderData); };
+
+    window.populateSKU = function() {
+        var rawIdx = parseInt(document.getElementById('skuSelect') && document.getElementById('skuSelect').value);
+        var sku = window.skuDatabase[isNaN(rawIdx) ? 5 : rawIdx] || window.skuDatabase[5];
+        if (!sku) return;
+        var bL = document.getElementById('boxL'); if (bL) bL.value = sku.L;
+        var bW = document.getElementById('boxW'); if (bW) bW.value = sku.W;
+        var bH = document.getElementById('boxH'); if (bH) bH.value = sku.H;
+        var bWt = document.getElementById('boxWt'); if (bWt) bWt.value = sku.Wt;
+    };
+
+    window.autoSyncSingleTargetCapacity = function() {
+        var vType = (document.getElementById('vehicleType') && document.getElementById('vehicleType').value) || '20DC';
+        var vSpec = window.VEHICLE_SPECS[vType] || window.VEHICLE_SPECS['20DC'];
+        var baseType = (document.getElementById('baseType') && document.getElementById('baseType').value) || 'floor';
+        var rawIdx = parseInt(document.getElementById('skuSelect') && document.getElementById('skuSelect').value);
+        var sku = window.skuDatabase[isNaN(rawIdx) ? 5 : rawIdx] || window.skuDatabase[5];
+        var maxWgt = parseInt(document.getElementById('maxWgt') && document.getElementById('maxWgt').value) || vSpec.maxWgt;
+
+        var clr = window.getEffectiveClearances(vType);
+        var totalMax = window.calculateMaxVehicleBoxes(clr.effW, clr.effL, vSpec, sku, maxWgt, baseType);
+        var targetEl = document.getElementById('targetBoxes');
+        if (!window.isUserDefinedTarget || !targetEl || !targetEl.value) { if (targetEl) targetEl.value = totalMax; }
+        window.setElText('capacityHintBadge', '1 Araç Tam Kapasite: ' + totalMax + ' Adet');
+    };
+
+    window.switchTab = function(mode) {
+        window.currentMode = mode;
+        window.lastAdvisorSignature = '';
+        window.advisorSuccessMessage = '';
+        var tS = document.getElementById('tab-single'); if (tS) tS.className = mode === 'single' ? 'tab-btn active text-center' : 'tab-btn text-slate-500 text-center';
+        var tM = document.getElementById('tab-mixed'); if (tM) tM.className = mode === 'mixed' ? 'tab-btn active text-center' : 'tab-btn text-slate-500 text-center';
+        var pS = document.getElementById('panel-single'); if (pS) pS.style.display = mode === 'single' ? 'block' : 'none';
+        var pM = document.getElementById('panel-mixed'); if (pM) pM.style.display = mode === 'mixed' ? 'block' : 'none';
+        if (mode === 'single') window.autoSyncSingleTargetCapacity();
+        window.runEngine();
+    };
+
+    window.onVehicleChange = function() {
+        var vType = (document.getElementById('vehicleType') && document.getElementById('vehicleType').value) || '20DC';
+        var mW = document.getElementById('maxWgt'); if (mW) mW.value = (window.VEHICLE_SPECS[vType] || window.VEHICLE_SPECS['20DC']).maxWgt;
+        var fc = document.getElementById('optFrontCurveLabel'); if (fc) fc.style.display = vType === 'TIR' ? 'flex' : 'none';
+        window.lastAdvisorSignature = '';
+        window.advisorSuccessMessage = '';
+        window.autoSyncSingleTargetCapacity();
+        window.runEngine();
+    };
+
+    window.onSkuSelectChanged = function() {
+        window.isUserDefinedTarget = false;
+        window.lastAdvisorSignature = '';
+        window.advisorSuccessMessage = '';
+        window.populateSKU();
+        window.autoSyncSingleTargetCapacity();
+        window.runEngine();
+    };
+
+    window.onBaseTypeChange = function() {
+        window.lastAdvisorSignature = '';
+        window.advisorSuccessMessage = '';
+        window.autoSyncSingleTargetCapacity();
+        window.runEngine();
+    };
+
+    window.debouncedRunEngine = function() {
+        clearTimeout(window.debounceTimer);
+        window.debounceTimer = setTimeout(window.runEngine, 40);
+    };
+
+    window.moveMixedRow = function(idx, dir) {
+        var targetIdx = idx + dir;
+        if (targetIdx < 0 || targetIdx >= window.mixedItemsState.length) return;
+        var temp = window.mixedItemsState[idx];
+        window.mixedItemsState[idx] = window.mixedItemsState[targetIdx];
+        window.mixedItemsState[targetIdx] = temp;
+        window.lastAdvisorSignature = '';
+        window.renderMixedList();
+        window.runEngine();
+    };
+
+    window.renderMixedList = function() {
+        var list = document.getElementById('mixedList');
+        if (!list) return;
+        list.innerHTML = '';
+        window.mixedItemsState.forEach(function(item, idx) {
+            var currentSku = window.skuDatabase[item.skuIdx] || { Wt: 0 };
+            var prevSku = idx > 0 ? (window.skuDatabase[window.mixedItemsState[idx - 1].skuIdx] || { Wt: 0 }) : null;
+            var isHeavierThanPrev = prevSku && (currentSku.Wt > prevSku.Wt);
+
+            var row = document.createElement('div');
+            row.className = "p-2.5 bg-white border " + (isHeavierThanPrev ? 'border-amber-400 bg-amber-50/30' : 'border-slate-200') + " rounded-xl flex flex-col gap-2";
+            var opts = window.skuDatabase.map(function(s, i) {
+                return '<option value="' + i + '" ' + (i === item.skuIdx ? 'selected' : '') + '>' + window.escapeHtml(s.name) + ' (' + s.Wt + 'kg)</option>';
+            }).join('');
+
+            row.innerHTML = '<div class="flex justify-between items-center border-b pb-1">' +
+                '<div class="flex items-center gap-1.5">' +
+                    '<span class="text-[10px] font-bold uppercase text-slate-700">' + (idx + 1) + '. Blok (' + currentSku.Wt + ' kg)</span>' +
+                    (isHeavierThanPrev ? '<span class="text-[9px] bg-amber-100 text-amber-800 border border-amber-300 px-1.5 py-0.2 rounded font-black">⚠️ Öncekinden Ağır</span>' : '') +
+                '</div>' +
+                '<div class="flex items-center gap-1">' +
+                    '<button type="button" onclick="window.moveMixedRow(' + idx + ', -1)" class="text-slate-400 hover:text-slate-800 font-bold text-xs px-1 cursor-pointer">▲</button>' +
+                    '<button type="button" onclick="window.moveMixedRow(' + idx + ', 1)" class="text-slate-400 hover:text-slate-800 font-bold text-xs px-1 cursor-pointer">▼</button>' +
+                    '<button type="button" onclick="window.removeMixedRow(' + idx + ')" class="text-rose-500 font-bold text-xs px-1 cursor-pointer">✕</button>' +
+                '</div>' +
+            '</div>' +
+            '<div class="flex gap-2">' +
+                '<select class="w-[64%] p-1.5 border rounded-lg text-xs" onchange="window.mixedItemsState[' + idx + '].skuIdx=parseInt(this.value)||0;window.lastAdvisorSignature=\'\';window.renderMixedList();window.runEngine();">' + opts + '</select>' +
+                '<input type="number" class="w-[36%] p-1.5 border rounded-lg text-xs font-mono font-bold" value="' + item.count + '" oninput="window.mixedItemsState[' + idx + '].count=Math.max(0,parseInt(this.value)||0);window.lastAdvisorSignature=\'\';window.debouncedRunEngine();">' +
+            '</div>';
+            list.appendChild(row);
+        });
+    };
+
+    window.addNewMixedRow = function() { window.mixedItemsState.push({ skuIdx: 0, count: 100 }); window.lastAdvisorSignature = ''; window.renderMixedList(); window.runEngine(); };
+    window.removeMixedRow = function(idx) { if (window.mixedItemsState.length > 1) { window.mixedItemsState.splice(idx, 1); window.lastAdvisorSignature = ''; window.renderMixedList(); window.runEngine(); } };
+
+    window.renderSkuManagerList = function() {
+        var container = document.getElementById('skuManagerList');
+        if (!container) return;
+        container.innerHTML = window.skuDatabase.map(function(s, idx) {
+            return '<div class="flex items-center justify-between p-2 bg-slate-50 border rounded-lg"><div><strong class="text-slate-800">' + window.escapeHtml(s.name) + '</strong><span class="text-[10px] text-slate-500 font-mono ml-1">(' + s.W + 'x' + s.L + 'x' + s.H + ' mm - ' + s.Wt + ' kg)</span></div>' + (idx >= window.defaultSkuDatabase.length ? '<button type="button" onclick="window.skuDatabase.splice(' + idx + ',1);window.renderSkuManagerList();window.runEngine();" class="text-rose-500 font-bold px-2 cursor-pointer">Sil</button>' : '<span class="text-[10px] text-slate-400">Standart</span>') + '</div>';
+        }).join('');
+    };
+
+    window.addCustomSku = function() {
+        var name = document.getElementById('newSkuName') && document.getElementById('newSkuName').value.trim();
+        var W = parseInt(document.getElementById('newSkuW') && document.getElementById('newSkuW').value);
+        var L = parseInt(document.getElementById('newSkuL') && document.getElementById('newSkuL').value);
+        var H = parseInt(document.getElementById('newSkuH') && document.getElementById('newSkuH').value);
+        var Wt = parseFloat(document.getElementById('newSkuWt') && document.getElementById('newSkuWt').value);
+        if (!name || !W || !L || !H || !Wt) return alert("Lütfen tüm ürün ölçülerini girin.");
+        window.skuDatabase.push({ name: name, W: W, L: L, H: H, Wt: Wt, maxLayers: 6, shape: "box" });
+        var select = document.getElementById('skuSelect');
+        if (select) select.options.add(new Option('⏹ ' + name + ' (' + W + 'x' + L + 'x' + H + ')', String(window.skuDatabase.length - 1)));
+        window.renderMixedList();
+        window.renderSkuManagerList();
+    };
+
+    window.openAdminUsersModal = function() {
+        if (!window.currentUserProfile || window.currentUserProfile.role !== 'admin') {
+            return alert("Yetkisiz erişim: Rol atamalarını yalnızca Sistem Yöneticisi yapabilir.");
+        }
+        window.openModal('adminUsersModal');
+        window.renderAdminUsersRows();
+    };
+
+    window.renderAdminUsersRows = function() {
+        var tbody = document.getElementById('adminUsersTableBody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        var usersList = window.getLocalDirectory();
+        var overrides = window.getRoleOverrides();
+
+        usersList.forEach(function(u, idx) {
+            var tr = document.createElement('tr');
+            tr.className = "hover:bg-slate-50 transition";
+            var emailClean = (u.email || '').trim();
+            var currentRole = overrides[emailClean.toLowerCase()] || u.role || 'sales';
+            var dateStr = u.created_at ? new Date(u.created_at).toLocaleDateString('tr-TR') : '-';
+            var isAdminMaster = emailClean.toLowerCase() === 'admin96@admin.com';
+
+            var colorClasses = currentRole === 'admin'
+                ? 'bg-purple-50 text-purple-900 border-purple-300'
+                : (currentRole === 'logistics' ? 'bg-indigo-50 text-indigo-900 border-indigo-300' : 'bg-slate-50 text-slate-800 border-slate-300');
+
+            tr.innerHTML = '<td class="p-3 font-bold text-slate-900">' + window.escapeHtml(u.full_name || 'İsimsiz') + '</td>' +
+                '<td class="p-3 font-mono text-slate-600">' + window.escapeHtml(emailClean) + '</td>' +
+                '<td class="p-3 text-slate-500 font-mono">' + dateStr + '</td>' +
+                '<td class="p-3 text-center">' +
+                    '<div class="inline-flex items-center gap-2">' +
+                        '<select id="roleSel_' + idx + '" onchange="window.updateUserRoleByIndex(' + idx + ', this.value)" class="p-1.5 border rounded-lg text-xs font-bold cursor-pointer transition ' + colorClasses + '">' +
+                            '<option value="sales" ' + (currentRole === 'sales' ? 'selected' : '') + '>Satış Ekibi</option>' +
+                            '<option value="logistics" ' + (currentRole === 'logistics' ? 'selected' : '') + '>Lojistik & Saha</option>' +
+                            '<option value="admin" ' + (currentRole === 'admin' ? 'selected' : '') + '>Yönetici (Admin)</option>' +
+                        '</select>' +
+                        '<span id="roleSavedBadge_' + idx + '" class="hidden text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">✓ Kaydedildi</span>' +
+                    '</div>' +
+                    (isAdminMaster ? '<span class="text-[9px] text-purple-600 block font-bold mt-0.5">(Ana Yönetici)</span>' : '') +
+                '</td>';
+            tbody.appendChild(tr);
+        });
+    };
+
+    window.updateUserRoleByIndex = function(rowIdx, newRole) {
+        if (!window.currentUserProfile || window.currentUserProfile.role !== 'admin') {
+            return alert("Yetkisiz işlem!");
+        }
+        var usersList = window.getLocalDirectory();
+        var targetUser = usersList[rowIdx];
+        if (!targetUser) return;
+
+        var targetEmail = targetUser.email;
+        var targetId = targetUser.id;
+
+        window.setRoleOverride(targetEmail, newRole);
+        window.saveUserToLocalDirectory({ id: targetId, email: targetEmail, role: newRole }, false);
+
+        var selEl = document.getElementById('roleSel_' + rowIdx);
+        if (selEl) {
+            var colorClasses = newRole === 'admin'
+                ? 'bg-purple-50 text-purple-900 border-purple-300'
+                : (newRole === 'logistics' ? 'bg-indigo-50 text-indigo-900 border-indigo-300' : 'bg-slate-50 text-slate-800 border-slate-300');
+            selEl.className = 'p-1.5 border rounded-lg text-xs font-bold cursor-pointer transition ' + colorClasses;
+        }
+
+        var badgeEl = document.getElementById('roleSavedBadge_' + rowIdx);
+        if (badgeEl) {
+            badgeEl.classList.remove('hidden');
+            setTimeout(function() { badgeEl.classList.add('hidden'); }, 3500);
+        }
+
+        var bannerEl = document.getElementById('adminUsersStatusBanner');
+        if (bannerEl) {
+            var roleNameTR = newRole === 'admin' ? 'Yönetici (Admin)' : (newRole === 'logistics' ? 'Lojistik & Saha' : 'Satış Ekibi');
+            bannerEl.textContent = "✓ " + targetEmail + " kullanıcısının yetkisi '" + roleNameTR + "' olarak kaydedildi.";
+            bannerEl.classList.remove('hidden');
+        }
+    };
+
+    window.exportCSV = function() {
+        if (!window.globalFleet || !window.globalFleet[0]) return;
+        var csv = "\uFEFFArac_No,SKU_Adi,Koli_Adedi,Agirlik_kg\n";
+        window.globalFleet.forEach(function(f, i) { f.placedItems.forEach(function(it) { csv += (i + 1) + ',"' + it.id + '",' + it.boxes + ',' + it.wgt + '\n'; }); });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+        a.download = 'Elita_Yukleme_Manifestosu.csv'; a.click();
+    };
+
+    window.exportPDF = function() {
+        if (typeof html2pdf === 'undefined') return window.print();
+        html2pdf().set({ margin: 10, filename: 'Elita_Yukleme_Manifestosu.pdf', jsPDF: { orientation: 'landscape' } }).from(document.getElementById('printArea')).save();
+    };
+
+    window.initWorkspace = function() {
+        window.populateSKU();
+        window.renderMixedList();
+        window.autoSyncSingleTargetCapacity();
+        window.refreshCommunicationBadges();
+        var canvas = document.getElementById('contCanvas');
+        if (canvas && !window.canvasInitialized) {
+            window.canvasInitialized = true;
+            canvas.addEventListener('mousedown', function(e) { window.isDragging = true; window.startX = e.clientX - window.panX; window.startY = e.clientY - window.panY; });
+            window.addEventListener('mousemove', function(e) { if (window.isDragging) { window.panX = e.clientX - window.startX; window.panY = e.clientY - window.startY; if (window.lastRenderData) window.performRender(window.lastRenderData); } });
+            window.addEventListener('mouseup', function() { window.isDragging = false; });
+            canvas.addEventListener('wheel', function(e) { e.preventDefault(); window.zoomLevel = Math.max(0.4, Math.min(6, window.zoomLevel * (e.deltaY < 0 ? 1.1 : 0.9))); if (window.lastRenderData) window.performRender(window.lastRenderData); }, { passive: false });
+        }
+    };
+
+    // Sayfa yüklendiğinde: Eğer aktif bir oturum varsa doğrudan çalışma alanını aç, yoksa boş giriş ekranında bekle
+    window.initWorkspace();
+    window.runEngine();
+    try {
+        var savedSessionRaw = localStorage.getItem('elita_active_session');
+        if (savedSessionRaw) {
+            var savedSession = JSON.parse(savedSessionRaw);
+            if (savedSession && savedSession.email) {
+                window.enterApplication(savedSession);
+            }
+        }
+    } catch (e) {}
+</script>
+</body>
+</html>
